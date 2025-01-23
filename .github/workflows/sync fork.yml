@@ -15,7 +15,7 @@ jobs:
 
     - name: Sync Upstream to develop
       env:
-        GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         # Clone the fork
         git clone https://github.com/Rolln-dev/MOOSE_INCLUDE-ROLLN-FORK.git work
@@ -23,7 +23,7 @@ jobs:
 
         # Set up Git config
         git config user.name "Rolln-dev"
-        git config user.email "RollnThndr@gmail.com"
+        git config user.email "Rolln-dev@users.noreply.githu.com"
 
         # Add the upstream repository
         git remote add upstream https://github.com/FlightControl-Master/MOOSE_INCLUDE.git
