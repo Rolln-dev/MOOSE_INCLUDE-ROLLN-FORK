@@ -23,7 +23,7 @@ jobs:
 
         # Set up Git config
         git config user.name "Rolln-dev"
-        git config user.email "Rolln-dev@users.noreply.githu.com"
+        git config user.email "rollnthndr@gmail.com"
 
         # Add the upstream repository
         git remote add upstream https://github.com/FlightControl-Master/MOOSE_INCLUDE.git
