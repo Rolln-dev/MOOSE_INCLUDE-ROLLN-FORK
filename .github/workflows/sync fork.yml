@@ -15,7 +15,7 @@ jobs:
 
     - name: Sync Upstream to develop
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
       run: |
         # Clone the fork
         git clone https://github.com/Rolln-dev/MOOSE_INCLUDE-ROLLN-FORK.git work
