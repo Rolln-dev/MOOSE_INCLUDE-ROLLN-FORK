@@ -1,4 +1,4 @@
-name: Sync Fork with Upstream - Develop Branch
+name: sync-develop
 
 on:
   schedule:
