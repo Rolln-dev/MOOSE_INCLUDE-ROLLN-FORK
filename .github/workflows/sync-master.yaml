@@ -35,6 +35,6 @@ jobs:
       - name: Merge and Push master
         run: |
           git checkout master
-          git merge upstream/master --allow-unrelated-histories
+          git merge upstream/master
           git push origin master
           
