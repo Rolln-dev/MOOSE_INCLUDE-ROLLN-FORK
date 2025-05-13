@@ -1,6 +1,6 @@
 VNAO - Sync fork branches with upstream FlightControl branches
 
-[![Sync Master](https://github.com/Rolln-dev/MOOSE_INCLUDE-ROLLN-FORK/actions/workflows/sync-master.yaml/badge.svg?branch=master)](https://github.com/Rolln-dev/MOOSE_INCLUDE-ROLLN-FORK/actions/workflows/sync-master.yml) [![Sync Develop](https://github.com/Rolln-dev/MOOSE_INCLUDE-ROLLN-FORK/actions/workflows/sync-develop.yaml/badge.svg?branch=master)](https://github.com/Rolln-dev/MOOSE_INCLUDE-ROLLN-FORK/actions/workflows/sync-develop.yml)
+[![Sync Master](https://github.com/Rolln-dev/MOOSE_INCLUDE-ROLLN-FORK/actions/workflows/sync-master.yaml/badge.svg?branch=master)](https://github.com/Rolln-dev/MOOSE_INCLUDE-ROLLN-FORK/actions/workflows/sync-master.yaml) [![Sync Develop](https://github.com/Rolln-dev/MOOSE_INCLUDE-ROLLN-FORK/actions/workflows/sync-develop.yaml/badge.svg?branch=master)](https://github.com/Rolln-dev/MOOSE_INCLUDE-ROLLN-FORK/actions/workflows/sync-develop.yaml)
 
 <br>
 <br>
