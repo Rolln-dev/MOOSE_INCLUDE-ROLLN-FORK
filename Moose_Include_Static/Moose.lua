@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-05-15T06:42:07+02:00-ea4a1f9ff91e54e8653c1da6762d73be5ae88f97 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-05-15T08:51:30+02:00-db869bcb6d08134392c235166f007c1df71c697d ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -112164,7 +112164,7 @@ end
 -- @module Functional.Mantis
 -- @image Functional.Mantis.jpg
 --
--- Last Update: Apr 2025
+-- Last Update: May 2025
 
 -------------------------------------------------------------------------
 --- **MANTIS** class, extends Core.Base#BASE
@@ -112204,7 +112204,8 @@ end
 -- @field #table FilterZones Table of Core.Zone#ZONE Zones Consider SAM groups in this zone(s) only for this MANTIS instance, must be handed as #table of Zone objects.
 -- @field #boolean SmokeDecoy If true, smoke short range SAM units as decoy if a plane is in firing range.
 -- @field #number SmokeDecoyColor Color to use, defaults to SMOKECOLOR.White
--- @field #number checkcounter Counter for SAM Table refreshes
+-- @field #number checkcounter Counter for SAM Table refreshes.
+-- @field #number DLinkCacheTime Seconds after which cached contacts in DLink will decay.
 -- @extends Core.Base#BASE
 
 
@@ -112463,6 +112464,7 @@ MANTIS = {
   SmokeDecoy            = false,
   SmokeDecoyColor       = SMOKECOLOR.White,
   checkcounter          = 1,
+  DLinkCacheTime        = 120,
 }
 
 --- Advanced state enumerator
@@ -112754,7 +112756,8 @@ do
       self.advAwacs = false
     end
     
-
+    self:SetDLinkCacheTime()
+    
     -- Set the string id for output to DCS.log file.
     self.lid=string.format("MANTIS %s | ", self.name)
 
@@ -112818,7 +112821,7 @@ do
     
     -- TODO Version
     -- @field #string version
-    self.version="0.9.28"
+    self.version="0.9.29"
     self:I(string.format("***** Starting MANTIS Version %s *****", self.version))
 
     --- FSM Functions ---
@@ -113166,6 +113169,15 @@ do
         self.HQ_Template_CC = group:GetName()
       end
     end
+    return self
+  end
+  
+  --- Function to set how long INTEL DLINK remembers contacts.
+  -- @param #MANTIS self
+  -- @param #number seconds Remember this many seconds
+  -- @return #MANTIS self
+  function MANTIS:SetDLinkCacheTime(seconds)
+    self.DLinkCacheTime = math.abs(seconds or 120)
     return self
   end
 
@@ -113560,7 +113572,9 @@ do
     --IntelTwo:SetClusterRadius(5000)
     IntelTwo:Start()
     
-    local IntelDlink = INTEL_DLINK:New({IntelOne,IntelTwo},self.name.." DLINK",22,300)
+    local CacheTime = self.DLinkCacheTime or 120
+    local IntelDlink = INTEL_DLINK:New({IntelOne,IntelTwo},self.name.." DLINK",22,CacheTime)
+    
     IntelDlink:__Start(1)
     
     self:SetUsingDLink(IntelDlink)
