@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-05-15T11:42:05+02:00-d7defe6f7fa5b9732ae3c37575c7f33b1d4f9a05 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-05-15T13:19:42+02:00-4bab2ee1deb41274a143a17253b56b88f2a59098 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -66070,6 +66070,8 @@ end
 --
 -- ===
 -- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- # 1) MOOSE Cargo System.
 -- 
 -- #### Those who have used the mission editor, know that the DCS mission editor provides cargo facilities.
@@ -67497,6 +67499,8 @@ do -- CARGO_UNIT
   --
   -- # Developer Note
   -- 
+  -- ![Banner Image](..\Images\deprecated.png)
+  -- 
   -- Note while this class still works, it is no longer supported as the original author stopped active development of MOOSE
   -- Therefore, this class is considered to be deprecated
   --
@@ -67894,6 +67898,8 @@ do -- CARGO_SLINGLOAD
   --
   -- # Developer Note
   -- 
+  -- ![Banner Image](..\Images\deprecated.png)
+  -- 
   -- Note while this class still works, it is no longer supported as the original author stopped active development of MOOSE
   -- Therefore, this class is considered to be deprecated
   --
@@ -68159,6 +68165,9 @@ do -- CARGO_CRATE
   -- @type CARGO_CRATE
   -- @extends Cargo.Cargo#CARGO_REPRESENTABLE
   
+  ---
+  -- ![Banner Image](..\Images\deprecated.png)
+  --
   --- Defines a cargo that is represented by a UNIT object within the simulator, and can be transported by a carrier.
   -- Use the event functions as described above to Load, UnLoad, Board, UnBoard the CARGO\_CRATE objects to and from carriers.
   -- 
@@ -68500,6 +68509,8 @@ do -- CARGO_GROUP
   -- @extends Cargo.Cargo#CARGO_REPORTABLE
   
   --- Defines a cargo that is represented by a @{Wrapper.Group} object within the simulator.
+  -- 
+  -- ![Banner Image](..\Images\deprecated.png)
   -- The cargo can be Loaded, UnLoaded, Boarded, UnBoarded to and from Carriers.
   -- 
   -- The above cargo classes are used by the following AI_CARGO_ classes to allow AI groups to transport cargo:
@@ -73654,6 +73665,8 @@ end
 --     * **200 meter**: Destroys the missile when the distance to the aircraft is below or equal to 200 meter.
 --     
 -- # Developer Note
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 -- 
 -- Note while this class still works, it is no longer supported as the original author stopped active development of MOOSE.
 -- Therefore, this class is considered to be deprecated and superseded by the [Functional.Fox](https://flightcontrol-master.github.io/MOOSE_DOCS_DEVELOP/Documentation/Functional.Fox.html) class, which provides the same functionality.
@@ -152306,8 +152319,9 @@ end
 -- @field Wrapper.Group#GROUP Test
 -- @extends Core.Fsm#FSM_SET
 
-
---- Monitors and manages as many replacement AI groups as there are
+--- ![Banner Image](..\Images\deprecated.png)
+-- 
+-- Monitors and manages as many replacement AI groups as there are
 -- CLIENTS in a SET\_CLIENT collection, which are not occupied by human players. 
 -- In other words, use AI_BALANCER to simulate human behaviour by spawning in replacement AI in multi player missions.
 -- 
@@ -152595,6 +152609,7 @@ end
 
 --- The AI_AIR class implements the core functions to operate an AI @{Wrapper.Group}.
 -- 
+-- ![Banner Image](..\Images\deprecated.png)
 -- 
 -- # 1) AI_AIR constructor
 --   
@@ -153435,6 +153450,8 @@ end
 --- The AI_AIR_PATROL class implements the core functions to patrol a @{Core.Zone} by an AI @{Wrapper.Group}
 -- and automatically engage any airborne enemies that are within a certain range or within a certain zone.
 -- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- ![Process](..\Presentations\AI_CAP\Dia3.JPG)
 -- 
 -- The AI_AIR_PATROL is assigned a @{Wrapper.Group} and this must be done before the AI_AIR_PATROL process can be started using the **Start** event.
@@ -153824,11 +153841,13 @@ end
 
 
 
--- @type AI_AIR_ENGAGE
+--- @type AI_AIR_ENGAGE
 -- @extends AI.AI_AIR#AI_AIR
 
 
 --- Implements the core functions to intercept intruders. Use the Engage trigger to intercept intruders.
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 -- 
 -- The AI_AIR_ENGAGE is assigned a @{Wrapper.Group} and this must be done before the AI_AIR_ENGAGE process can be started using the **Start** event.
 -- 
@@ -154419,6 +154438,8 @@ end
 
 --- Implements the core functions to patrol a @{Core.Zone} by an AI @{Wrapper.Group} or @{Wrapper.Group}.
 -- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- ![Process](..\Presentations\AI_PATROL\Dia3.JPG)
 -- 
 -- The AI_A2A_PATROL is assigned a @{Wrapper.Group} and this must be done before the AI_A2A_PATROL process can be started using the **Start** event.
@@ -154830,7 +154851,9 @@ end
 
 --- The AI_A2A_CAP class implements the core functions to patrol a @{Core.Zone} by an AI @{Wrapper.Group} or @{Wrapper.Group}
 -- and automatically engage any airborne enemies that are within a certain range or within a certain zone.
---
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- ![Process](..\Presentations\AI_CAP\Dia3.JPG)
 --
 -- The AI_A2A_CAP is assigned a @{Wrapper.Group} and this must be done before the AI_A2A_CAP process can be started using the **Start** event.
@@ -155050,6 +155073,8 @@ end
 
 --- Implements the core functions to intercept intruders. Use the Engage trigger to intercept intruders.
 --
+-- ![Banner Image](..\Images\deprecated.png)
+--
 -- The AI_A2A_GCI is assigned a @{Wrapper.Group} and this must be done before the AI_A2A_GCI process can be started using the **Start** event.
 --
 -- The AI will fly towards the random 3D point within the patrol zone, using a random speed within the given altitude and speed limits.
@@ -155208,7 +155233,9 @@ end
 -- [DCS WORLD - MOOSE - A2A GCICAP - Build an automatic A2A Defense System](https://www.youtube.com/playlist?list=PL7ZUrU4zZUl0S4KMNUUJpaUs6zZHjLKNx)
 --
 -- ===
---
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- # QUICK START GUIDE
 --
 -- There are basically two classes available to model an A2A defense system.
@@ -159710,7 +159737,9 @@ end
 -- @extends AI.AI_Air_Engage#AI_AIR_ENGAGE
 
 --- Implements the core functions to intercept intruders. Use the Engage trigger to intercept intruders.
---
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- # Developer Note
 -- 
 -- Note while this class still works, it is no longer supported as the original author stopped active development of MOOSE
@@ -159810,6 +159839,8 @@ end
 --
 -- # Developer Note
 -- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- Note while this class still works, it is no longer supported as the original author stopped active development of MOOSE
 -- Therefore, this class is considered to be deprecated
 --
@@ -159907,6 +159938,8 @@ end
 
 
 --- Implements the core functions to SEAD intruders. Use the Engage trigger to intercept intruders.
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 -- 
 -- The AI_A2G_SEAD is assigned a @{Wrapper.Group} and this must be done before the AI_A2G_SEAD process can be started using the **Start** event.
 -- 
@@ -160055,6 +160088,8 @@ end
 -- ===
 -- 
 -- # QUICK START GUIDE
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 -- 
 -- The following class is available to model an A2G defense system.
 -- 
@@ -164859,6 +164894,8 @@ end
 
 --- Implements the core functions to patrol a @{Core.Zone} by an AI @{Wrapper.Controllable} or @{Wrapper.Group}.
 -- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- ![Process](..\Presentations\AI_PATROL\Dia3.JPG)
 -- 
 -- The AI_PATROL_ZONE is assigned a @{Wrapper.Group} and this must be done before the AI_PATROL_ZONE process can be started using the **Start** event.
@@ -165798,6 +165835,8 @@ end
 --- Implements the core functions to patrol a @{Core.Zone} by an AI @{Wrapper.Controllable} or @{Wrapper.Group} 
 -- and automatically engage any airborne enemies that are within a certain range or within a certain zone.
 -- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- ![Process](..\Presentations\AI_CAP\Dia3.JPG)
 -- 
 -- The AI_CAP_ZONE is assigned a @{Wrapper.Group} and this must be done before the AI_CAP_ZONE process can be started using the **Start** event.
@@ -166338,6 +166377,9 @@ end
 -- @extends AI.AI_Patrol#AI_PATROL_ZONE
 
 --- Implements the core functions to provide Close Air Support in an Engage @{Core.Zone} by an AIR @{Wrapper.Controllable} or @{Wrapper.Group}.
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- The AI_CAS_ZONE runs a process. It holds an AI in a Patrol Zone and when the AI is commanded to engage, it will fly to an Engage Zone.
 -- 
 -- ![HoldAndEngage](..\Presentations\AI_CAS\Dia3.JPG)
@@ -166907,6 +166949,8 @@ end
 -- @extends AI.AI_Patrol#AI_PATROL_ZONE
 
 --- Implements the core functions to provide BattleGround Air Interdiction in an Engage @{Core.Zone} by an AIR @{Wrapper.Controllable} or @{Wrapper.Group}.
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 -- 
 -- The AI_BAI_ZONE runs a process. It holds an AI in a Patrol Zone and when the AI is commanded to engage, it will fly to an Engage Zone.
 -- 
@@ -167561,6 +167605,8 @@ end
 
 
 --- Build large formations, make AI follow a @{Wrapper.Client#CLIENT} (player) leader or a @{Wrapper.Unit#UNIT} (AI) leader.
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 --
 -- AI_FORMATION makes AI @{Wrapper.Group#GROUP}s fly in formation of various compositions.
 -- The AI_FORMATION class models formations in a different manner than the internal DCS formation logic!!!
@@ -168822,6 +168868,8 @@ end
 -- ===
 -- 
 -- Allows you to interact with escorting AI on your flight and take the lead.
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 -- 
 -- Each escorting group can be commanded with a complete set of radio commands (radio menu in your flight, and then F10).
 --
@@ -171014,6 +171062,8 @@ end
 -- 
 -- Allows you to interact with escorting AI on your flight and take the lead.
 -- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- Each escorting group can be commanded with a complete set of radio commands (radio menu in your flight, and then F10).
 --
 -- The radio commands will vary according the category of the group. The richest set of commands are with helicopters and airPlanes.
@@ -171333,6 +171383,8 @@ end
 --
 -- # Developer Note
 -- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- Note while this class still works, it is no longer supported as the original author stopped active development of MOOSE
 -- Therefore, this class is considered to be deprecated
 --
@@ -171521,6 +171573,8 @@ end
 
 --- Models the assignment of AI escorts to player flights upon request using the radio menu.
 --
+-- ![Banner Image](..\Images\deprecated.png)
+--
 -- # Developer Note
 -- 
 -- Note while this class still works, it is no longer supported as the original author stopped active development of MOOSE
@@ -171660,11 +171714,13 @@ end
 -- @module AI.AI_Cargo
 -- @image Cargo.JPG
 
--- @type AI_CARGO
+--- @type AI_CARGO
 -- @extends Core.Fsm#FSM_CONTROLLABLE
 
 
 --- Base class for the dynamic cargo handling capability for AI groups.
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 -- 
 -- Carriers can be mobilized to intelligently transport infantry and other cargo within the simulation.
 -- The AI_CARGO module uses the @{Cargo.Cargo} capabilities within the MOOSE framework.
@@ -172254,6 +172310,8 @@ end
 
 
 --- Brings a dynamic cargo handling capability for an AI vehicle group.
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 -- 
 -- Armoured Personnel Carriers (APC), Trucks, Jeeps and other ground based carrier equipment can be mobilized to intelligently transport infantry and other cargo within the simulation.
 -- 
@@ -172861,6 +172919,8 @@ end
 
 
 --- Brings a dynamic cargo handling capability for an AI helicopter group.
+--  
+--  ![Banner Image](..\Images\deprecated.png)
 --  
 -- Helicopter carriers can be mobilized to intelligently transport infantry and other cargo within the simulation.
 -- 
@@ -173522,6 +173582,8 @@ end
 
 
 --- Brings a dynamic cargo handling capability for an AI airplane group.
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 --  
 -- Airplane carrier equipment can be mobilized to intelligently transport infantry and other cargo within the simulation between airbases.
 -- 
@@ -174032,6 +174094,8 @@ end
 
 --- Brings a dynamic cargo handling capability for an AI naval group.
 --
+-- ![Banner Image](..\Images\deprecated.png)
+--
 -- Naval ships can be utilized to transport cargo around the map following naval shipping lanes.
 -- The AI_CARGO_SHIP class uses the @{Cargo.Cargo} capabilities within the MOOSE framework. 
 -- @{Cargo.Cargo} must be declared within the mission or warehouse to make the AI_CARGO_SHIP recognize the cargo.
@@ -174441,6 +174505,8 @@ end
 -- [FlightControl-Master/MOOSE_MISSIONS/AID - AI Dispatching/AID-CGO - AI Cargo Dispatching/](https://github.com/FlightControl-Master/MOOSE_MISSIONS/tree/master/AI/AI_Cargo_Dispatcher)
 -- 
 -- ===
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 -- 
 -- # The dispatcher concept.
 -- 
@@ -175694,6 +175760,8 @@ end
 
 --- A dynamic cargo transportation capability for AI groups.
 -- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- Armoured Personnel APCs (APC), Trucks, Jeeps and other carrier equipment can be mobilized to intelligently transport infantry and other cargo within the simulation.
 -- 
 -- The AI_CARGO_DISPATCHER_APC module is derived from the AI_CARGO_DISPATCHER module.
@@ -175951,6 +176019,8 @@ end--- **AI** - Models the intelligent transportation of infantry and other carg
 
 --- A dynamic cargo handling capability for AI helicopter groups.
 -- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- Helicopters can be mobilized to intelligently transport infantry and other cargo within the simulation.
 -- 
 -- 
@@ -176149,6 +176219,8 @@ end
 
 --- Brings a dynamic cargo handling capability for AI groups.
 -- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- Airplanes can be mobilized to intelligently transport infantry and other cargo within the simulation.
 -- 
 -- The AI_CARGO_DISPATCHER_AIRPLANE module is derived from the AI_CARGO_DISPATCHER module.
@@ -176316,6 +176388,8 @@ end
 
 
 --- A dynamic cargo transportation capability for AI groups.
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 -- 
 -- Naval vessels can be mobilized to semi-intelligently transport cargo within the simulation.
 --
@@ -176486,6 +176560,8 @@ function AI_CARGO_DISPATCHER_SHIP:AICargo( Ship, CargoSet )
 end--- (SP) (MP) (FSM) Accept or reject process for player (task) assignments.
 --
 -- ===
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 --
 -- # @{#ACT_ASSIGN} FSM template class, extends @{Core.Fsm#FSM_PROCESS}
 --
@@ -176778,6 +176854,8 @@ end -- ACT_ASSIGN_MENU_ACCEPT
 --- (SP) (MP) (FSM) Route AI or players through waypoints or to zones.
 --
 -- ===
+--
+-- ![Banner Image](..\Images\deprecated.png)
 --
 -- # @{#ACT_ROUTE} FSM class, extends @{Core.Fsm#FSM_PROCESS}
 --
@@ -177260,7 +177338,7 @@ do -- ACT_ROUTE_ZONE
 end -- ACT_ROUTE_ZONE
 --- **Actions** - ACT_ACCOUNT_ classes **account for** (detect, count & report) various DCS events occurring on UNITs.
 --
--- ![Banner Image](..\Presentations\ACT_ACCOUNT\Dia1.JPG)
+-- ![Banner Image](..\Images\deprecated.png)
 --
 -- ===
 --
@@ -177268,9 +177346,11 @@ end -- ACT_ROUTE_ZONE
 -- @image MOOSE.JPG
 
 do -- ACT_ACCOUNT
-
+  
   --- # @{#ACT_ACCOUNT} FSM class, extends @{Core.Fsm#FSM_PROCESS}
-  --
+  -- 
+  -- ![Banner Image](..\Images\deprecated.png)
+  -- 
   -- ## ACT_ACCOUNT state machine:
   --
   -- This class is a state machine: it manages a process that is triggered by events causing state transitions to occur.
@@ -177570,6 +177650,7 @@ do -- ACT_ACCOUNT_DEADS
 end -- ACT_ACCOUNT DEADS
 --- (SP) (MP) (FSM) Route AI or players through waypoints or to zones.
 --
+-- ![Banner Image](..\Images\deprecated.png)
 -- ## ACT_ASSIST state machine:
 --
 -- This class is a state machine: it manages a process that is triggered by events causing state transitions to occur.
@@ -183918,6 +183999,8 @@ MSRS.LoadConfigFile()
 
 
 --- Governs multiple missions, the tasking and the reporting.
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 --  
 -- Command centers govern missions, communicates the task assignments between human players of the coalition, and manages the menu flow.
 -- It can assign a random task to a player when requested.
@@ -184735,6 +184818,8 @@ end
 -- @extends Core.Fsm#FSM
 
 --- Models goals to be achieved and can contain multiple tasks to be executed to achieve the goals.
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 -- 
 -- A mission contains multiple tasks and can be of different task types.
 -- These tasks need to be assigned to human players to be executed.
@@ -185930,6 +186015,8 @@ end
 --   * Manage the task goal and scoring.
 -- 
 -- ===
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 -- 
 -- # 1) Tasking from a player perspective.
 -- 
@@ -187993,6 +188080,8 @@ end
 --- 
 -- # TASKINFO class, extends @{Core.Base#BASE}
 -- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- ## The TASKINFO class implements the methods to contain information and display information of a task. 
 --
 -- # Developer Note
@@ -188353,6 +188442,8 @@ end
 -- 
 -- ===
 -- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- 1) @{Tasking.Task_Manager#TASK_MANAGER} class, extends @{Core.Fsm#FSM}
 -- ===
 -- The @{Tasking.Task_Manager#TASK_MANAGER} class defines the core functions to report tasks to groups.
@@ -188547,6 +188638,8 @@ end
 -- 
 -- The @{#DETECTION_MANAGER} class defines the core functions to report detected objects to groups.
 -- Reportings can be done in several manners, and it is up to the derived classes if DETECTION_MANAGER to model the reporting behaviour.
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 -- 
 -- 1.1) DETECTION_MANAGER constructor:
 -- -----------------------------------
@@ -188978,6 +189071,8 @@ do -- TASK_A2G_DISPATCHER
   -- @extends Tasking.DetectionManager#DETECTION_MANAGER
 
   --- Orchestrates dynamic **A2G Task Dispatching** based on the detection results of a linked @{Functional.Detection} object.
+  -- 
+  -- ![Banner Image](..\Images\deprecated.png)
   --
   -- It uses the Tasking System within the MOOSE framework, which is a multi-player Tasking Orchestration system.
   -- It provides a truly dynamic battle environment for pilots and ground commanders to engage upon,
@@ -189793,6 +189888,9 @@ do -- TASK_A2G
 
   --- The TASK_A2G class defines Air To Ground tasks for a @{Core.Set} of Target Units,
   -- based on the tasking capabilities defined in @{Tasking.Task#TASK}.
+  -- 
+  -- ![Banner Image](..\Images\deprecated.png)
+  -- 
   -- The TASK_A2G is implemented using a @{Core.Fsm#FSM_TASK}, and has the following statuses:
   --
   --   * **None**: Start of the process
@@ -190438,6 +190536,8 @@ do -- TASK_A2A_DISPATCHER
   -- @extends Tasking.DetectionManager#DETECTION_MANAGER
 
   --- Orchestrates the dynamic dispatching of tasks upon groups of detected units determined a @{Core.Set} of EWR installation groups.
+  -- 
+  -- ![Banner Image](..\Images\deprecated.png)
   --
   -- ![Banner Image](..\Presentations\TASK_A2A_DISPATCHER\Dia3.JPG)
   --
@@ -191048,6 +191148,9 @@ do -- TASK_A2A
 
   --- Defines Air To Air tasks for a @{Core.Set} of Target Units, 
   -- based on the tasking capabilities defined in @{Tasking.Task#TASK}.
+  -- 
+  -- ![Banner Image](..\Images\deprecated.png)
+  -- 
   -- The TASK_A2A is implemented using a @{Core.Fsm#FSM_TASK}, and has the following statuses:
   -- 
   --   * **None**: Start of the process
@@ -191691,6 +191794,8 @@ end
 -- 
 -- 
 -- ===
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 -- 
 -- ## Test Missions:
 -- 
@@ -193092,6 +193197,8 @@ end
 
 --- **Tasking** - Models tasks for players to transport cargo.
 -- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- **Specific features:**
 -- 
 --   * Creates a task to transport #Cargo.Cargo to and between deployment zones.
@@ -193499,6 +193606,8 @@ end
 --
 -- ===
 -- 
+-- ![Banner Image](..\Images\deprecated.png)
+-- 
 -- Please read through the @{Tasking.Task_CARGO} process to understand the mechanisms of tasking and cargo tasking and handling.
 -- 
 -- The cargo will be a downed pilot, which is located somwhere on the battlefield. Use the menus system and facilities to 
@@ -193855,6 +193964,8 @@ end
 -- 
 -- The **TASK_CARGO_DISPATCHER** allows you to setup various tasks for let human
 -- players transport cargo as part of a task. 
+-- 
+-- ![Banner Image](..\Images\deprecated.png)
 --  
 -- The cargo dispatcher will implement for you mechanisms to create cargo transportation tasks:
 --  
@@ -194792,6 +194903,8 @@ do -- TASK_ZONE_GOAL
 
   --- # TASK_ZONE_GOAL class, extends @{Tasking.Task#TASK}
   -- 
+  -- ![Banner Image](..\Images\deprecated.png)
+  -- 
   -- The TASK_ZONE_GOAL class defines the task to protect or capture a protection zone. 
   -- The TASK_ZONE_GOAL is implemented using a @{Core.Fsm#FSM_TASK}, and has the following statuses:
   -- 
@@ -195181,6 +195294,8 @@ do -- TASK_CAPTURE_DISPATCHER
   
 
   --- Implements the dynamic dispatching of capture zone tasks.
+  -- 
+  -- ![Banner Image](..\Images\deprecated.png)
   -- 
   -- The **TASK_CAPTURE_DISPATCHER** allows you to setup various tasks for let human
   -- players capture zones in a co-operation effort. 
