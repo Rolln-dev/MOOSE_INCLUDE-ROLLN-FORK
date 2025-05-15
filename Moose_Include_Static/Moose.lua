@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-05-15T08:51:30+02:00-db869bcb6d08134392c235166f007c1df71c697d ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-05-15T11:42:05+02:00-d7defe6f7fa5b9732ae3c37575c7f33b1d4f9a05 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -112275,8 +112275,7 @@ end
 -- 
 -- # 0.1 Set-up in the mission editor
 -- 
--- Set up your SAM sites in the mission editor. Name the groups using a systematic approach like above.
--- Set up your EWR system in the mission editor. Name the groups using a systematic approach like above. Can be e.g. AWACS or a combination of AWACS and Search Radars like e.g. EWR 1L13 etc. 
+-- Set up your SAM sites in the mission editor. Name the groups using a systematic approach like above.Can be e.g. AWACS or a combination of AWACS and Search Radars like e.g. EWR 1L13 etc. 
 -- Search Radars usually have "SR" or "STR" in their names. Use the encyclopedia in the mission editor to inform yourself.
 -- Set up your SHORAD systems. They need to be **close** to (i.e. around) the SAM sites to be effective. Use **one unit ** per group (multiple groups) for the SAM location. 
 -- Else, evasive manoevers might club up all defenders in one place. Red SA-15 TOR systems offer a good missile defense.
@@ -113174,10 +113173,11 @@ do
   
   --- Function to set how long INTEL DLINK remembers contacts.
   -- @param #MANTIS self
-  -- @param #number seconds Remember this many seconds
+  -- @param #number seconds Remember this many seconds, at least 5 seconds.
   -- @return #MANTIS self
   function MANTIS:SetDLinkCacheTime(seconds)
     self.DLinkCacheTime = math.abs(seconds or 120)
+    if self.DLinkCacheTime < 5 then self.DLinkCacheTime = 5 end
     return self
   end
 
