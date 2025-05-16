@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-05-15T13:19:42+02:00-4bab2ee1deb41274a143a17253b56b88f2a59098 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-05-16T13:43:03+02:00-b126cc00d05ec3e139864467443dbcd6177a1a21 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -20844,6 +20844,8 @@ end
 -- @param #string GroupName
 -- @return Wrapper.Group#GROUP The found GROUP.
 function DATABASE:FindGroup( GroupName )
+
+  if type(GroupName) ~= "string" or GroupName == "" then return end
 
   local GroupFound = self.GROUPS[GroupName]
   
@@ -59103,6 +59105,7 @@ AIRBASE.TheChannel = {
 -- * AIRBASE.Syria.Hatzor
 -- * AIRBASE.Syria.Palmashim
 -- * AIRBASE.Syria.Tel_Nof
+-- * AIRBASE.Syria.Marka
 --
 --@field Syria
 AIRBASE.Syria={
@@ -59176,6 +59179,7 @@ AIRBASE.Syria={
   ["Hatzor"] = "Hatzor",
   ["Palmashim"] = "Palmashim",
   ["Tel_Nof"] = "Tel Nof",
+  ["Marka"] = "Marka",
 }
 
 --- Airbases of the Mariana Islands map:
@@ -112219,6 +112223,7 @@ end
 -- @field #number SmokeDecoyColor Color to use, defaults to SMOKECOLOR.White
 -- @field #number checkcounter Counter for SAM Table refreshes.
 -- @field #number DLinkCacheTime Seconds after which cached contacts in DLink will decay.
+-- @field #boolean logsamstatus Log SAM status in dcs.log every cycle if true
 -- @extends Core.Base#BASE
 
 
@@ -112477,6 +112482,7 @@ MANTIS = {
   SmokeDecoyColor       = SMOKECOLOR.White,
   checkcounter          = 1,
   DLinkCacheTime        = 120,
+  logsamstatus          = false,
 }
 
 --- Advanced state enumerator
@@ -112802,6 +112808,8 @@ do
       table.insert(self.ewr_templates,awacs)
     end
     
+    self.logsamstatus = false
+    
     self:T({self.ewr_templates})
     
     self.SAM_Group = SET_GROUP:New():FilterPrefixes(self.SAM_Templates_Prefix):FilterCoalitions(self.Coalition)
@@ -112833,7 +112841,7 @@ do
     
     -- TODO Version
     -- @field #string version
-    self.version="0.9.29"
+    self.version="0.9.30"
     self:I(string.format("***** Starting MANTIS Version %s *****", self.version))
 
     --- FSM Functions ---
@@ -113850,7 +113858,9 @@ do
           local grpname = group:GetName()
           local grpcoord = group:GetCoordinate()
           local grprange, grpheight,type,blind  = self:_GetSAMRange(grpname)
-          local radaralive = group:IsSAM()
+          -- TODO the below might stop working at some point after some hours, needs testing
+          --local radaralive = group:IsSAM()
+          local radaralive = true
           table.insert( SAM_Tbl, {grpname, grpcoord, grprange, grpheight, blind, type}) -- make the table lighter, as I don't really use the zone here
           table.insert( SEAD_Grps, grpname )
           if type == MANTIS.SamType.LONG and radaralive then
@@ -114012,7 +114022,7 @@ do
         end --end alive
       end --end check     
     end --for loop
-    if self.debug or self.verbose then
+    if self.debug or self.verbose or self.logsamstatus then
       for _,_status in pairs(self.SamStateTracker) do
         if _status == "GREEN" then
           instatusgreen=instatusgreen+1
@@ -114033,8 +114043,9 @@ do
   -- @param #MANTIS self
   -- @param Functional.Detection#DETECTION_AREAS detection Detection object
   -- @param #boolean dlink
+  -- @param #boolean reporttolog
   -- @return #MANTIS self
-  function MANTIS:_Check(detection,dlink)
+  function MANTIS:_Check(detection,dlink,reporttolog)
     self:T(self.lid .. "Check")
     --get detected set
     local detset = detection:GetDetectedItemCoordinates()
@@ -114061,7 +114072,8 @@ do
       local samset = self:_GetSAMTable() -- table of i.1=names, i.2=coordinates, i.3=firing range, i.4=firing height
       instatusred, instatusgreen, activeshorads = self:_CheckLoop(samset,detset,dlink,self.maxclassic)
     end
-    if self.debug or self.verbose then
+    
+    local function GetReport()
       local statusreport = REPORT:New("\nMANTIS Status "..self.name)
       statusreport:Add("+-----------------------------+")
       statusreport:Add(string.format("+ SAM in RED State: %2d",instatusred))
@@ -114070,7 +114082,15 @@ do
        statusreport:Add(string.format("+ SHORAD active: %2d",activeshorads))  
       end
       statusreport:Add("+-----------------------------+")
+      return statusreport
+    end
+    
+    if self.debug or self.verbose then
+      local statusreport = GetReport()
       MESSAGE:New(statusreport:Text(),10):ToAll():ToLog()
+    elseif reporttolog == true then
+      local statusreport = GetReport()
+      MESSAGE:New(statusreport:Text(),10):ToLog()
     end
     return self
   end
@@ -114178,7 +114198,7 @@ do
     self:T({From, Event, To})
     -- check detection
     if not self.state2flag then
-      self:_Check(self.Detection,self.DLink)
+      self:_Check(self.Detection,self.DLink,self.logsamstatus)
     end
   
     local EWRAlive = self:_CheckAnyEWRAlive()
