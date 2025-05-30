@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-05-25T09:12:04+02:00-1889df4952ca803af55a69b96179ce3dd04ae4ba ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-05-30T11:13:50+02:00-dd5ca93f26a69932407927e161614f57c7475d4e ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -149638,7 +149638,7 @@ CSAR.AircraftType["CH-47Fbl1"] = 31
 
 --- CSAR class version.
 -- @field #string version
-CSAR.version="1.0.32"
+CSAR.version="1.0.33"
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- ToDo list
@@ -151441,7 +151441,8 @@ end
 --- (Internal) Determine distance to closest MASH.
 -- @param #CSAR self
 -- @param Wrapper.Unit#UNIT _heli Helicopter #UNIT
--- @return #CSAR self
+-- @return #number Distance in meters
+-- @return #string MASH Name as string
 function CSAR:_GetClosestMASH(_heli)
   self:T(self.lid .. " _GetClosestMASH")
   local _mashset = self.mash -- Core.Set#SET_GROUP
@@ -151453,31 +151454,13 @@ function CSAR:_GetClosestMASH(_heli)
   local _shortestDistance = -1
   local _distance = 0
   local _helicoord = _heli:GetCoordinate()
-  
-  local function GetCloseAirbase(coordinate,Coalition,Category)
-      
-      local a=coordinate:GetVec3()
-      local distmin=math.huge
-      local airbase=nil
-      for DCSairbaseID, DCSairbase in pairs(world.getAirbases(Coalition)) do
-        local b=DCSairbase:getPoint()
-  
-        local c=UTILS.VecSubstract(a,b)
-        local dist=UTILS.VecNorm(c)
-  
-        if dist<distmin and (Category==nil or Category==DCSairbase:getDesc().category) then
-          distmin=dist
-          airbase=DCSairbase
-        end
-  
-      end  
-      return distmin
-  end
+  local MashName = nil
   
   if self.allowFARPRescue then
     local position = _heli:GetCoordinate()
     local afb,distance = position:GetClosestAirbase(nil,self.coalition)
     _shortestDistance = distance
+    MashName = (afb ~= nil) and afb:GetName() or "Unknown"
   end
   
   for _,_mashes in pairs(MashSets)  do
@@ -151491,12 +151474,13 @@ function CSAR:_GetClosestMASH(_heli)
         _distance = self:_GetDistance(_helicoord, _mashcoord)
         if _distance ~= nil and (_shortestDistance == -1 or _distance < _shortestDistance) then
           _shortestDistance = _distance
+          MashName = _mashUnit:GetName() or "Unknown"
         end
     end
   end
   
   if _shortestDistance ~= -1 then
-      return _shortestDistance
+      return _shortestDistance, MashName
   else
       return -1
   end
