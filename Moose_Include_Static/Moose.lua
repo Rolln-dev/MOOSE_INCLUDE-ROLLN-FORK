@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-05-30T11:13:50+02:00-dd5ca93f26a69932407927e161614f57c7475d4e ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-05-30T18:37:50+02:00-c1997d9f70e44639b3d2fc055804026e961c1c6c ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -149588,6 +149588,7 @@ CSAR = {
   rescuedpilots = 0,
   limitmaxdownedpilots = true,
   maxdownedpilots = 10,
+  useFIFOLimitReplacement = false, -- If true, it will remove the oldest downed pilot when a new one is added, if the limit is reached.
   allheligroupset = nil,
   topmenuname = "CSAR",
   ADFRadioPwr = 1000,
@@ -150469,19 +150470,8 @@ function CSAR:_EventHandler(EventData)
         self:T("Double Ejection!")
         return self
       end
-      
-      -- limit no of pilots in the field.
-      if self.limitmaxdownedpilots and self:_ReachedPilotLimit() then
-        self:T("Maxed Downed Pilot!")
-        return self
-      end
-    
-    
-    -- TODO: Over water check --- EVENTS.LandingAfterEjection NOT triggered by DCS, so handle csarUsePara = true case
-    -- might create dual pilots in edge cases
-    
-    local wetfeet = false
-    
+
+
     local initdcscoord = nil
     local initcoord = nil
     if _event.id == EVENTS.Ejection then
@@ -150493,6 +150483,36 @@ function CSAR:_EventHandler(EventData)
       initcoord = COORDINATE:NewFromVec3(initdcscoord)
       self:T({initdcscoord})
     end
+
+      -- Remove downed pilot if already exists to replace with new one.
+      if _event.IniPlayerName then
+          local PilotTable = self.downedPilots --#CSAR.DownedPilot
+          local _foundPilot = nil
+          for _,_pilot in pairs(PilotTable) do
+            if _pilot.player == _event.IniPlayerName and _pilot.alive == true then
+              _foundPilot = _pilot
+              break
+            end
+          end
+          if _foundPilot then
+              self:T("Downed pilot already exists!")
+              _foundPilot.group:Destroy(false)
+              self:_RemoveNameFromDownedPilots(_foundPilot.name)
+              self:_CheckDownedPilotTable()
+          end
+      end
+
+      -- limit no of pilots in the field.
+      if self.limitmaxdownedpilots and self:_ReachedPilotLimit() then
+        self:T("Maxed Downed Pilot!")
+        return self
+      end
+    
+    
+    -- TODO: Over water check --- EVENTS.LandingAfterEjection NOT triggered by DCS, so handle csarUsePara = true case
+    -- might create dual pilots in edge cases
+    
+    local wetfeet = false
     
     --local surface = _unit:GetCoordinate():GetSurfaceType()
     local surface = initcoord:GetSurfaceType()
@@ -151726,11 +151746,26 @@ function CSAR:_ReachedPilotLimit()
    local limit = self.maxdownedpilots
    local islimited = self.limitmaxdownedpilots
    local count = self:_CountActiveDownedPilots()
-   if islimited and (count >= limit) then
-      return true
-   else
-      return false
-   end
+    if islimited and (count >= limit) then
+        if self.useFIFOLimitReplacement then
+            local oldIndex  = -1
+            local oldDownedPilot = nil
+            for _index, _downedpilot in pairs(self.downedPilots) do
+                oldIndex = _index
+                oldDownedPilot = _downedpilot
+                break
+            end
+            if oldDownedPilot then
+                oldDownedPilot.group:Destroy(false)
+                oldDownedPilot.alive = false
+                self:_CheckDownedPilotTable()
+                return false
+            end
+        end
+        return true
+    else
+        return false
+    end
 end
 
   --- User - Function to add onw SET_GROUP Set-up for pilot filtering and assignment.
