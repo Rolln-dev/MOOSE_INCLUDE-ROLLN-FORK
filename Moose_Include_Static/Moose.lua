@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-06-08T18:43:01+02:00-eeeeda4e5e1550bf2c1b2aaaebe347b93b4eb48f ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-06-10T18:05:02+02:00-0aeb1fc6afc2c3e2fcab252f43925d44b11dd0e7 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -3332,6 +3332,13 @@ end
 function UTILS.GetReportingName(Typename)
 
   local typename = string.lower(Typename)
+  
+  -- special cases - Shark and Manstay have "A-50" in the name
+  if string.find(typename,"ka-50",1,true) then
+    return "Shark"
+  elseif string.find(typename,"a-50",1,true) then
+    return "Mainstay"
+  end
 
   for name, value in pairs(ENUMS.ReportingName.NATO) do
     local svalue = string.lower(value)
