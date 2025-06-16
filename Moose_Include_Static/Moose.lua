@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-06-15T13:14:05+02:00-a53763221c4cd17246ae550e6ca8c489289a4b6f ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-06-15T17:01:58+02:00-cbcc893ce5448885818c2bd43fd8d998ef7a7535 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -59141,7 +59141,6 @@ AIRBASE.TheChannel = {
 -- * AIRBASE.Syria.Al_Dumayr
 -- * AIRBASE.Syria.Al_Qusayr
 -- * AIRBASE.Syria.Aleppo
--- * AIRBASE.Syria.Amman
 -- * AIRBASE.Syria.An_Nasiriyah
 -- * AIRBASE.Syria.At_Tanf
 -- * AIRBASE.Syria.Bassel_Al_Assad
@@ -59203,7 +59202,7 @@ AIRBASE.TheChannel = {
 -- * AIRBASE.Syria.Wujah_Al_Hajar
 -- * AIRBASE.Syria.Ben_Gurion 
 -- * AIRBASE.Syria.Hatzor
--- * AIRBASE.Syria.Palmashim
+-- * AIRBASE.Syria.Palmachim
 -- * AIRBASE.Syria.Tel_Nof
 -- * AIRBASE.Syria.Marka
 --
@@ -59215,7 +59214,6 @@ AIRBASE.Syria={
   ["Al_Dumayr"] = "Al-Dumayr",
   ["Al_Qusayr"] = "Al Qusayr",
   ["Aleppo"] = "Aleppo",
-  ["Amman"] = "Amman",
   ["An_Nasiriyah"] = "An Nasiriyah",
   ["At_Tanf"] = "At Tanf",
   ["Bassel_Al_Assad"] = "Bassel Al-Assad",
@@ -59247,6 +59245,7 @@ AIRBASE.Syria={
   ["Kuweires"] = "Kuweires",
   ["Lakatamia"] = "Lakatamia",
   ["Larnaca"] = "Larnaca",
+  ["Marka"] = "Marka",
   ["Marj_Ruhayyil"] = "Marj Ruhayyil",
   ["Marj_as_Sultan_North"] = "Marj as Sultan North",
   ["Marj_as_Sultan_South"] = "Marj as Sultan South",
@@ -59277,9 +59276,8 @@ AIRBASE.Syria={
   ["Wujah_Al_Hajar"] = "Wujah Al Hajar",
   ["Ben_Gurion"] = "Ben Gurion",
   ["Hatzor"] = "Hatzor",
-  ["Palmashim"] = "Palmashim",
+  ["Palmachim"] = "Palmachim",
   ["Tel_Nof"] = "Tel Nof",
-  ["Marka"] = "Marka",
 }
 
 --- Airbases of the Mariana Islands map:
@@ -142420,7 +142418,7 @@ CTLD.FixedWingTypes = {
 
 --- CTLD class version.
 -- @field #string version
-CTLD.version="1.3.34"
+CTLD.version="1.3.35"
 
 --- Instantiate a new CTLD.
 -- @param #CTLD self
@@ -146977,16 +146975,22 @@ function CTLD:SmokeZoneNearBy(Unit, Flare)
     for index,cargozone in pairs(zones[i]) do
       local CZone = cargozone --#CTLD.CargoZone
       local zonename = CZone.name
-      local zone = nil
+      local zone = nil -- Core.Zone#ZONE_RADIUS
+      local airbasezone = false
       if i == 4 then
         zone = UNIT:FindByName(zonename)
       else
         zone = ZONE:FindByName(zonename)
         if not zone then
           zone = AIRBASE:FindByName(zonename):GetZone()
+          airbasezone = true
         end
       end
       local zonecoord = zone:GetCoordinate()
+      -- Avoid smoke/flares on runways
+      if (i==1 or 1==3) and airbasezone==true and zone:IsInstanceOf("ZONE_BASE") then
+        zonecoord = zone:GetRandomCoordinate(inner,outer,{land.SurfaceType.LAND})
+      end
     if zonecoord then
       local active = CZone.active
       local color = CZone.color
