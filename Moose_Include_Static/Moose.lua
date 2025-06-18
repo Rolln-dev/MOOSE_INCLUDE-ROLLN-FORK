@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-06-15T17:01:58+02:00-cbcc893ce5448885818c2bd43fd8d998ef7a7535 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-06-18T14:29:34+02:00-8ec86973c66a37871dde49f90ddc38d0989b52a2 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -42385,8 +42385,9 @@ end
 function SPAWNSTATIC:SpawnFromZone(Zone, Heading, NewName)
 
   -- Spawn the new static at the center of the zone.
-  local Static = self:SpawnFromPointVec2( Zone:GetPointVec2(), Heading, NewName )
-
+  --local Static = self:SpawnFromPointVec2( Zone:GetPointVec2(), Heading, NewName )
+  local Static = self:SpawnFromCoordinate(Zone:GetCoordinate(), Heading, NewName)
+    
   return Static
 end
 
@@ -182254,7 +182255,7 @@ MSRS.Voices = {
        ["en_GB_Wavenet_F"] = 'en-GB-Wavenet-N', -- [13] FEMALE
        ["en_GB_Wavenet_O"] = 'en-GB-Wavenet-O', -- [12] MALE
        ["en_GB_Wavenet_N"] = 'en-GB-Wavenet-N', -- [13] FEMALE     
-       ["en_US_Wavenet_A"] = 'en-US-Wavenet-N', -- [14] MALE
+       ["en_US_Wavenet_A"] = 'en-US-Wavenet-A', -- [14] MALE
        ["en_US_Wavenet_B"] = 'en-US-Wavenet-B', -- [15] MALE
        ["en_US_Wavenet_C"] = 'en-US-Wavenet-C', -- [16] FEMALE
        ["en_US_Wavenet_D"] = 'en-US-Wavenet-D', -- [17] MALE
