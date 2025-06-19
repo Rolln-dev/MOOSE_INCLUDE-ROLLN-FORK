@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-06-18T14:29:34+02:00-8ec86973c66a37871dde49f90ddc38d0989b52a2 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-06-19T09:15:42+02:00-2594c5bbf0be4bb7864406ec888a4f3488397842 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -11575,7 +11575,7 @@ function SCHEDULEDISPATCHER:Stop( Scheduler, CallID )
     local Schedule = self.Schedule[Scheduler][CallID] -- #SCHEDULEDISPATCHER.ScheduleData
 
     -- Only stop when there is a ScheduleID defined for the CallID. So, when the scheduler was stopped before, do nothing.
-    if Schedule.ScheduleID then
+    if Schedule and Schedule.ScheduleID then
 
       self:T( string.format( "SCHEDULEDISPATCHER stopping scheduler CallID=%s, ScheduleID=%s", tostring( CallID ), tostring( Schedule.ScheduleID ) ) )
 
