@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-06-19T09:15:42+02:00-2594c5bbf0be4bb7864406ec888a4f3488397842 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-06-20T14:01:24+02:00-3cabc07d58413bf7253dc751c75224a88eeedebb ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -59521,6 +59521,12 @@ AIRBASE.Kola = {
   ["Enontekio"] = "Enontekio",
   ["Evenes"] = "Evenes",
   ["Hosio"] = "Hosio",
+  ["Kilpyavr"] = "Kilpyavr",
+  ["Afrikanda"] = "Afrikanda",
+  ["Kalevala"] = "Kalevala",
+  ["Koshka_Yavr"] = "Koshka Yavr",
+  ["Poduzhemye"] = "Poduzhemye",
+  ["Luostari_Pechenga"] = "Luostari Pechenga",
 }
 
 --- Airbases of the Afghanistan map
