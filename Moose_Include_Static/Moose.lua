@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-06-20T14:01:24+02:00-3cabc07d58413bf7253dc751c75224a88eeedebb ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-06-23T22:41:16+02:00-6d9c3fd0aac3bc91aa57c088ce94d80a422880bb ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -21679,7 +21679,7 @@ function DATABASE:_EventOnBirth( Event )
       if PlayerName then
 
         -- Debug info.
-        self:I(string.format("Player '%s' joined unit '%s' of group '%s'", tostring(PlayerName), tostring(Event.IniDCSUnitName), tostring(Event.IniDCSGroupName)))
+        self:I(string.format("Player '%s' joined unit '%s' (%s) of group '%s'", tostring(PlayerName), tostring(Event.IniDCSUnitName), tostring(Event.IniTypeName), tostring(Event.IniDCSGroupName)))
               
         -- Add client in case it does not exist already.
         if client == nil or (client and client:CountPlayers() == 0) then
@@ -116001,6 +116001,7 @@ end
 --    * [USS George Washington](https://en.wikipedia.org/wiki/USS_George_Washington_\(CVN-73\)) (CVN-73) [Super Carrier Module]
 --    * [USS Harry S. Truman](https://en.wikipedia.org/wiki/USS_Harry_S._Truman) (CVN-75) [Super Carrier Module]
 --    * [USS Forrestal](https://en.wikipedia.org/wiki/USS_Forrestal_\(CV-59\)) (CV-59) [Heatblur Carrier Module]
+--    * [Essex Class](https://en.wikipedia.org/wiki/Essex-class_aircraft_carrier) (CV-11) [Magnitude 3 Carrier Module]
 --    * [HMS Hermes](https://en.wikipedia.org/wiki/HMS_Hermes_\(R12\)) (R12)
 --    * [HMS Invincible](https://en.wikipedia.org/wiki/HMS_Invincible_\(R05\)) (R05)
 --    * [USS Tarawa](https://en.wikipedia.org/wiki/USS_Tarawa_\(LHA-1\)) (LHA-1)
@@ -116016,6 +116017,7 @@ end
 --    * [AV-8B N/A Harrier](https://forums.eagle.ru/forumdisplay.php?f=555) (Player & AI)
 --    * [T-45C Goshawk](https://forum.dcs.world/topic/203816-vnao-t-45-goshawk/) (VNAO mod) (Player & AI)
 --    * [FE/A-18E/F/G Superhornet](https://forum.dcs.world/topic/316971-cjs-super-hornet-community-mod-v20-official-thread/) (CJS mod) (Player & AI)
+--    * [F4U-1D Corsair](https://forum.dcs.world/forum/781-f4u-1d/) (Player & AI)
 --    * F/A-18C Hornet (AI)
 --    * F-14A Tomcat (AI)
 --    * E-2D Hawkeye (AI)
@@ -117252,6 +117254,8 @@ AIRBOSS = {
 -- @field #string RHINOE F/A-18E Superhornet (mod).
 -- @field #string RHINOF F/A-18F Superhornet (mod).
 -- @field #string GROWLER FEA-18G Superhornet (mod).
+-- @field #string CORSAIR F4U-1D Corsair.
+-- @field #string CORSAIR_CW F4U-1D Corsair Mk.4 (clipped wing).
 AIRBOSS.AircraftCarrier={
   AV8B="AV8BNA",
   HORNET="FA-18C_hornet",
@@ -117268,6 +117272,8 @@ AIRBOSS.AircraftCarrier={
   RHINOE="FA-18E",
   RHINOF="FA-18F",
   GROWLER="EA-18G",
+  CORSAIR="F4U-1D",
+  CORSAIR_CW="F4U-1D CW",  
 }
 
 --- Carrier types.
@@ -117279,6 +117285,7 @@ AIRBOSS.AircraftCarrier={
 -- @field #string TRUMAN USS Harry S. Truman (CVN-75) [Super Carrier Module]
 -- @field #string FORRESTAL USS Forrestal (CV-59) [Heatblur Carrier Module]
 -- @field #string VINSON USS Carl Vinson (CVN-70) [Deprecated!]
+-- @field #string ESSEX Essex class carrier (e.g. USS Yorktown (CV-10)) [Magnitude 3 Carrier Module]
 -- @field #string HERMES HMS Hermes (R12) [V/STOL Carrier]
 -- @field #string INVINCIBLE HMS Invincible (R05) [V/STOL Carrier]
 -- @field #string TARAWA USS Tarawa (LHA-1) [V/STOL Carrier]
@@ -117294,6 +117301,7 @@ AIRBOSS.CarrierType = {
   STENNIS = "Stennis",
   FORRESTAL = "Forrestal",
   VINSON = "VINSON",
+  ESSEX = "Essex",
   HERMES = "HERMES81",
   INVINCIBLE = "hms_invincible",
   TARAWA = "LHA_Tarawa",
@@ -117716,7 +117724,7 @@ AIRBOSS.MenuF10Root = nil
 
 --- Airboss class version.
 -- @field #string version
-AIRBOSS.version = "1.3.3"
+AIRBOSS.version = "1.4.0"
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- TODO list
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -117982,6 +117990,8 @@ function AIRBOSS:New( carriername, alias )
   elseif self.carriertype == AIRBOSS.CarrierType.VINSON then
     -- Carl Vinson is legacy now.
     self:_InitStennis()
+  elseif self.carriertype == AIRBOSS.CarrierType.ESSEX then
+    self:_InitEssex()
   elseif self.carriertype == AIRBOSS.CarrierType.HERMES then
     -- Hermes parameters.
     self:_InitHermes()
@@ -118835,23 +118845,28 @@ end
 function AIRBOSS:SetGlideslopeErrorThresholds(_max,_min, High, HIGH, Low, LOW)
 
   --Check if V/STOL Carrier
-  if self.carriertype == AIRBOSS.CarrierType.INVINCIBLE or self.carriertype == AIRBOSS.CarrierType.HERMES or self.carriertype == AIRBOSS.CarrierType.TARAWA or self.carriertype == AIRBOSS.CarrierType.AMERICA or self.carriertype == AIRBOSS.CarrierType.JCARLOS or self.carriertype == AIRBOSS.CarrierType.CANBERRA then
+  if self.carriertype == AIRBOSS.CarrierType.INVINCIBLE or 
+    self.carriertype == AIRBOSS.CarrierType.HERMES or 
+    self.carriertype == AIRBOSS.CarrierType.TARAWA or 
+    self.carriertype == AIRBOSS.CarrierType.AMERICA or 
+    self.carriertype == AIRBOSS.CarrierType.JCARLOS or 
+    self.carriertype == AIRBOSS.CarrierType.CANBERRA then
 
-  -- allow a larger GSE for V/STOL operations --Pene Testing
-  self.gle._max=_max or  0.7
-  self.gle.High=High or  1.4
-  self.gle.HIGH=HIGH or  1.9
-  self.gle._min=_min or -0.5
-  self.gle.Low=Low   or -1.2
-  self.gle.LOW=LOW   or -1.5
-  -- CVN values
+    -- allow a larger GSE for V/STOL operations --Pene Testing
+    self.gle._max=_max or  0.7
+    self.gle.High=High or  1.4
+    self.gle.HIGH=HIGH or  1.9
+    self.gle._min=_min or -0.5
+    self.gle.Low=Low   or -1.2
+    self.gle.LOW=LOW   or -1.5
   else
-  self.gle._max=_max or  0.4
-  self.gle.High=High or  0.8
-  self.gle.HIGH=HIGH or  1.5
-  self.gle._min=_min or -0.3
-  self.gle.Low=Low   or -0.6
-  self.gle.LOW=LOW   or -0.9
+    -- CVN values    
+    self.gle._max=_max or  0.4
+    self.gle.High=High or  0.8
+    self.gle.HIGH=HIGH or  1.5
+    self.gle._min=_min or -0.3
+    self.gle.Low=Low   or -0.6
+    self.gle.LOW=LOW   or -0.9
   end
 
   return self
@@ -120596,6 +120611,51 @@ function AIRBOSS:_InitForrestal()
 
 end
 
+--- Init parameters for Essec class carriers.
+-- @param #AIRBOSS self
+function AIRBOSS:_InitEssex()
+
+  -- Init Nimitz as default.
+  self:_InitNimitz()
+
+  -- Carrier Parameters.
+  self.carrierparam.sterndist = -126
+  self.carrierparam.deckheight = 19.27 --DCS World\CoreMods\tech\M3 WWII PTO units\Database\Essex_Class_Carrier_1944.lua
+
+  -- Total size of the carrier (approx as rectangle).
+  self.carrierparam.totlength = 268
+  self.carrierparam.totwidthport = 23
+  self.carrierparam.totwidthstarboard = 23
+
+  -- Landing runway.
+  self.carrierparam.rwyangle = 0.0
+  self.carrierparam.rwylength = 265
+  self.carrierparam.rwywidth = 20
+
+  -- Wires.
+  self.carrierparam.wire1  = 21.9
+  self.carrierparam.wire2  = 28.3
+  self.carrierparam.wire3  = 34.7
+  self.carrierparam.wire4  = 41.1
+  self.carrierparam.wire5  = 47.4
+  self.carrierparam.wire6  = 53.7
+  self.carrierparam.wire7  = 59.0
+
+  self.carrierparam.wire8  = 64.1
+  self.carrierparam.wire9  = 72.7
+  self.carrierparam.wire10 = 78.0
+  self.carrierparam.wire11 = 85.5
+
+  self.carrierparam.wire12 = 105.9
+  self.carrierparam.wire13 = 113.3
+  self.carrierparam.wire14 = 121.0
+  self.carrierparam.wire15 = 128.5
+
+  -- Landing distance.
+  self.carrierparam.landingdist = self.carrierparam.sterndist+self.carrierparam.wire3
+
+end
+
 --- Init parameters for R12 HMS Hermes carrier.
 -- @param #AIRBOSS self
 function AIRBOSS:_InitHermes()
@@ -121298,7 +121358,8 @@ function AIRBOSS:_GetAircraftAoA( playerData )
   local goshawk = playerData.actype == AIRBOSS.AircraftCarrier.T45C
   local skyhawk = playerData.actype == AIRBOSS.AircraftCarrier.A4EC
   local harrier = playerData.actype == AIRBOSS.AircraftCarrier.AV8B
-  local tomcat = playerData.actype == AIRBOSS.AircraftCarrier.F14A or playerData.actype == AIRBOSS.AircraftCarrier.F14B
+  local tomcat  = playerData.actype == AIRBOSS.AircraftCarrier.F14A or playerData.actype == AIRBOSS.AircraftCarrier.F14B
+  local corsair = playerData.actype == AIRBOSS.AircraftCarrier.CORSAIR or playerData.actype == AIRBOSS.AircraftCarrier.CORSAIR_CW
 
   -- Table with AoA values.
   local aoa = {} -- #AIRBOSS.AircraftAoA
@@ -121343,7 +121404,6 @@ function AIRBOSS:_GetAircraftAoA( playerData )
     aoa.Fast = 8.25 -- =17.5/2
     aoa.FAST = 8.00 -- =16.5/2
   elseif harrier then
-
     -- AV-8B Harrier parameters. Tuning done on the Fast AoA to allow for abeam and ninety at Nozzles 55. Pene testing
     aoa.SLOW       = 16.0
     aoa.Slow       = 13.5
@@ -121352,7 +121412,15 @@ function AIRBOSS:_GetAircraftAoA( playerData )
     aoa.OnSpeedMin =  9.5
     aoa.Fast       =  8.0
     aoa.FAST       =  7.5
-
+  elseif corsair then
+    -- F4U-1D Corsair parameters.
+    aoa.SLOW       = 16.0
+    aoa.Slow       = 13.5
+    aoa.OnSpeedMax = 12.5
+    aoa.OnSpeed    = 10.0
+    aoa.OnSpeedMin =  9.5
+    aoa.Fast       =  8.0
+    aoa.FAST       =  7.5
   end
 
   return aoa
@@ -121465,6 +121533,7 @@ function AIRBOSS:_GetAircraftParameters( playerData, step )
   local tomcat = playerData.actype == AIRBOSS.AircraftCarrier.F14A or playerData.actype == AIRBOSS.AircraftCarrier.F14B
   local harrier = playerData.actype == AIRBOSS.AircraftCarrier.AV8B
   local goshawk = playerData.actype == AIRBOSS.AircraftCarrier.T45C
+  local corsair = playerData.actype == AIRBOSS.AircraftCarrier.CORSAIR or playerData.actype == AIRBOSS.AircraftCarrier.CORSAIR_CW
 
   -- Return values.
   local alt
@@ -121524,6 +121593,9 @@ function AIRBOSS:_GetAircraftParameters( playerData, step )
     elseif goshawk then
       alt = UTILS.FeetToMeters( 800 )
       speed = UTILS.KnotsToMps( 300 )
+    elseif corsair then
+      alt = UTILS.FeetToMeters( 300 )
+      speed = UTILS.KnotsToMps( 120 )
     end
 
   elseif step == AIRBOSS.PatternStep.BREAKENTRY then
@@ -121537,6 +121609,9 @@ function AIRBOSS:_GetAircraftParameters( playerData, step )
     elseif goshawk then
       alt = UTILS.FeetToMeters( 800 )
       speed = UTILS.KnotsToMps( 300 )
+    elseif corsair then
+      alt = UTILS.FeetToMeters( 200 )
+      speed = UTILS.KnotsToMps( 110 )
     end
 
   elseif step == AIRBOSS.PatternStep.EARLYBREAK then
@@ -121545,6 +121620,9 @@ function AIRBOSS:_GetAircraftParameters( playerData, step )
       alt = UTILS.FeetToMeters( 800 )
     elseif skyhawk then
       alt = UTILS.FeetToMeters( 600 )
+    elseif corsair then
+      alt = UTILS.FeetToMeters( 200 )
+      speed = UTILS.KnotsToMps( 100 )
     end
 
   elseif step == AIRBOSS.PatternStep.LATEBREAK then
@@ -121553,6 +121631,9 @@ function AIRBOSS:_GetAircraftParameters( playerData, step )
       alt = UTILS.FeetToMeters( 800 )
     elseif skyhawk then
       alt = UTILS.FeetToMeters( 600 )
+    elseif corsair then
+      alt = UTILS.FeetToMeters( 150 )
+      speed = UTILS.KnotsToMps( 100 )
     end
 
   elseif step == AIRBOSS.PatternStep.ABEAM then
@@ -121561,6 +121642,9 @@ function AIRBOSS:_GetAircraftParameters( playerData, step )
       alt = UTILS.FeetToMeters( 600 )
     elseif skyhawk then
       alt = UTILS.FeetToMeters( 500 )
+    elseif corsair then
+      alt = UTILS.FeetToMeters( 150 )
+      speed = UTILS.KnotsToMps( 90 )
     end
 
     aoa = aoaac.OnSpeed
@@ -121585,6 +121669,9 @@ function AIRBOSS:_GetAircraftParameters( playerData, step )
       alt = UTILS.FeetToMeters( 500 )
     elseif harrier then
       alt = UTILS.FeetToMeters( 425 )
+    elseif corsair then
+      alt = UTILS.FeetToMeters( 90 )
+      speed = UTILS.KnotsToMps( 90 )      
     end
 
     aoa = aoaac.OnSpeed
@@ -121597,6 +121684,8 @@ function AIRBOSS:_GetAircraftParameters( playerData, step )
       alt = UTILS.FeetToMeters( 430 ) -- Tomcat should be a bit higher as it intercepts the GS a bit higher.
     elseif skyhawk then
       alt = UTILS.FeetToMeters( 370 ) -- ?
+    elseif corsair then
+      alt = UTILS.FeetToMeters( 80 )
     end
     -- Harrier wont get into wake pos. Runway is not angled and it stays port.
 
@@ -121612,6 +121701,8 @@ function AIRBOSS:_GetAircraftParameters( playerData, step )
       alt = UTILS.FeetToMeters( 300 ) -- ?
     elseif harrier then
       alt=UTILS.FeetToMeters(312)-- 300-325 ft
+    elseif corsair then
+      alt = UTILS.FeetToMeters( 80 )      
     end
 
     aoa = aoaac.OnSpeed
@@ -122488,6 +122579,8 @@ function AIRBOSS:_LandAI( flight )
     Speed = UTILS.KnotsToKmph( 175 )
   elseif flight.actype == AIRBOSS.AircraftCarrier.S3B or flight.actype == AIRBOSS.AircraftCarrier.S3BTANKER then
     Speed = UTILS.KnotsToKmph( 140 )
+  elseif flight.actype == AIRBOSS.AircraftCarrier.CORSAIR or flight.actype == AIRBOSS.AircraftCarrier.CORSAIR_CW then
+    Speed = UTILS.KnotsToKmph( 100 )
   end
 
   -- Carrier position.
@@ -126283,6 +126376,9 @@ function AIRBOSS:_GetSternCoord()
   elseif self.carriertype == AIRBOSS.CarrierType.FORRESTAL then
     -- Forrestal
     self.sterncoord:Translate( self.carrierparam.sterndist, hdg, true, true ):Translate( 7.5, FB + 90, true, true )
+  elseif self.carriertype == AIRBOSS.CarrierType.ESSEX then
+    -- Forrestal
+    self.sterncoord:Translate( self.carrierparam.sterndist, hdg, true, true ):Translate( -1, FB + 90, true, true )
   else
     -- Nimitz SC: translate 8 meters starboard wrt Final bearing.
     self.sterncoord:Translate( self.carrierparam.sterndist, hdg, true, true ):Translate( 9.5, FB + 90, true, true )
@@ -143086,6 +143182,9 @@ function CTLD:_EventHandler(EventData)
       local _group = event.IniGroup
       local _unit = event.IniUnit
       self:_RefreshLoadCratesMenu(_group, _unit)
+    if self:IsFixedWing(_unit) and self.enableFixedWing then
+      self:_RefreshDropCratesMenu(_group, _unit)
+    end
     end
   elseif event.id == EVENTS.PlayerLeaveUnit or event.id == EVENTS.UnitLost then
     -- remove from pilot table
@@ -145899,7 +145998,17 @@ function CTLD:_UnloadSingleCrateSet(Group, Unit, setIndex)
     cObj:SetWasDropped(true)
     cObj:SetHasMoved(true)
   end
-
+local cname  = crateObj:GetName() or "Unknown"
+local count  = #chunk
+if needed > 1 then
+if count == needed then
+    self:_SendMessage(string.format("Dropped %d %s.", 1, cname), 10, false, Group)
+else
+    self:_SendMessage(string.format("Dropped %d/%d crate(s) of %s.", count, needed, cname), 15, false, Group)
+end
+else
+self:_SendMessage(string.format("Dropped %d %s(s).", count, cname), 10, false, Group)
+end
   -- Rebuild the cargo list to remove the dropped crates
   local loadedData = self.Loaded_Cargo[unitName]
   if loadedData and loadedData.Cargo then
@@ -146018,8 +146127,10 @@ function CTLD:_RefreshDropCratesMenu(Group, Unit)
       --------------------------------------------------------------------
       local mAll=MENU_GROUP:New(Group,"Drop ALL crates",dropCratesMenu)
       MENU_GROUP_COMMAND:New(Group,"Drop",mAll,self._UnloadCrates,self,Group,Unit)
-      MENU_GROUP_COMMAND:New(Group,"Drop and build",mAll,self._DropAndBuild,self,Group,Unit)
-  
+      if not ( self:IsUnitInAir(Unit) and self:IsFixedWing(Unit) ) then
+        MENU_GROUP_COMMAND:New(Group,"Drop and build",mAll,self._DropAndBuild,self,Group,Unit)
+      end
+
       self.CrateGroupList=self.CrateGroupList or{}
       self.CrateGroupList[Unit:GetName()]={}
   
@@ -146040,7 +146151,9 @@ function CTLD:_RefreshDropCratesMenu(Group, Unit)
             local setIndex=#self.CrateGroupList[Unit:GetName()]
             local mSet=MENU_GROUP:New(Group,label,dropCratesMenu)
             MENU_GROUP_COMMAND:New(Group,"Drop",mSet,self._UnloadSingleCrateSet,self,Group,Unit,setIndex)
+            if not ( self:IsUnitInAir(Unit) and self:IsFixedWing(Unit) ) then
             MENU_GROUP_COMMAND:New(Group,"Drop and build",mSet,self._DropSingleAndBuild,self,Group,Unit,setIndex)
+            end
             i=i+needed
           else
             local chunk={}
@@ -146167,6 +146280,8 @@ function CTLD:_UnloadSingleTroopByID(Group, Unit, chunkID)
       foundCargo:SetWasDropped(true)
       if cType == CTLD_CARGO.Enum.ENGINEERS then
         self.Engineers = self.Engineers + 1
+          local grpname = self.DroppedTroops[self.TroopCounter]:GetName()
+        self.EngineersInField[self.Engineers] = CTLD_ENGINEERING:New(name, grpname)
         self:_SendMessage(string.format("Dropped Engineers %s into action!", name), 10, false, Group)
       else
         self:_SendMessage(string.format("Dropped Troops %s into action!", name), 10, false, Group)
