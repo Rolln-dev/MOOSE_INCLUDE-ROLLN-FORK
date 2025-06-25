@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-06-23T22:41:16+02:00-6d9c3fd0aac3bc91aa57c088ce94d80a422880bb ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-06-24T19:26:36+02:00-a467fabdc8869215f7404c343245a274bd5808d6 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -59302,6 +59302,35 @@ AIRBASE.MarianaIslands = {
   ["Rota_Intl"] = "Rota Intl",
   ["Saipan_Intl"] = "Saipan Intl",
   ["Tinian_Intl"] = "Tinian Intl",
+}
+
+--- Airbase of the Marianas WWII map
+--
+-- * AIRBASE.MarianaIslandsWWII.Agana
+-- * AIRBASE.MarianaIslandsWWII.Airfield_3
+-- * AIRBASE.MarianaIslandsWWII.Charon_Kanoa
+-- * AIRBASE.MarianaIslandsWWII.Gurguan_Point
+-- * AIRBASE.MarianaIslandsWWII.Isley
+-- * AIRBASE.MarianaIslandsWWII.Kagman
+-- * AIRBASE.MarianaIslandsWWII.Marpi
+-- * AIRBASE.MarianaIslandsWWII.Orote
+-- * AIRBASE.MarianaIslandsWWII.Pagan
+-- * AIRBASE.MarianaIslandsWWII.Rota
+-- * AIRBASE.MarianaIslandsWWII.Ushi
+-- @field AIRBASE.MarianaIslandsWWII
+AIRBASE.MarianaIslandsWWII = 
+{
+  ["Agana"] = "Agana",
+  ["Airfield_3"] = "Airfield 3",
+  ["Charon_Kanoa"] = "Charon Kanoa",
+  ["Gurguan_Point"] = "Gurguan Point",
+  ["Isley"] = "Isley",
+  ["Kagman"] = "Kagman",
+  ["Marpi"] = "Marpi",
+  ["Orote"] = "Orote",
+  ["Pagan"] = "Pagan",
+  ["Rota"] = "Rota",
+  ["Ushi"] = "Ushi",
 }
 
 --- Airbases of the South Atlantic map:
@@ -142953,6 +142982,7 @@ function CTLD:New(Coalition, Prefixes, Alias)
   -- @param #string To State.
   -- @param Wrapper.Group#GROUP Group Group Object.
   -- @param Wrapper.Unit#UNIT Unit Unit Object.
+  -- @param CargoName The name of the cargo being built.
   -- @return #CTLD self
 
   --- FSM Function OnAfterCratesRepairStarted. Info event that a repair has been started.
@@ -143934,8 +143964,12 @@ function CTLD:_GetCrates(Group, Unit, Cargo, number, drop, pack)
       if cratedistance > self.CrateDistance then cratedistance = self.CrateDistance end
       -- altered heading logic
       -- DONE: right standard deviation?
-      rheading = UTILS.RandomGaussian(0,30,-90,90,100)
-      rheading = math.fmod((heading + rheading), 360)
+        if self:IsUnitInAir(Unit) and self:IsFixedWing(Unit) then
+          rheading = math.random(20,60)
+        else
+          rheading = UTILS.RandomGaussian(0, 30, -90, 90, 100)
+        end
+      rheading=math.fmod((heading+rheading),360)
       cratecoord = position:Translate(cratedistance,rheading)
     else
       cratedistance = (row-1)*6
@@ -145072,7 +145106,7 @@ function CTLD:_BuildCrates(Group, Unit,Engineering,MultiDrop)
               local buildtimer = TIMER:New(self._BuildObjectFromCrates,self,Group,Unit,build,false,Group:GetCoordinate(),MultiDrop)
               buildtimer:Start(self.buildtime)
               self:_SendMessage(string.format("Build started, ready in %d seconds!",self.buildtime),15,false,Group)
-              self:__CratesBuildStarted(1,Group,Unit)
+              self:__CratesBuildStarted(1,Group,Unit,build.Name) 
               self:_RefreshDropTroopsMenu(Group,Unit)
           else
             self:_BuildObjectFromCrates(Group,Unit,build,false,nil,MultiDrop)
