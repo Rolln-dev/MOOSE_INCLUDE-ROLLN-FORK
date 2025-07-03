@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-06-24T19:26:36+02:00-a467fabdc8869215f7404c343245a274bd5808d6 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-03T15:14:11+02:00-33e63a4819c53f3a581a6c657d071eda43bda38a ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -5846,6 +5846,53 @@ end
 --- The fog animation will be discarded and whatever the current thickness and visibility are set to will remain
 function UTILS.Weather.StopFogAnimation()
   return world.weather.setFogAnimation({})
+end
+
+--- Find a ME created zone by its name
+function UTILS.GetEnvZone(name)
+    for _,v in ipairs(env.mission.triggers.zones) do
+        if v.name == name then
+            return v
+        end
+    end
+end
+
+--- Show a helper gate at a DCS#Vec3 position
+-- @param DCS#Vec3 pos The position
+-- @param number heading Heading in degrees, can be 0..359 degrees
+function UTILS.ShowHelperGate(pos, heading)
+    net.dostring_in("mission",string.format("a_show_helper_gate(%s, %s, %s, %f)", pos.x, pos.y, pos.z, math.rad(heading)))
+end
+
+--- Shell a zone, zone must ME created
+-- @param #string name The name of the ME created zone
+-- @param #number power Equals kg of TNT, e.g. 75
+-- @param #count Number of shells simulated
+function UTILS.ShellZone(name, power, count)
+    local z = UTILS.GetEnvZone(name)
+    if z then
+        net.dostring_in("mission",string.format("a_shelling_zone(%d, %d, %d)", z.zoneId, power, count))
+    end
+end
+
+--- Remove objects from a zone, zone must ME created
+-- @param #string name The name of the ME created zone
+-- @param #number type Type of objects to remove can be 0:all, 1: trees, 2:objects
+function UTILS.RemoveObjects(name, type)
+    local z = UTILS.GetEnvZone(name)
+    if z then
+        net.dostring_in("mission",string.format("a_remove_scene_objects(%d, %d)", z.zoneId, type))
+    end
+end
+
+--- Remove scenery objects from a zone, zone must ME created
+-- @param #string name The name of the ME created zone
+-- @param #number level Level of removal
+function UTILS.DestroyScenery(name, level)
+    local z = UTILS.GetEnvZone(name)
+    if z then
+        net.dostring_in("mission",string.format("a_scenery_destruction_zone(%d, %d)", z.zoneId, level))
+    end
 end
 --- **Utils** - Lua Profiler.
 --
@@ -18880,12 +18927,7 @@ function ZONE_POLYGON:Scan( ObjectCategories, UnitCategories )
 
   local vectors = self:GetBoundingSquare()
 
-  local minVec3 = {x=vectors.x1, y=0, z=vectors.y1}
-  local maxVec3 = {x=vectors.x2, y=0, z=vectors.y2}
-
-  local minmarkcoord = COORDINATE:NewFromVec3(minVec3)
-  local maxmarkcoord = COORDINATE:NewFromVec3(maxVec3)
-  local ZoneRadius = minmarkcoord:Get2DDistance(maxmarkcoord)/2
+  local ZoneRadius = UTILS.VecDist2D({x=vectors.x1, y=vectors.y1}, {x=vectors.x2, y=vectors.y2})/2
 --  self:I("Scan Radius:" ..ZoneRadius)
   local CenterVec3 = self:GetCoordinate():GetVec3()
 
@@ -23322,7 +23364,26 @@ do -- SET_BASE
 
     return ObjectNames
   end
+  
+    --- Get a *new* set table that only contains alive objects.
+  -- @param #SET_BASE self
+  -- @return #table Set table of alive objects.
+  function SET_BASE:GetAliveSet()
+    --self:F2()
 
+    local AliveSet = {}
+    -- Clean the Set before returning with only the alive Objects.
+    for ObjectName, Object in pairs( self.Set ) do
+      if Object then
+        if Object:IsAlive() then
+          table.insert(AliveSet, ObjectName, Object)
+        end
+      end
+    end
+
+    return AliveSet or {}
+  end
+  
 end
 
 do 
@@ -23489,25 +23550,25 @@ do
     
   end
   
-  --- Get a *new* set that only contains alive groups.
+  --- Get a *new* set table that only contains alive groups.
   -- @param #SET_GROUP self
-  -- @return #SET_GROUP Set of alive groups.
+  -- @return #table Set of alive groups.
   function SET_GROUP:GetAliveSet()
     --self:F2()
 
-    local AliveSet = SET_GROUP:New()
-
+    --local AliveSet = SET_GROUP:New()
+    local AliveSet = {}
     -- Clean the Set before returning with only the alive Groups.
     for GroupName, GroupObject in pairs( self.Set ) do
       local GroupObject = GroupObject -- Wrapper.Group#GROUP
       if GroupObject then
         if GroupObject:IsAlive() then
-          AliveSet:Add( GroupName, GroupObject )
+          table.insert(AliveSet, GroupName, GroupObject)
         end
       end
     end
 
-    return AliveSet.Set or {}
+    return AliveSet or {}
   end
 
   --- Returns a report of of unit types.
@@ -24959,16 +25020,14 @@ do -- SET_UNIT
   
   --- Gets the alive set.
   -- @param #SET_UNIT self
-  -- @return #table Table of SET objects
+  -- @return #table Table of alive UNIT objects
   -- @return #SET_UNIT AliveSet 
   function SET_UNIT:GetAliveSet()
 
     local AliveSet = SET_UNIT:New()
 
     -- Clean the Set before returning with only the alive Groups.
-    for GroupName, GroupObject in pairs(self.Set) do    
-      local GroupObject=GroupObject --Wrapper.Client#CLIENT
-      
+    for GroupName, GroupObject in pairs(self.Set) do       
       if GroupObject and GroupObject:IsAlive() then      
         AliveSet:Add(GroupName, GroupObject)
       end
@@ -27148,18 +27207,16 @@ do -- SET_CLIENT
   -- @return #table Table of SET objects
   function SET_CLIENT:GetAliveSet()
 
-    local AliveSet = SET_CLIENT:New()
+    local AliveSet = {}
 
     -- Clean the Set before returning with only the alive Groups.
-    for GroupName, GroupObject in pairs(self.Set) do    
-      local GroupObject=GroupObject --Wrapper.Client#CLIENT
-      
+    for GroupName, GroupObject in pairs(self.Set) do      
       if GroupObject and GroupObject:IsAlive() then      
-        AliveSet:Add(GroupName, GroupObject)
+        table.insert(AliveSet, GroupName, GroupObject)
       end
     end
 
-    return AliveSet.Set or {}
+    return AliveSet or {}
   end
 
   --- [User] Add a custom condition function.
@@ -43471,7 +43528,7 @@ MARKEROPS_BASE = {
   ClassName = "MARKEROPS",
   Tag = "mytag",
   Keywords = {},
-  version = "0.1.3",
+  version = "0.1.4",
   debug = false,
   Casesensitive = true,
 }
@@ -43575,14 +43632,7 @@ function MARKEROPS_BASE:OnEventMark(Event)
       self:E("Skipping onEvent. Event or Event.idx unknown.")
       return true
     end
-    --position
-    local vec3={y=Event.pos.y, x=Event.pos.x, z=Event.pos.z}
-    local coord=COORDINATE:NewFromVec3(vec3)
-    if self.debug then
-      local coordtext = coord:ToStringLLDDM()
-      local text = tostring(Event.text)
-      local m = MESSAGE:New(string.format("Mark added at %s with text: %s",coordtext,text),10,"Info",false):ToAll()
-    end
+
     local coalition = Event.MarkCoalition
     -- decision
     if Event.id==world.event.S_EVENT_MARK_ADDED then
@@ -43591,8 +43641,14 @@ function MARKEROPS_BASE:OnEventMark(Event)
       local Eventtext = tostring(Event.text)
       if Eventtext~=nil then
         if self:_MatchTag(Eventtext) then
-         local matchtable = self:_MatchKeywords(Eventtext)
-         self:MarkAdded(Eventtext,matchtable,coord,Event.idx,coalition,Event.PlayerName,Event)
+          local coord=COORDINATE:NewFromVec3({y=Event.pos.y, x=Event.pos.x, z=Event.pos.z})
+          if self.debug then
+            local coordtext = coord:ToStringLLDDM()
+            local text = tostring(Event.text)
+            local m = MESSAGE:New(string.format("Mark added at %s with text: %s",coordtext,text),10,"Info",false):ToAll()
+          end
+          local matchtable = self:_MatchKeywords(Eventtext)
+          self:MarkAdded(Eventtext,matchtable,coord,Event.idx,coalition,Event.PlayerName,Event)
         end
       end
     elseif Event.id==world.event.S_EVENT_MARK_CHANGE then
@@ -43601,8 +43657,14 @@ function MARKEROPS_BASE:OnEventMark(Event)
       local Eventtext = tostring(Event.text)
       if Eventtext~=nil then
         if self:_MatchTag(Eventtext) then
-         local matchtable = self:_MatchKeywords(Eventtext)
-         self:MarkChanged(Eventtext,matchtable,coord,Event.idx,coalition,Event.PlayerName,Event)
+           local coord=COORDINATE:NewFromVec3({y=Event.pos.y, x=Event.pos.x, z=Event.pos.z})
+           if self.debug then
+              local coordtext = coord:ToStringLLDDM()
+              local text = tostring(Event.text)
+              local m = MESSAGE:New(string.format("Mark changed at %s with text: %s",coordtext,text),10,"Info",false):ToAll()
+           end
+           local matchtable = self:_MatchKeywords(Eventtext)
+           self:MarkChanged(Eventtext,matchtable,coord,Event.idx,coalition,Event.PlayerName,Event)
         end
       end
     elseif Event.id==world.event.S_EVENT_MARK_REMOVED then
@@ -44904,18 +44966,20 @@ end
 function POSITIONABLE:GetVec3()
   local DCSPositionable = self:GetDCSObject()
   if DCSPositionable then
-    --local status, vec3 = pcall(
-      -- function()
-        --  local vec3 = DCSPositionable:getPoint()
-        --  return vec3
-       --end
-    --)
+
     local vec3 = DCSPositionable:getPoint()
-    --if status then
-      return vec3
-    --else
-      --self:E( { "Cannot get Vec3 from DCS Object", Positionable = self, Alive = self:IsAlive() } )
-    --end
+    
+    if not vec3 then 
+      local pos = DCSPositionable:getPosition()
+      if pos and pos.p then 
+       vec3 = pos.p
+      else
+        self:E( { "Cannot get the position from DCS Object for GetVec3", Positionable = self, Alive = self:IsAlive() } )
+      end
+    end
+
+    return vec3
+
   end
   -- ERROR!
   self:E( { "Cannot get the Positionable DCS Object for GetVec3", Positionable = self, Alive = self:IsAlive() } )
@@ -45046,13 +45110,13 @@ function POSITIONABLE:GetCoordinate()
 
     -- Get the current position.
     local PositionableVec3 = self:GetVec3()
-
-    local coord=COORDINATE:NewFromVec3(PositionableVec3)
-    local heading = self:GetHeading()
-    coord.Heading = heading
-    -- Return a new coordiante object.
-    return coord
-
+    if PositionableVec3 then
+      local coord=COORDINATE:NewFromVec3(PositionableVec3)
+      local heading = self:GetHeading()
+      coord.Heading = heading
+      -- Return a new coordiante object.
+      return coord
+    end
   end
 
   -- Error message.
@@ -57716,6 +57780,13 @@ function UNIT:IsAAA()
         return true
     end
     return false
+end
+
+--- Set the relative life points of a UNIT object
+-- @param #UNIT self
+-- @param #number Percent Percent to set, can be 0..100.
+function UNIT:SetLife(Percent)
+    net.dostring_in("mission",string.format("a_unit_set_life_percentage(%d, %f)", self:GetID(), Percent))
 end
 --- **Wrapper** - CLIENT wraps DCS Unit objects acting as a __Client__ or __Player__ within a mission.
 -- 
@@ -104310,7 +104381,7 @@ end
 -- @param #WAREHOUSE self
 -- @return Core.Point#COORDINATE The coordinate of the warehouse.
 function WAREHOUSE:GetCoordinate()
-  return self.warehouse:GetCoordinate()
+  return self.warehouse:GetCoord()
 end
 
 --- Get 3D vector of warehouse static.
@@ -108050,7 +108121,7 @@ function WAREHOUSE:_CheckConquered()
     for _,_unit in pairs(units) do
       local unit=_unit --Wrapper.Unit#UNIT
 
-      local distance=coord:Get2DDistance(unit:GetCoordinate())
+      local distance=coord:Get2DDistance(unit:GetCoord())
 
       -- Filter only alive groud units. Also check distance again, because the scan routine might give some larger distances.
       if unit:IsGround() and unit:IsAlive() and distance <= radius then
