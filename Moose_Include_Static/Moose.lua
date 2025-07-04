@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-03T15:14:11+02:00-33e63a4819c53f3a581a6c657d071eda43bda38a ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-03T16:39:24+02:00-727cb3276cb69412b50ae7f277b0d6228b410359 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -23376,7 +23376,7 @@ do -- SET_BASE
     for ObjectName, Object in pairs( self.Set ) do
       if Object then
         if Object:IsAlive() then
-          table.insert(AliveSet, ObjectName, Object)
+          AliveSet[#AliveSet+1] = Object
         end
       end
     end
@@ -23563,7 +23563,7 @@ do
       local GroupObject = GroupObject -- Wrapper.Group#GROUP
       if GroupObject then
         if GroupObject:IsAlive() then
-          table.insert(AliveSet, GroupName, GroupObject)
+          AliveSet[GroupName] = GroupObject
         end
       end
     end
@@ -25029,7 +25029,7 @@ do -- SET_UNIT
     -- Clean the Set before returning with only the alive Groups.
     for GroupName, GroupObject in pairs(self.Set) do       
       if GroupObject and GroupObject:IsAlive() then      
-        AliveSet:Add(GroupName, GroupObject)
+        AliveSet[GroupName] = GroupObject
       end
     end
 
@@ -27212,7 +27212,7 @@ do -- SET_CLIENT
     -- Clean the Set before returning with only the alive Groups.
     for GroupName, GroupObject in pairs(self.Set) do      
       if GroupObject and GroupObject:IsAlive() then      
-        table.insert(AliveSet, GroupName, GroupObject)
+        AliveSet[GroupName] = GroupObject
       end
     end
 
