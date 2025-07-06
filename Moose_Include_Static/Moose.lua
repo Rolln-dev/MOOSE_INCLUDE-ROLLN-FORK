@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-03T16:39:24+02:00-727cb3276cb69412b50ae7f277b0d6228b410359 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-05T18:56:59+02:00-da70f4ce6c76e3dd40e2bd66c74a84e2c75ff816 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -5562,9 +5562,14 @@ end
 -- @param #string VehicleTemplate, template name for additional vehicles. Can be nil for no additional vehicles.
 -- @param #number Liquids Tons of fuel to be added initially to the FARP. Defaults to 10 (tons). Set to 0 for no fill.
 -- @param #number Equipment Number of equipment items per known item to be added initially to the FARP. Defaults to 10 (items). Set to 0 for no fill.
+-- @param #number Airframes Number of helicopter airframes per known type in Ops.CSAR#CSAR.AircraftType to be added initially to the FARP. Set to 0 for no airframes.
+-- @param #string F10Text Text to display on F10 map if given. Handy to post things like the ADF beacon Frequency, Callsign and ATC Frequency.
+-- @param #boolean DynamicSpawns If true, allow Dynamic Spawns from this FARP.
+-- @param #boolean HotStart If true and DynamicSpawns is true, allow hot starts for Dynamic Spawns from this FARP.
 -- @return #list<Wrapper.Static#STATIC> Table of spawned objects and vehicle object (if given).
 -- @return #string ADFBeaconName Name of the ADF beacon, to be able to remove/stop it later.
-function UTILS.SpawnFARPAndFunctionalStatics(Name,Coordinate,FARPType,Coalition,Country,CallSign,Frequency,Modulation,ADF,SpawnRadius,VehicleTemplate,Liquids,Equipment)
+-- @return #number MarkerID ID of the F10 Text, to be able to remove it later.
+function UTILS.SpawnFARPAndFunctionalStatics(Name,Coordinate,FARPType,Coalition,Country,CallSign,Frequency,Modulation,ADF,SpawnRadius,VehicleTemplate,Liquids,Equipment,Airframes,F10Text,DynamicSpawns,HotStart)
   
   -- Set Defaults
   local farplocation = Coordinate
@@ -5578,6 +5583,7 @@ function UTILS.SpawnFARPAndFunctionalStatics(Name,Coordinate,FARPType,Coalition,
   local liquids = Liquids or 10
   liquids = liquids * 1000 -- tons to kg
   local equip = Equipment or 10
+  local airframes = Airframes or 10
   local statictypes = ENUMS.FARPObjectTypeNamesAndShape[farptype] or {TypeName="FARP", ShapeName="FARPS"}
   local STypeName = statictypes.TypeName
   local SShapeName = statictypes.ShapeName
@@ -5587,7 +5593,7 @@ function UTILS.SpawnFARPAndFunctionalStatics(Name,Coordinate,FARPType,Coalition,
   -- Spawn FARP
   local newfarp = SPAWNSTATIC:NewFromType(STypeName,"Heliports",Country) --  "Invisible FARP" "FARP"
   newfarp:InitShape(SShapeName) -- "invisiblefarp" "FARPS"
-  newfarp:InitFARP(callsign,freq,mod)
+  newfarp:InitFARP(callsign,freq,mod,DynamicSpawns,HotStart)
   local spawnedfarp = newfarp:SpawnFromCoordinate(farplocation,0,Name)
   table.insert(ReturnObjects,spawnedfarp)
   -- Spawn Objects
@@ -5640,6 +5646,12 @@ function UTILS.SpawnFARPAndFunctionalStatics(Name,Coordinate,FARPType,Coalition,
     end
   end
   
+  if airframes and airframes > 0 then
+    for typename in pairs (CSAR.AircraftType) do
+      newWH:SetItem(typename,airframes)
+    end
+  end
+  
   local ADFName
   if ADF and type(ADF) == "number" then
     local ADFFreq = ADF*1000 -- KHz to Hz
@@ -5650,7 +5662,20 @@ function UTILS.SpawnFARPAndFunctionalStatics(Name,Coordinate,FARPType,Coalition,
     trigger.action.radioTransmission(Sound, vec3, 0, true, ADFFreq, 250, ADFName)
   end
   
-  return ReturnObjects, ADFName
+  local MarkerID = nil
+  if F10Text then
+    local Color = {0,0,1}
+    if Coalition == coalition.side.RED then
+      Color = {1,0,0}
+    elseif Coalition == coalition.side.NEUTRAL then
+      Color = {0,1,0}
+    end
+    local Alpha = 0.75
+    local coordinate = Coordinate:Translate(600,0)
+    MarkerID = coordinate:TextToAll(F10Text,Coalition,Color,1,{1,1,1},Alpha,14,true)
+  end
+  
+  return ReturnObjects, ADFName, MarkerID
 end
 
 --- Converts a Vec2 to a Vec3.
@@ -42285,12 +42310,16 @@ end
 -- @param #number CallsignID Callsign ID. Default 1 (="London").
 -- @param #number Frequency Frequency in MHz. Default 127.5 MHz.
 -- @param #number Modulation Modulation 0=AM, 1=FM.
+-- @param #boolean DynamicSpawns If true, allow Dynamic Spawns
+-- @param #boolean DynamicHotStarts If true, and DynamicSpawns is true, then allow Dynamic Spawns with hot starts.
 -- @return #SPAWNSTATIC self
-function SPAWNSTATIC:InitFARP(CallsignID, Frequency, Modulation)
+function SPAWNSTATIC:InitFARP(CallsignID, Frequency, Modulation, DynamicSpawns,DynamicHotStarts)
   self.InitFarp=true
   self.InitFarpCallsignID=CallsignID or 1
   self.InitFarpFreq=Frequency or 127.5
   self.InitFarpModu=Modulation or 0
+  self.InitFarpDynamicSpawns = DynamicSpawns
+  self.InitFarpDynamicHotStarts = (DynamicSpawns == true and DynamicHotStarts == true) and true or nil
   return self
 end
 
@@ -42533,6 +42562,13 @@ function SPAWNSTATIC:_SpawnStatic(Template, CountryID)
     TemplateGroup.x=Template.x
     TemplateGroup.y=Template.y
     TemplateGroup.name=Template.name
+    
+    if self.InitFarpDynamicSpawns == true then
+      TemplateGroup.units[1].dynamicSpawn = true
+      if self.InitFarpDynamicHotStarts == true then
+        TemplateGroup.units[1].allowHotStart = true
+      end
+    end
 
     self:T("Spawning FARP")
     self:T({Template=Template})
@@ -42540,7 +42576,8 @@ function SPAWNSTATIC:_SpawnStatic(Template, CountryID)
 
     -- ED's dirty way to spawn FARPS.
     Static=coalition.addGroup(CountryID, -1, TemplateGroup)
-
+    --Static=coalition.addStaticObject(CountryID, Template)
+    
     -- Currently DCS 2.8 does not trigger birth events if FARPS are spawned!
     -- We create such an event. The airbase is registered in Core.Event
     local Event = {
