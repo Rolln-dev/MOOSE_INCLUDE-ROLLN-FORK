@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-09T12:16:29+02:00-f0a4c5b0083d48240af2bb9a5da49dcedd6f4fe7 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-15T11:19:41+02:00-f3b7740041d737376752b12e78eb580f5348c418 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -52951,6 +52951,7 @@ GROUP.Attribute = {
   GROUND_EWR="Ground_EWR",
   GROUND_AAA="Ground_AAA",
   GROUND_SAM="Ground_SAM",
+  GROUND_SHORAD="Ground_SHORAD",
   GROUND_OTHER="Ground_OtherGround",
   NAVAL_AIRCRAFTCARRIER="Naval_AircraftCarrier",
   NAVAL_WARSHIP="Naval_WarShip",
