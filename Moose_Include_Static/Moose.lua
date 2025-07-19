@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-15T11:19:41+02:00-f3b7740041d737376752b12e78eb580f5348c418 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-18T18:09:57+02:00-be40d7be9a20cef1f587a797c15b17b2c54999f2 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -42157,6 +42157,7 @@ function SPAWNSTATIC:NewFromStatic(SpawnTemplateName, SpawnCountryID)
     self.CategoryID          = CategoryID
     self.CoalitionID         = CoalitionID
     self.SpawnIndex          = 0
+    self.StaticCopyFrom      = SpawnTemplateName
   else
     error( "SPAWNSTATIC:New: There is no static declared in the mission editor with SpawnTemplatePrefix = '" .. tostring(SpawnTemplateName) .. "'" )
   end
@@ -42615,7 +42616,20 @@ function SPAWNSTATIC:_SpawnStatic(Template, CountryID)
     -- delay calling this for .3 seconds so that it hopefully comes after the BIRTH event of the group.
     self:ScheduleOnce(0.3, self.SpawnFunctionHook, mystatic, unpack(self.SpawnFunctionArguments))
   end
-
+  
+  if self.StaticCopyFrom ~= nil then
+    mystatic.StaticCopyFrom = self.StaticCopyFrom
+    if not _DATABASE.Templates.Statics[Template.name] then
+      local TemplateGroup={}
+      TemplateGroup.units={}
+      TemplateGroup.units[1]=Template
+      TemplateGroup.x=Template.x
+      TemplateGroup.y=Template.y
+      TemplateGroup.name=Template.name
+      _DATABASE:_RegisterStaticTemplate( TemplateGroup, self.CoalitionID, self.CategoryID, CountryID )
+    end
+  end
+  
   return mystatic
 end
 --- **Core** - Timer scheduler.
