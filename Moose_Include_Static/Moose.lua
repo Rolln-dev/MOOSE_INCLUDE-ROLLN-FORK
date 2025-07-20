@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-18T18:09:57+02:00-be40d7be9a20cef1f587a797c15b17b2c54999f2 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-20T14:03:33+02:00-1b18ae15972a9137eb254a61a3a8dceabb159ac0 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -36272,7 +36272,7 @@ end
 _MESSAGESRS = {}
 
 --- Set up MESSAGE generally to allow Text-To-Speech via SRS and TTS functions. `SetMSRS()` will try to use as many attributes configured with @{Sound.SRS#MSRS.LoadConfigFile}() as possible.
--- @param #string PathToSRS (optional) Path to SRS Folder, defaults to "C:\\\\Program Files\\\\DCS-SimpleRadio-Standalone" or your configuration file setting.
+-- @param #string PathToSRS (optional) Path to SRS TTS Folder, defaults to "C:\\\\Program Files\\\\DCS-SimpleRadio-Standalone\\ExternalAudio" or your configuration file setting.
 -- @param #number Port Port (optional) number of SRS, defaults to 5002 or your configuration file setting.
 -- @param #string PathToCredentials (optional) Path to credentials file for Google.
 -- @param #number Frequency Frequency in MHz. Can also be given as a #table of frequencies.
@@ -36288,13 +36288,13 @@ _MESSAGESRS = {}
 -- @usage
 --          -- Mind the dot here, not using the colon this time around!
 --          -- Needed once only
---          MESSAGE.SetMSRS("D:\\Program Files\\DCS-SimpleRadio-Standalone",5012,nil,127,radio.modulation.FM,"female","en-US",nil,coalition.side.BLUE)
+--          MESSAGE.SetMSRS("D:\\Program Files\\DCS-SimpleRadio-Standalone\\ExternalAudio",5012,nil,127,radio.modulation.FM,"female","en-US",nil,coalition.side.BLUE)
 --          -- later on in your code
 --          MESSAGE:New("Test message!",15,"SPAWN"):ToSRS()
 --          
 function MESSAGE.SetMSRS(PathToSRS,Port,PathToCredentials,Frequency,Modulation,Gender,Culture,Voice,Coalition,Volume,Label,Coordinate,Backend)
   
-  _MESSAGESRS.PathToSRS = PathToSRS or MSRS.path or "C:\\Program Files\\DCS-SimpleRadio-Standalone"
+  _MESSAGESRS.PathToSRS = PathToSRS or MSRS.path or "C:\\Program Files\\DCS-SimpleRadio-Standalone\\ExternalAudio"
   
   _MESSAGESRS.frequency = Frequency or MSRS.frequencies or 243
   _MESSAGESRS.modulation = Modulation or MSRS.modulations or radio.modulation.AM
@@ -36355,7 +36355,7 @@ end
 -- @usage
 --          -- Mind the dot here, not using the colon this time around!
 --          -- Needed once only
---          MESSAGE.SetMSRS("D:\\Program Files\\DCS-SimpleRadio-Standalone",5012,nil,127,radio.modulation.FM,"female","en-US",nil,coalition.side.BLUE)
+--          MESSAGE.SetMSRS("D:\\Program Files\\DCS-SimpleRadio-Standalone\\ExternalAudio",5012,nil,127,radio.modulation.FM,"female","en-US",nil,coalition.side.BLUE)
 --          -- later on in your code
 --          MESSAGE:New("Test message!",15,"SPAWN"):ToSRS()
 --          
@@ -36387,7 +36387,7 @@ end
 -- @usage
 --          -- Mind the dot here, not using the colon this time around!
 --          -- Needed once only
---          MESSAGE.SetMSRS("D:\\Program Files\\DCS-SimpleRadio-Standalone",5012,nil,127,radio.modulation.FM,"female","en-US",nil,coalition.side.BLUE)
+--          MESSAGE.SetMSRS("D:\\Program Files\\DCS-SimpleRadio-Standalone\\ExternalAudio",5012,nil,127,radio.modulation.FM,"female","en-US",nil,coalition.side.BLUE)
 --          -- later on in your code
 --          MESSAGE:New("Test message!",15,"SPAWN"):ToSRSBlue()
 --          
@@ -36409,7 +36409,7 @@ end
 -- @usage
 --          -- Mind the dot here, not using the colon this time around!
 --          -- Needed once only
---          MESSAGE.SetMSRS("D:\\Program Files\\DCS-SimpleRadio-Standalone",5012,nil,127,radio.modulation.FM,"female","en-US",nil,coalition.side.RED)
+--          MESSAGE.SetMSRS("D:\\Program Files\\DCS-SimpleRadio-Standalone\\ExternalAudio",5012,nil,127,radio.modulation.FM,"female","en-US",nil,coalition.side.RED)
 --          -- later on in your code
 --          MESSAGE:New("Test message!",15,"SPAWN"):ToSRSRed()
 --          
@@ -36431,7 +36431,7 @@ end
 -- @usage
 --          -- Mind the dot here, not using the colon this time around!
 --          -- Needed once only
---          MESSAGE.SetMSRS("D:\\Program Files\\DCS-SimpleRadio-Standalone",5012,nil,127,radio.modulation.FM,"female","en-US",nil,coalition.side.NEUTRAL)
+--          MESSAGE.SetMSRS("D:\\Program Files\\DCS-SimpleRadio-Standalone\\ExternalAudio",5012,nil,127,radio.modulation.FM,"female","en-US",nil,coalition.side.NEUTRAL)
 --          -- later on in your code
 --          MESSAGE:New("Test message!",15,"SPAWN"):ToSRSAll()
 --          
@@ -112458,7 +112458,7 @@ end
 -- @module Functional.Mantis
 -- @image Functional.Mantis.jpg
 --
--- Last Update: May 2025
+-- Last Update: July 2025
 
 -------------------------------------------------------------------------
 --- **MANTIS** class, extends Core.Base#BASE
@@ -112547,7 +112547,7 @@ end
 -- * Silkworm (though strictly speaking this is a surface to ship missile)
 -- * SA-2, SA-3, SA-5, SA-6, SA-7, SA-8, SA-9, SA-10, SA-11, SA-13, SA-15, SA-19
 -- * From IDF mod: STUNNER IDFA, TAMIR IDFA (Note all caps!)
--- * From HDS (see note on HDS below): SA-2, SA-3, SA-10B, SA-10C, SA-12, SA-17, SA-20A, SA-20B, SA-23, HQ-2
+-- * From HDS (see note on HDS below): SA-2, SA-3, SA-10B, SA-10C, SA-12, SA-17, SA-20A, SA-20B, SA-23, HQ-2, SAMP/T Block 1, SAMP/T Block 1INT,  SAMP/T Block2
 -- 
 -- * From SMA: RBS98M, RBS70, RBS90, RBS90M, RBS103A, RBS103B, RBS103AM, RBS103BM, Lvkv9040M 
 -- **NOTE** If you are using the Swedish Military Assets (SMA), please note that the **group name** for RBS-SAM types also needs to contain the keyword "SMA"
@@ -112561,10 +112561,11 @@ end
 -- * SA-2 (with V759 missile, e.g. "Red SAM SA-2 HDS")
 -- * SA-2 (with HQ-2 launcher, use HQ-2 in the group name, e.g. "Red SAM HQ-2" )
 -- * SA-3 (with V601P missile, e.g. "Red SAM SA-3 HDS")
--- * SA-10B (overlap with other SA-10 types, e.g. "Red SAM SA-10B HDS")
--- * SA-10C (overlap with other SA-10 types, e.g. "Red SAM SA-10C HDS")
--- * SA-12 (launcher dependent range, e.g. "Red SAM SA-12 HDS")
--- * SA-23 (launcher dependent range, e.g. "Red SAM SA-23 HDS") 
+-- * SA-10B (overlap with other SA-10 types, e.g. "Red SAM SA-10B HDS" with 5P85CE launcher)
+-- * SA-10C (overlap with other SA-10 types, e.g. "Red SAM SA-10C HDS" with 5P85SE launcher)
+-- * SA-12 (launcher dependent range, e.g. "Red SAM SA-12 HDS 2" for the 9A82 variant and "Red SAM SA-12 HDS 1" for the 9A83 variant)
+-- * SA-23 (launcher dependent range, e.g. "Red SAM SA-23 HDS 2" for the 9A82ME variant and "Red SAM SA-23 HDS 1" for the 9A83ME variant)
+-- * SAMP/T (launcher dependent range, e.g. "Blue SAM SAMPT Block 1 HDS" for Block 1, "Blue SAM SAMPT Block 1INT HDS", "Blue SAM SAMPT Block 2 HDS")
 -- 
 -- The other HDS types work like the rest of the known SAM systems.
 -- 
@@ -112710,6 +112711,7 @@ end
 MANTIS = {
   ClassName             = "MANTIS",
   name                  = "mymantis",
+  version               = "0.9.32",
   SAM_Templates_Prefix  = "",
   SAM_Group             = nil,
   EWR_Templates_Prefix  = "",
@@ -112821,7 +112823,7 @@ MANTIS.SamData = {
   ["HEMTT_C-RAM_Phalanx"] = { Range=2, Blindspot=0, Height=2, Type="Point", Radar="HEMTT_C-RAM_Phalanx", Point="true" },
   -- units from HDS Mod, multi launcher options is tricky
   ["SA-10B"] = { Range=75, Blindspot=0, Height=18, Type="Medium" , Radar="SA-10B"},
-  ["SA-17"] = { Range=50, Blindspot=3, Height=30, Type="Medium", Radar="SA-17" },
+  ["SA-17"] = { Range=50, Blindspot=3, Height=50, Type="Medium", Radar="SA-17" },
   ["SA-20A"] = { Range=150, Blindspot=5, Height=27, Type="Long" , Radar="S-300PMU1"},
   ["SA-20B"] = { Range=200, Blindspot=4, Height=27, Type="Long" , Radar="S-300PMU2"},
   ["HQ-2"] = { Range=50, Blindspot=6, Height=35, Type="Medium", Radar="HQ_2_Guideline_LN" },
@@ -112842,13 +112844,17 @@ MANTIS.SamDataHDS = {
   -- group name MUST contain HDS to ID launcher type correctly!
   ["SA-2 HDS"] = { Range=56, Blindspot=7, Height=30, Type="Medium", Radar="V759" }, 
   ["SA-3 HDS"] = { Range=20, Blindspot=6, Height=30, Type="Short", Radar="V-601P" },  
-  ["SA-10C HDS 2"] = { Range=90, Blindspot=5, Height=25, Type="Long" , Radar="5P85DE ln"}, -- V55RUD
-  ["SA-10C HDS 1"] = { Range=90, Blindspot=5, Height=25, Type="Long" , Radar="5P85CE ln"}, -- V55RUD
-  ["SA-12 HDS 2"] = { Range=100, Blindspot=10, Height=25, Type="Long" , Radar="S-300V 9A82 l"},
-  ["SA-12 HDS 1"] = { Range=75, Blindspot=1, Height=25, Type="Long" , Radar="S-300V 9A83 l"},
+  ["SA-10B HDS"] = { Range=90, Blindspot=5, Height=25, Type="Long" , Radar="5P85CE ln"}, -- V55RUD
+  ["SA-10C HDS"] = { Range=75, Blindspot=5, Height=25, Type="Long" , Radar="5P85SE ln"}, -- V55RUD
+  ["SA-17 HDS"] = { Range=50, Blindspot=3, Height=50, Type="Medium", Radar="SA-17 " },
+  ["SA-12 HDS 2"] = { Range=100, Blindspot=13, Height=30, Type="Long" , Radar="S-300V 9A82 l"},
+  ["SA-12 HDS 1"] = { Range=75, Blindspot=6, Height=25, Type="Long" , Radar="S-300V 9A83 l"},
   ["SA-23 HDS 2"] = { Range=200, Blindspot=5, Height=37, Type="Long", Radar="S-300VM 9A82ME" },
   ["SA-23 HDS 1"] = { Range=100, Blindspot=1, Height=50, Type="Long", Radar="S-300VM 9A83ME" },
   ["HQ-2 HDS"] = { Range=50, Blindspot=6, Height=35, Type="Medium", Radar="HQ_2_Guideline_LN" },
+  ["SAMPT Block 1 HDS"] = { Range=120, Blindspot=1, Height=20, Type="long", Radar="SAMPT_MLT_Blk1" }, -- Block 1 Launcher
+  ["SAMPT Block 1INT HDS"] = { Range=150, Blindspot=1, Height=25, Type="long", Radar="SAMPT_MLT_Blk1NT" }, -- Block 1-INT Launcher
+  ["SAMPT Block 2 HDS"] = { Range=200, Blindspot=10, Height=70, Type="long", Radar="SAMPT_MLT_Blk2" }, -- Block 2 Launcher
 }
 
 --- SAM data SMA
@@ -113116,9 +113122,6 @@ do
     -- counter for SAM table updates
     self.checkcounter = 1
     
-    -- TODO Version
-    -- @field #string version
-    self.version="0.9.30"
     self:I(string.format("***** Starting MANTIS Version %s *****", self.version))
 
     --- FSM Functions ---
@@ -114234,7 +114237,7 @@ do
       if self.Shorad and self.Shorad.ActiveGroups and self.Shorad.ActiveGroups[name] then
        activeshorad = true
       end
-      if IsInZone and not suppressed and not activeshorad then --check any target in zone and not currently managed by SEAD
+      if IsInZone and (not suppressed) and (not activeshorad) then --check any target in zone and not currently managed by SEAD
         if samgroup:IsAlive() then
           -- switch on SAM
           local switch = false
@@ -114266,7 +114269,7 @@ do
           -- link in to SHORAD if available
           -- DONE: Test integration fully
           if self.ShoradLink and (Distance < self.ShoradActDistance or Distance < blind ) then -- don't give SHORAD position away too early
-            local Shorad = self.Shorad
+            local Shorad = self.Shorad  --Functional.Shorad#SHORAD
             local radius = self.checkradius
             local ontime = self.ShoradTime
             Shorad:WakeUpShorad(name, radius, ontime)
@@ -114546,7 +114549,7 @@ do
     if self.debug and self.verbose then
       self:I(self.lid .. "Status Report")
       for _name,_state in pairs(self.SamStateTracker) do
-        self:I(string.format("Site %s\tStatus %s",_name,_state))
+        self:I(string.format("Site %s | Status %s",_name,_state))
       end
     end
     local interval = self.detectinterval * -1
@@ -119221,12 +119224,12 @@ end
 
 --- Set up SRS for usage without sound files
 -- @param #AIRBOSS self
--- @param #string PathToSRS Path to SRS folder, e.g. "C:\\Program Files\\DCS-SimpleRadio-Standalone".
+-- @param #string PathToSRS Path to SRS TTS folder, e.g. "C:\\Program Files\\DCS-SimpleRadio-Standalone\\ExternalAudio".
 -- @param #number Port Port of the SRS server, defaults to 5002.
 -- @param #string Culture (Optional, Airboss Culture)  Culture, defaults to "en-US".
 -- @param #string Gender (Optional, Airboss Gender)  Gender, e.g. "male" or "female". Defaults to "male".
 -- @param #string Voice (Optional, Airboss Voice) Set to use a specific voice. Will **override gender and culture** settings.
--- @param #string GoogleCreds (Optional) Path to Google credentials, e.g. "C:\\Program Files\\DCS-SimpleRadio-Standalone\\yourgooglekey.json".
+-- @param #string GoogleCreds (Optional) Path to Google credentials, e.g. "C:\\Program Files\\DCS-SimpleRadio-Standalone\\ExternalAudio\\yourgooglekey.json".
 -- @param #number Volume (Optional) E.g. 0.75. Defaults to 1.0 (loudest).
 -- @param #table AltBackend (Optional) See MSRS for details.
 -- @return #AIRBOSS self
@@ -149846,7 +149849,7 @@ end
 -- ## 2.2 SRS Features and Other Features
 -- 
 --       mycsar.useSRS = false -- Set true to use FF\'s SRS integration
---       mycsar.SRSPath = "C:\\Progra~1\\DCS-SimpleRadio-Standalone\\" -- adjust your own path in your SRS installation -- server(!)
+--       mycsar.SRSPath = "C:\\Progra~1\\DCS-SimpleRadio-Standalone\\ExternalAudio\\" -- adjust your own path in your SRS installation -- server(!)
 --       mycsar.SRSchannel = 300 -- radio channel
 --       mycsar.SRSModulation = radio.modulation.AM -- modulation
 --       mycsar.SRSport = 5002  -- and SRS Server port
@@ -150197,7 +150200,7 @@ function CSAR:New(Coalition, Template, Alias)
   -- for this to work you need to de-sanitize your mission environment in <DCS root>\Scripts\MissionScripting.lua
   -- needs SRS => 1.9.6 to work (works on the *server* side)
   self.useSRS = false -- Use FF\'s SRS integration
-  self.SRSPath = "E:\\Program Files\\DCS-SimpleRadio-Standalone" -- adjust your own path in your server(!)
+  self.SRSPath = "E:\\Program Files\\DCS-SimpleRadio-Standalone\\ExternalAudio" -- adjust your own path in your server(!)
   self.SRSchannel = 300 -- radio channel
   self.SRSModulation = radio.modulation.AM -- modulation
   self.SRSport = 5002 -- port
@@ -182672,7 +182675,7 @@ end
 -- set the path to the exe file via @{#MSRS.SetPath}.
 --
 -- @param #MSRS self
--- @param #string Path Path to SRS directory. Default `C:\\Program Files\\DCS-SimpleRadio-Standalone`.
+-- @param #string Path Path to SRS directory. Default `C:\\Program Files\\DCS-SimpleRadio-Standalone\\ExternalAudio`.
 -- @param #number Frequency Radio frequency in MHz. Default 143.00 MHz. Can also be given as a #table of multiple frequencies.
 -- @param #number Modulation Radio modulation: 0=AM (default), 1=FM. See `radio.modulation.AM` and `radio.modulation.FM` enumerators. Can also be given as a #table of multiple modulations.
 -- @param #string Backend Backend used: `MSRS.Backend.SRSEXE` (default) or `MSRS.Backend.GRPC`.
@@ -182807,13 +182810,13 @@ end
 
 --- Set path to SRS install directory. More precisely, path to where the `DCS-SR-ExternalAudio.exe` is located.
 -- @param #MSRS self
--- @param #string Path Path to the directory, where the sound file is located. Default is `C:\\Program Files\\DCS-SimpleRadio-Standalone`.
+-- @param #string Path Path to the directory, where the sound file is located. Default is `C:\\Program Files\\DCS-SimpleRadio-Standalone\\ExternalAudio`.
 -- @return #MSRS self
 function MSRS:SetPath(Path)
   self:F( {Path=Path} )
 
   -- Set path.
-  self.path=Path or "C:\\Program Files\\DCS-SimpleRadio-Standalone"
+  self.path=Path or "C:\\Program Files\\DCS-SimpleRadio-Standalone\\ExternalAudio"
 
   -- Remove (back)slashes.
   local n=1 ; local nmax=1000
@@ -183857,7 +183860,7 @@ end
 --
 --     -- Moose MSRS default Config
 --     MSRS_Config = {
---       Path = "C:\\Program Files\\DCS-SimpleRadio-Standalone", -- Path to SRS install directory.
+--       Path = "C:\\Program Files\\DCS-SimpleRadio-Standalone\\ExternalAudio", -- Path to SRS install directory.
 --       Port = 5002,            -- Port of SRS server. Default 5002.
 --       Backend = "srsexe",     -- Interface to SRS: "srsexe" or "grpc".
 --       Frequency = {127, 243}, -- Default frequences. Must be a table 1..n entries!
@@ -183877,7 +183880,7 @@ end
 --       -- Google Cloud
 --       gcloud = {
 --         voice = "en-GB-Standard-A", -- The Google Cloud voice to use (see https://cloud.google.com/text-to-speech/docs/voices).
---         credentials="C:\\Program Files\\DCS-SimpleRadio-Standalone\\yourfilename.json", -- Full path to credentials JSON file (only for SRS-TTS.exe backend)
+--         credentials="C:\\Program Files\\DCS-SimpleRadio-Standalone\\ExternalAudio\\yourfilename.json", -- Full path to credentials JSON file (only for SRS-TTS.exe backend)
 --         key="Your access Key", -- Google API access key (only for DCS-gRPC backend)
 --       },
 --       -- Amazon Web Service
@@ -183945,7 +183948,7 @@ function MSRS:LoadConfigFile(Path,Filename)
 
       local Self = self or MSRS  --#MSRS
 
-      Self.path = MSRS_Config.Path or "C:\\Program Files\\DCS-SimpleRadio-Standalone"
+      Self.path = MSRS_Config.Path or "C:\\Program Files\\DCS-SimpleRadio-Standalone\\ExternalAudio"
       Self.port = MSRS_Config.Port or 5002
       Self.backend = MSRS_Config.Backend or MSRS.Backend.SRSEXE
       Self.frequencies = MSRS_Config.Frequency or {127,243}
