@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-21T15:02:45+02:00-7ae4cdc8f1b27380f33ddd11a6a6d80c853fbf7c ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-22T13:08:46+02:00-ada38fa3ea593eebfd0028a9764ac3b18fb63d5a ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -5684,6 +5684,10 @@ end
 -- @param #number Country Country ID the MASH belongs to, e.g. country.id.USA or country.id.RUSSIA.
 -- @param #number ADF (Optional) ADF Frequency in kHz (Kilohertz), if given activate an ADF Beacon at the location of the MASH.
 -- @param #string Livery (Optional) The livery of the static CH-47, defaults to dark green.
+-- @param #boolean DeployHelo (Optional) If true, deploy the helicopter static.
+-- @param #number MASHRadio MASH Radio Frequency, defaults to 127.5.
+-- @param #number MASHRadioModulation MASH Radio Modulation, defaults to radio.modulation.AM.
+-- @param #number MASHCallsign Defaults to CALLSIGN.FARP.Berlin.
 -- @param #table Templates (Optional) You can hand in your own template table of numbered(!) entries. Each entry consist of a relative(!) x,y position and data of a 
 -- static, shape_name is optional. Also, livery_id is optional, but is applied to the helicopter static only.
 -- @return #table Table of Wrapper.Static#STATIC objects that were spawned.
@@ -5711,7 +5715,7 @@ end
 --              [18]={category='Fortifications',type='Tent04',shape_name='M92_Tent04',heading=0,x=21.220671,y=30.247529,},
 --              }
 --    
-function UTILS.SpawnMASHStatics(Name,Coordinate,Country,ADF,Livery,Templates)
+function UTILS.SpawnMASHStatics(Name,Coordinate,Country,ADF,Livery,DeployHelo,MASHRadio,MASHRadioModulation,MASHCallsign,Templates)
   
   -- Basic objects table
   
@@ -5745,6 +5749,9 @@ function UTILS.SpawnMASHStatics(Name,Coordinate,Country,ADF,Livery,Templates)
   local ReturnStatics = {} 
   local CountryID = Country or country.id.USA
   local livery = "us army dark green"
+  local MASHRadio = MASHRadio or 127.5
+  local MASHRadioModulation = MASHRadioModulation or radio.modulation.AM
+  local MASHCallsign = MASHCallsign or CALLSIGN.FARP.Berlin
   
   -- check for coordinate or zone  
   if type(Coordinate) == "table" then
@@ -5760,7 +5767,7 @@ function UTILS.SpawnMASHStatics(Name,Coordinate,Country,ADF,Livery,Templates)
   -- position
   local BaseX = positionVec2.x
   local BaseY = positionVec2.y
-  
+   
   -- Statics
   for id,object in pairs(MASHTemplates) do
     local NewName = string.format("%s#%3d",name,id)
@@ -5770,14 +5777,22 @@ function UTILS.SpawnMASHStatics(Name,Coordinate,Country,ADF,Livery,Templates)
     if object.shape_name and object.shape_name ~= "none" then
       static:InitShape(object.shape_name)
     end
-    if object.category == "Helicopters" then
+    if object.category == "Helicopters" and DeployHelo == true then 
       if object.livery_id ~= nil then
         livery = object.livery_id
       end
       static:InitLivery(livery)
+      local newstatic = static:SpawnFromCoordinate(Coordinate,object.heading,NewName)
+      table.insert(ReturnStatics,newstatic)
+    elseif object.category == "Heliports" then
+      static:InitFARP(MASHCallsign,MASHRadio,MASHRadioModulation,false,false)
+      local newstatic = static:SpawnFromCoordinate(Coordinate,object.heading,NewName)
+      table.insert(ReturnStatics,newstatic)
+    elseif object.category ~= "Helicopters" and object.category ~= "Heliports" then
+      local newstatic = static:SpawnFromCoordinate(Coordinate,object.heading,NewName)
+      table.insert(ReturnStatics,newstatic)
     end
-    static:SpawnFromCoordinate(Coordinate,object.heading,NewName)
-    table.insert(ReturnStatics,static)
+
   end
   
   -- Beacon
@@ -118015,7 +118030,7 @@ AIRBOSS.MenuF10Root = nil
 
 --- Airboss class version.
 -- @field #string version
-AIRBOSS.version = "1.4.0"
+AIRBOSS.version = "1.4.1"
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- TODO list
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -119340,7 +119355,7 @@ end
 
 --- Set up SRS for usage without sound files
 -- @param #AIRBOSS self
--- @param #string PathToSRS Path to SRS folder, e.g. "C:\\Program Files\\DCS-SimpleRadio-Standalone".
+-- @param #string PathToSRS Path to SRS folder, e.g. "C:\\Program Files\\DCS-SimpleRadio\\ExternalAudio".
 -- @param #number Port Port of the SRS server, defaults to 5002.
 -- @param #string Culture (Optional, Airboss Culture)  Culture, defaults to "en-US".
 -- @param #string Gender (Optional, Airboss Gender)  Gender, e.g. "male" or "female". Defaults to "male".
@@ -142026,7 +142041,7 @@ end
 -- @module Ops.CTLD
 -- @image OPS_CTLD.jpg
 
--- Last Update May 2025
+-- Last Update July 2025
 
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -143415,7 +143430,7 @@ CTLD.FixedWingTypes = {
 
 --- CTLD class version.
 -- @field #string version
-CTLD.version="1.3.35"
+CTLD.version="1.3.36"
 
 --- Instantiate a new CTLD.
 -- @param #CTLD self
@@ -143482,6 +143497,7 @@ function CTLD:New(Coalition, Prefixes, Alias)
   self:AddTransition("*",             "CratesRepaired",      "*")           -- CTLD repair  event.
   self:AddTransition("*",             "CratesBuildStarted",  "*")           -- CTLD build  event.
   self:AddTransition("*",             "CratesRepairStarted", "*")           -- CTLD repair  event.
+  self:AddTransition("*",             "CratesPacked",        "*")           -- CTLD repack  event.
   self:AddTransition("*",             "HelicopterLost",      "*")           -- CTLD lost  event.
   self:AddTransition("*",             "Load",                "*")           -- CTLD load  event.
   self:AddTransition("*",             "Loaded",              "*")           -- CTLD load  event.   
@@ -143760,6 +143776,17 @@ function CTLD:New(Coalition, Prefixes, Alias)
   -- @param Wrapper.Unit#UNIT Unit Unit Object.
   -- @param Wrapper.Group#GROUP Vehicle The #GROUP object of the vehicle or FOB repaired.
   -- @return #CTLD self
+        
+  --- FSM Function OnBeforeCratesPacked.
+  -- @function [parent=#CTLD] OnBeforeCratesPacked
+  -- @param #CTLD self
+  -- @param #string From State.
+  -- @param #string Event Trigger.
+  -- @param #string To State.
+  -- @param Wrapper.Group#GROUP Group Group Object.
+  -- @param Wrapper.Unit#UNIT Unit Unit Object.
+  -- @param #CTLD_CARGO Cargo Cargo crate that was repacked.
+  -- @return #CTLD self
     
   --- FSM Function OnBeforeTroopsRTB.
   -- @function [parent=#CTLD] OnBeforeTroopsRTB
@@ -143889,6 +143916,17 @@ function CTLD:New(Coalition, Prefixes, Alias)
   -- @param Wrapper.Group#GROUP Group Group Object.
   -- @param Wrapper.Unit#UNIT Unit Unit Object.
   -- @param Wrapper.Group#GROUP Vehicle The #GROUP object of the vehicle or FOB repaired.
+  -- @return #CTLD self
+  
+  --- FSM Function OnAfterCratesPacked.
+  -- @function [parent=#CTLD] OnAfterCratesPacked
+  -- @param #CTLD self
+  -- @param #string From State.
+  -- @param #string Event Trigger.
+  -- @param #string To State.
+  -- @param Wrapper.Group#GROUP Group Group Object.
+  -- @param Wrapper.Unit#UNIT Unit Unit Object.
+  -- @param #CTLD_CARGO Cargo Cargo crate that was repacked.
   -- @return #CTLD self
     
   --- FSM Function OnAfterTroopsRTB.
@@ -146013,6 +146051,7 @@ function CTLD:_PackCratesNearby(Group, Unit)
             _Group:Destroy() -- if a match is found destroy the Wrapper.Group#GROUP near the player
             self:_GetCrates(Group, Unit, _entry, nil, false, true) -- spawn the appropriate crates near the player
             self:_RefreshLoadCratesMenu(Group,Unit) -- call the refresher to show the crates in the menu
+            self:__CratesPacked(1,Group,Unit,_entry)
             return true
           end
         end
