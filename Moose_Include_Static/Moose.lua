@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-23T12:35:16+02:00-326b20b08d2f96347a0d35a30452ffc8541dc2cf ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-24T09:39:09+02:00-4bbf20ca4e52106208e9070be96328b147a99892 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -17403,7 +17403,7 @@ end
 -- @return #table A table of DCS#Vec2 positions that are clear of map objects within the given PosRadius. nil if no clear positions are found.
 function ZONE_RADIUS:GetClearZonePositions(PosRadius, NumPositions)
     local clearPositions = UTILS.GetSimpleZones(self:GetVec3(), self:GetRadius(), PosRadius, NumPositions)
-    if clearPositions or #clearPositions > 0 then
+    if clearPositions and #clearPositions > 0 then
         local validZones = {}
         for _, vec2 in pairs(clearPositions) do
             if self:IsVec2InZone(vec2) then
@@ -17426,7 +17426,7 @@ end
 function ZONE_RADIUS:GetRandomClearZoneCoordinate(PosRadius, NumPositions)
     local radius = PosRadius or math.min(self.Radius/10, 200)
     local clearPositions = self:GetClearZonePositions(radius, NumPositions or 50)
-    if clearPositions or #clearPositions > 0 then
+    if clearPositions and #clearPositions > 0 then
         local randomPosition = clearPositions[math.random(1, #clearPositions)]
         return COORDINATE:NewFromVec2(randomPosition), radius
     end
@@ -35642,17 +35642,20 @@ do -- COORDINATE
 -- @param #number SearchRadius Radius of the search area.
 -- @param #number PosRadius Required clear radius around each position.
 -- @param #number NumPositions Number of positions to find.
--- @return #table A table of Core.Point#COORDINATE that are clear of map objects within the given PosRadius.
+-- @return #table A table of Core.Point#COORDINATE that are clear of map objects within the given PosRadius. nil if no positions are found.
   function COORDINATE:GetSimpleZones(SearchRadius, PosRadius, NumPositions)
     local clearPositions = UTILS.GetSimpleZones(self:GetVec3(), SearchRadius, PosRadius, NumPositions)
-    local coords = {}
-    for _, pos in ipairs(clearPositions) do
-      local coord = COORDINATE:NewFromVec2(pos)
-      table.insert(coords, coord)
+    if clearPositions and #clearPositions > 0 then
+        local coords = {}
+        for _, pos in pairs(clearPositions) do
+          local coord = COORDINATE:NewFromVec2(pos)
+          table.insert(coords, coord)
+        end
+        return coords
     end
-    return coords
+    return nil
   end
-  
+
 end
 
 do 
@@ -62020,14 +62023,14 @@ function AIRBASE:GetRunwayData(magvar, mark)
     -- Draw arrow.
     --ri.center:ArrowToAll(rj.center)
 
-    local c0=ri.center
+    local c0=ri.position
 
     -- Vector in the direction of the runway.
     local a=UTILS.VecTranslate(c0, 1000, ri.heading)
 
     -- Vector from runway i to runway j.
-    local b=UTILS.VecSubstract(rj.center, ri.center)
-    b=UTILS.VecAdd(ri.center, b)
+    local b=UTILS.VecSubstract(rj.position, ri.position)
+    b=UTILS.VecAdd(ri.position, b)
 
     -- Check if rj is left of ri.
     local left=isLeft(c0, a, b)
