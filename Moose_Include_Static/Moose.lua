@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-24T09:39:09+02:00-4bbf20ca4e52106208e9070be96328b147a99892 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-25T14:57:58+02:00-7d3fc1740a16553105a0fd9505bdbf44d7a1d989 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -6058,6 +6058,84 @@ end
 -- @return #table A table of DCS#Vec2 positions that are clear of map objects within the given PosRadius.
 function UTILS.GetSimpleZones(Vec3, SearchRadius, PosRadius, NumPositions)
     return Disposition.getSimpleZones(Vec3, SearchRadius, PosRadius, NumPositions)
+end
+
+--- Search for clear ground spawn zones within this zone. A powerful and efficient function using Disposition to find clear areas for spawning ground units avoiding trees, water and map scenery.
+-- @param Core.Zone#ZONE Zone to search.
+-- @param #number (Optional) PosRadius Required clear radius around each position. (Default is math.min(Radius/10, 200))
+-- @param #number (Optional) NumPositions Number of positions to find. (Default 50)
+-- @return #table A table of DCS#Vec2 positions that are clear of map objects within the given PosRadius. nil if no clear positions are found.
+function UTILS.GetClearZonePositions(Zone, PosRadius, NumPositions)
+    local radius = PosRadius or math.min(Zone:GetRadius()/10, 200)
+    local clearPositions = UTILS.GetSimpleZones(Zone:GetVec3(), Zone:GetRadius(), radius, NumPositions or 50)
+    if clearPositions and #clearPositions > 0 then
+        local validZones = {}
+        for _, vec2 in pairs(clearPositions) do
+            if Zone:IsVec2InZone(vec2) then
+                table.insert(validZones, vec2)
+            end
+        end
+        if #validZones > 0 then
+            return validZones, radius
+        end
+    end
+    return nil
+end
+
+
+--- Search for a random clear ground spawn coordinate within this zone. A powerful and efficient function using Disposition to find clear areas for spawning ground units avoiding trees, water and map scenery.
+-- @param Core.Zone#ZONE Zone to search.
+-- @param #number PosRadius (Optional) Required clear radius around each position. (Default is math.min(Radius/10, 200))
+-- @param #number NumPositions (Optional) Number of positions to find. (Default 50)
+-- @return Core.Point#COORDINATE A random coordinate for a clear zone. nil if no clear positions are found.
+-- @return #number Assigned radius for the found zones. nil if no clear positions are found.
+function UTILS.GetRandomClearZoneCoordinate(Zone, PosRadius, NumPositions)
+    local clearPositions = UTILS.GetClearZonePositions(Zone, PosRadius, NumPositions)
+    if clearPositions and #clearPositions > 0 then
+        local randomPosition, radius = clearPositions[math.random(1, #clearPositions)]
+        return COORDINATE:NewFromVec2(randomPosition), radius
+    end
+
+    return nil
+end
+
+--- Find the point on the radius of a circle closest to a point outside of the radius.
+-- @param DCS#Vec2 Vec1 Simple Vec2 marking the middle of the circle.
+-- @param #number Radius The radius of the circle.
+-- @param DCS#Vec2 Vec2 Simple Vec2 marking the point outside of the circle.
+-- @return DCS#Vec2 Vec2 point on the radius.
+function UTILS.FindNearestPointOnCircle(Vec1,Radius,Vec2)
+    local r = Radius
+    local cx = Vec1.x or 1
+    local cy = Vec1.y or 1
+    local px = Vec2.x or 1
+    local py = Vec2.y or 1
+
+    -- Berechne den Vektor vom Mittelpunkt zum externen Punkt
+    local dx = px - cx
+    local dy = py - cy
+
+    -- Berechne die Länge des Vektors
+    local dist = math.sqrt(dx * dx + dy * dy)
+
+    -- Wenn der Punkt im Mittelpunkt liegt, wähle einen Punkt auf der X-Achse
+    if dist == 0 then
+        return {x=cx + r, y=cy}
+    end
+
+    -- Normalisiere den Vektor (richtungsweise Vektor mit Länge 1)
+    local norm_dx = dx / dist
+    local norm_dy = dy / dist
+
+    -- Berechne den Punkt auf dem Rand des Kreises
+    local qx = cx + r * norm_dx
+    local qy = cy + r * norm_dy
+
+    local shift_factor = 1
+    qx = qx + shift_factor * norm_dx
+    qy = qy + shift_factor * norm_dy
+
+    return {x=qx, y=qy}
 end
 --- **Utils** - Lua Profiler.
 --
@@ -17402,19 +17480,7 @@ end
 -- @param #number NumPositions Number of positions to find.
 -- @return #table A table of DCS#Vec2 positions that are clear of map objects within the given PosRadius. nil if no clear positions are found.
 function ZONE_RADIUS:GetClearZonePositions(PosRadius, NumPositions)
-    local clearPositions = UTILS.GetSimpleZones(self:GetVec3(), self:GetRadius(), PosRadius, NumPositions)
-    if clearPositions and #clearPositions > 0 then
-        local validZones = {}
-        for _, vec2 in pairs(clearPositions) do
-            if self:IsVec2InZone(vec2) then
-                table.insert(validZones, vec2)
-            end
-        end
-        if #validZones > 0 then
-            return validZones
-        end
-    end
-    return nil
+    return UTILS.GetClearZonePositions(self, PosRadius, NumPositions)
 end
 
 
@@ -17424,14 +17490,7 @@ end
 -- @return Core.Point#COORDINATE A random coordinate for a clear zone. nil if no clear positions are found.
 -- @return #number Assigned radius for the found zones. nil if no clear positions are found.
 function ZONE_RADIUS:GetRandomClearZoneCoordinate(PosRadius, NumPositions)
-    local radius = PosRadius or math.min(self.Radius/10, 200)
-    local clearPositions = self:GetClearZonePositions(radius, NumPositions or 50)
-    if clearPositions and #clearPositions > 0 then
-        local randomPosition = clearPositions[math.random(1, #clearPositions)]
-        return COORDINATE:NewFromVec2(randomPosition), radius
-    end
-
-    return nil
+    return UTILS.GetRandomClearZoneCoordinate(self, PosRadius, NumPositions)
 end
 
 --- Returns a random Vec2 location within the zone.
@@ -18410,6 +18469,24 @@ function ZONE_POLYGON_BASE:Flush()
   --self:F( { Polygon = self.ZoneName, Coordinates = self._.Polygon } )
 
   return self
+end
+
+--- Search for clear ground spawn zones within this zone. A powerful and efficient function using Disposition to find clear areas for spawning ground units avoiding trees, water and map scenery.
+-- @param #number PosRadius Required clear radius around each position.
+-- @param #number NumPositions Number of positions to find.
+-- @return #table A table of DCS#Vec2 positions that are clear of map objects within the given PosRadius. nil if no clear positions are found.
+function ZONE_POLYGON_BASE:GetClearZonePositions(PosRadius, NumPositions)
+    return UTILS.GetClearZonePositions(self, PosRadius, NumPositions)
+end
+
+
+--- Search for a random clear ground spawn coordinate within this zone. A powerful and efficient function using Disposition to find clear areas for spawning ground units avoiding trees, water and map scenery.
+-- @param #number PosRadius (Optional) Required clear radius around each position. (Default is math.min(Radius/10, 200))
+-- @param #number NumPositions (Optional) Number of positions to find. (Default 50)
+-- @return Core.Point#COORDINATE A random coordinate for a clear zone. nil if no clear positions are found.
+-- @return #number Assigned radius for the found zones. nil if no clear positions are found.
+function ZONE_POLYGON_BASE:GetRandomClearZoneCoordinate(PosRadius, NumPositions)
+    return UTILS.GetRandomClearZoneCoordinate(self, PosRadius, NumPositions)
 end
 
 --- Smokes the zone boundaries in a color.
@@ -21336,7 +21413,7 @@ function DATABASE:_RegisterGroupTemplate( GroupTemplate, CoalitionSide, Category
           self:E("WARNING: Invalid STN "..tostring(UnitTemplate.AddPropAircraft.STN_L16).." for ".. UnitTemplate.name)
         else
           self.STNS[stn] = UnitTemplate.name
-          self:I("Register STN "..tostring(UnitTemplate.AddPropAircraft.STN_L16).." for ".. UnitTemplate.name)
+          self:T("Register STN "..tostring(UnitTemplate.AddPropAircraft.STN_L16).." for ".. UnitTemplate.name)
         end
       end
       if UnitTemplate.AddPropAircraft.SADL_TN then
@@ -21345,7 +21422,7 @@ function DATABASE:_RegisterGroupTemplate( GroupTemplate, CoalitionSide, Category
           self:E("WARNING: Invalid SADL "..tostring(UnitTemplate.AddPropAircraft.SADL_TN).." for ".. UnitTemplate.name)
         else
           self.SADL[sadl] = UnitTemplate.name
-          self:I("Register SADL "..tostring(UnitTemplate.AddPropAircraft.SADL_TN).." for ".. UnitTemplate.name)
+          self:T("Register SADL "..tostring(UnitTemplate.AddPropAircraft.SADL_TN).." for ".. UnitTemplate.name)
         end
       end  
     end
@@ -21606,7 +21683,7 @@ function DATABASE:GetCoalitionFromClientTemplate( ClientName )
   if self.Templates.ClientsByName[ClientName] then  
     return self.Templates.ClientsByName[ClientName].CoalitionID
   end
-  self:E("WARNING: Template does not exist for client "..tostring(ClientName))
+  self:T("WARNING: Template does not exist for client "..tostring(ClientName))
   return nil
 end
 
@@ -21618,7 +21695,7 @@ function DATABASE:GetCategoryFromClientTemplate( ClientName )
   if self.Templates.ClientsByName[ClientName] then  
     return self.Templates.ClientsByName[ClientName].CategoryID
   end
-  self:E("WARNING: Template does not exist for client "..tostring(ClientName))
+  self:T("WARNING: Template does not exist for client "..tostring(ClientName))
   return nil
 end
 
@@ -21630,7 +21707,7 @@ function DATABASE:GetCountryFromClientTemplate( ClientName )
   if self.Templates.ClientsByName[ClientName] then  
     return self.Templates.ClientsByName[ClientName].CountryID
   end
-  self:E("WARNING: Template does not exist for client "..tostring(ClientName))
+  self:T("WARNING: Template does not exist for client "..tostring(ClientName))
   return nil  
 end
 
@@ -47222,16 +47299,25 @@ end
 --   * @{#CONTROLLABLE.OptionAlarmStateGreen}
 --   * @{#CONTROLLABLE.OptionAlarmStateRed}
 --
--- ## 5.4) Jettison weapons:
+-- ## 5.4) [AIR] Jettison weapons:
 --
 --   * @{#CONTROLLABLE.OptionAllowJettisonWeaponsOnThreat}
 --   * @{#CONTROLLABLE.OptionKeepWeaponsOnThreat}
 --
--- ## 5.5) Air-2-Air missile attack range:
+-- ## 5.5) [AIR] Air-2-Air missile attack range:
 --   * @{#CONTROLLABLE.OptionAAAttackRange}(): Defines the usage of A2A missiles against possible targets.
 --   
 -- # 6) [GROUND] IR Maker Beacons for GROUPs and UNITs
 --  * @{#CONTROLLABLE:NewIRMarker}(): Create a blinking IR Marker on a GROUP or UNIT.
+--  
+-- # 7) [HELICOPTER] Units prefer vertical landing and takeoffs:
+--  * @{#CONTROLLABLE.OptionPreferVerticalLanding}(): Set aircraft to prefer vertical landing and takeoff.
+--  
+-- # 8) [AIRCRAFT] Landing approach options
+--  * @{#CONTROLLABLE.SetOptionLandingStraightIn}(): Landing approach straight in.
+--  * @{#CONTROLLABLE.SetOptionLandingForcePair}(): Landing approach in pairs for groups > 1 unit.
+--  * @{#CONTROLLABLE.SetOptionLandingRestrictPair}(): Landing approach single.
+--  * @{#CONTROLLABLE.SetOptionLandingOverheadBreak}():  Landing approach overhead break.
 --
 -- @field #CONTROLLABLE
 CONTROLLABLE = {
@@ -48486,7 +48572,7 @@ end
 -- @param #number Speed The speed [m/s] flying when holding the position.
 -- @return #CONTROLLABLE self
 function CONTROLLABLE:TaskOrbitCircleAtVec2( Point, Altitude, Speed )
-  self:F2( { self.ControllableName, Point, Altitude, Speed } )
+  --self:F2( { self.ControllableName, Point, Altitude, Speed } )
 
   local DCSTask = {
     id = 'Orbit',
@@ -51255,6 +51341,50 @@ function CONTROLLABLE:OptionEngageRange( EngageRange )
     return self
   end
   return nil
+end
+
+--- [AIR] Set how the AI lands on an airfield. Here: Straight in.
+-- @param #CONTROLLABLE self
+-- @return #CONTROLLABLE self
+function CONTROLLABLE:SetOptionLandingStraightIn()
+  self:F2( { self.ControllableName } )
+  if self:IsAir() then
+    self:SetOption("36","0")
+  end
+  return self
+end
+
+--- [AIR] Set how the AI lands on an airfield. Here: In pairs (if > 1 aircraft in group)
+-- @param #CONTROLLABLE self
+-- @return #CONTROLLABLE self
+function CONTROLLABLE:SetOptionLandingForcePair()
+  self:F2( { self.ControllableName } )
+  if self:IsAir() then
+    self:SetOption("36","1")
+  end
+  return self
+end
+
+--- [AIR] Set how the AI lands on an airfield. Here: No landing in pairs.
+-- @param #CONTROLLABLE self
+-- @return #CONTROLLABLE self
+function CONTROLLABLE:SetOptionLandingRestrictPair()
+  self:F2( { self.ControllableName } )
+  if self:IsAir() then
+    self:SetOption("36","2")
+  end
+  return self
+end
+
+--- [AIR] Set how the AI lands on an airfield. Here: Overhead break.
+-- @param #CONTROLLABLE self
+-- @return #CONTROLLABLE self
+function CONTROLLABLE:SetOptionLandingOverheadBreak()
+  self:F2( { self.ControllableName } )
+  if self:IsAir() then
+    self:SetOption("36","3")
+  end
+  return self
 end
 
 --- [AIR] Set how the AI uses the onboard radar.
