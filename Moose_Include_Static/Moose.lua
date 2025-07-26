@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-25T14:57:58+02:00-7d3fc1740a16553105a0fd9505bdbf44d7a1d989 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-26T09:01:02+02:00-f172f6efebb963da4ec6beeb7a08b00e418fb930 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -6012,6 +6012,33 @@ function UTILS.GetEnvZone(name)
     end
 end
 
+--- net.dostring_in
+function UTILS.DoStringIn(State,DoString)
+  return net.dostring_in(State,DoString)
+end
+
+--- Show a picture on the screen
+-- @param #string FileName File name of the picture
+-- @param #number Duration Duration in seconds, defaults to 10
+-- @param #boolean ClearView If true, clears the view before showing the picture, defaults to false
+-- @param #number StartDelay Delay in seconds before showing the picture, defaults to 0
+-- @param #number HorizontalAlign Horizontal alignment of the picture, defaults to 1 (left), can be 0 (center) or 2 (right)
+-- @param #number VerticalAlign Vertical alignment of the picture, defaults to 1 (top), can be 0 (center) or 2 (bottom)
+-- @param #number Size Size of the picture in percent, defaults to 100
+-- @param #number SizeUnits Size units, defaults to 0 (percent), can be 1 (pixels)
+function UTILS.ShowPicture(FileName, Duration, ClearView, StartDelay, HorizontalAlign, VerticalAlign, Size, SizeUnits)
+    ClearView = ClearView or false
+    StartDelay = StartDelay or 0
+    HorizontalAlign = HorizontalAlign or 1
+    VerticalAlign = VerticalAlign or 1
+    Size = Size or 100
+    SizeUnits = SizeUnits or 0
+
+    if ClearView then ClearView = "true" else ClearView = "false" end
+
+    net.dostring_in("mission", string.format("a_out_picture(getValueResourceByKey(\"%s\"), %d, %s, %d, \"%d\", \"%d\", %d, \"%d\")", FileName, Duration or 10, ClearView, StartDelay, HorizontalAlign, VerticalAlign, Size, SizeUnits))
+end
+
 --- Show a helper gate at a DCS#Vec3 position
 -- @param DCS#Vec3 pos The position
 -- @param number heading Heading in degrees, can be 0..359 degrees
@@ -11714,7 +11741,7 @@ function SCHEDULEDISPATCHER:AddSchedule( Scheduler, ScheduleFunction, ScheduleAr
     local Name = Info.name or "?"
 
     local ErrorHandler = function( errmsg )
-      env.info( "Error in timer function: " .. errmsg )
+      env.info( "Error in timer function: " .. errmsg or "" )
       if BASE.Debug ~= nil then
         env.info( BASE.Debug.traceback() )
       end
@@ -16500,6 +16527,19 @@ function ZONE_BASE:GetZoneProbability()
   return self.ZoneProbability
 end
 
+--- Get the coordinate on the radius of the zone nearest to Outsidecoordinate. Useto e.g. find an ingress point.
+-- @param #ZONE_BASE self
+-- @param Core.Point#COORDINATE Outsidecoordinate The coordinate outside of the zone from where to look.
+-- @return Core.Point#COORDINATE CoordinateOnRadius
+function ZONE_BASE:FindNearestCoordinateOnRadius(Outsidecoordinate)
+  local Vec1 = self:GetVec2()
+  local Radius = self:GetRadius()
+  local Vec2 = Outsidecoordinate:GetVec2()
+  local Point = UTILS.FindNearestPointOnCircle(Vec1,Radius,Vec2)
+  local rc = COORDINATE:NewFromVec2(Point)
+  return rc
+end
+
 --- Get the zone taking into account the randomization probability of a zone to be selected.
 -- @param #ZONE_BASE self
 -- @return #ZONE_BASE The zone is selected taking into account the randomization probability factor.
@@ -17476,6 +17516,7 @@ function ZONE_RADIUS:IsVec3InZone( Vec3 )
 end
 
 --- Search for clear ground spawn zones within this zone. A powerful and efficient function using Disposition to find clear areas for spawning ground units avoiding trees, water and map scenery.
+-- @param #ZONE_RADIUS self
 -- @param #number PosRadius Required clear radius around each position.
 -- @param #number NumPositions Number of positions to find.
 -- @return #table A table of DCS#Vec2 positions that are clear of map objects within the given PosRadius. nil if no clear positions are found.
@@ -17485,6 +17526,7 @@ end
 
 
 --- Search for a random clear ground spawn coordinate within this zone. A powerful and efficient function using Disposition to find clear areas for spawning ground units avoiding trees, water and map scenery.
+-- @param #ZONE_RADIUS self
 -- @param #number PosRadius (Optional) Required clear radius around each position. (Default is math.min(Radius/10, 200))
 -- @param #number NumPositions (Optional) Number of positions to find. (Default 50)
 -- @return Core.Point#COORDINATE A random coordinate for a clear zone. nil if no clear positions are found.
@@ -18472,6 +18514,7 @@ function ZONE_POLYGON_BASE:Flush()
 end
 
 --- Search for clear ground spawn zones within this zone. A powerful and efficient function using Disposition to find clear areas for spawning ground units avoiding trees, water and map scenery.
+-- @param #ZONE_POLYGON_BASE self
 -- @param #number PosRadius Required clear radius around each position.
 -- @param #number NumPositions Number of positions to find.
 -- @return #table A table of DCS#Vec2 positions that are clear of map objects within the given PosRadius. nil if no clear positions are found.
@@ -18481,6 +18524,7 @@ end
 
 
 --- Search for a random clear ground spawn coordinate within this zone. A powerful and efficient function using Disposition to find clear areas for spawning ground units avoiding trees, water and map scenery.
+-- @param #ZONE_POLYGON_BASE self
 -- @param #number PosRadius (Optional) Required clear radius around each position. (Default is math.min(Radius/10, 200))
 -- @param #number NumPositions (Optional) Number of positions to find. (Default 50)
 -- @return Core.Point#COORDINATE A random coordinate for a clear zone. nil if no clear positions are found.
@@ -32753,6 +32797,26 @@ do -- COORDINATE
     return land.getHeight( Vec2 )
   end
 
+  --- Returns a table of DCS#Vec3 points representing the terrain profile between two points.
+  -- @param #COORDINATE self
+  -- @param Destination DCS#Vec3 Ending point of the profile.
+  -- @return #table DCS#Vec3 table of the profile
+  function COORDINATE:GetLandProfileVec3(Destination)
+    return land.profile(self:GetVec3(), Destination)
+  end
+
+  --- Returns a table of #COORDINATE representing the terrain profile between two points.
+  -- @param #COORDINATE self
+  -- @param Destination #COORDINATE Ending coordinate of the profile.
+  -- @return #table #COORDINATE table of the profile
+  function COORDINATE:GetLandProfileCoordinates(Destination)
+    local points = self:GetLandProfileVec3(Destination:GetVec3())
+    local coords = {}
+    for _, point in ipairs(points) do
+      table.insert(coords, COORDINATE:NewFromVec3(point))
+    end
+    return coords
+  end
 
   --- Set the heading of the coordinate, if applicable.
   -- @param #COORDINATE self
