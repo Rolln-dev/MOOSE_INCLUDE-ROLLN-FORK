@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-27T14:50:45+02:00-b9be3aa7f888cf1b3f92704bf13d4884d708e4bb ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-07-29T13:04:46+02:00-7149226283168e048cff7d8ee44e0376f23cde1c ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -6022,11 +6022,11 @@ end
 -- @param #number Duration Duration in seconds, defaults to 10
 -- @param #boolean ClearView If true, clears the view before showing the picture, defaults to false
 -- @param #number StartDelay Delay in seconds before showing the picture, defaults to 0
--- @param #number HorizontalAlign Horizontal alignment of the picture, defaults to 1 (left), can be 0 (center) or 2 (right)
--- @param #number VerticalAlign Vertical alignment of the picture, defaults to 1 (top), can be 0 (center) or 2 (bottom)
+-- @param #number HorizontalAlign Horizontal alignment of the picture, 0: Left, 1: Center, 2: Right
+-- @param #number VerticalAlign Vertical alignment of the picture, 0: Top, 1: Center, 2: Bottom
 -- @param #number Size Size of the picture in percent, defaults to 100
--- @param #number SizeUnits Size units, defaults to 0 (percent), can be 1 (pixels)
-function UTILS.ShowPicture(FileName, Duration, ClearView, StartDelay, HorizontalAlign, VerticalAlign, Size, SizeUnits)
+-- @param #number SizeUnits Size units, 0 for % of original picture size, and 1 for % of window size
+function UTILS.ShowPicture(FilePath, Duration, ClearView, StartDelay, HorizontalAlign, VerticalAlign, Size, SizeUnits)
     ClearView = ClearView or false
     StartDelay = StartDelay or 0
     HorizontalAlign = HorizontalAlign or 1
@@ -6036,7 +6036,7 @@ function UTILS.ShowPicture(FileName, Duration, ClearView, StartDelay, Horizontal
 
     if ClearView then ClearView = "true" else ClearView = "false" end
 
-    net.dostring_in("mission", string.format("a_out_picture(getValueResourceByKey(\"%s\"), %d, %s, %d, \"%d\", \"%d\", %d, \"%d\")", FileName, Duration or 10, ClearView, StartDelay, HorizontalAlign, VerticalAlign, Size, SizeUnits))
+    net.dostring_in("mission", string.format("a_out_picture(\"%s\", %d, %s, %d, \"%d\", \"%d\", %d, \"%d\")", FilePath, Duration or 10, ClearView, StartDelay, HorizontalAlign, VerticalAlign, Size, SizeUnits))
 end
 
 --- Load a mission file. This will replace the current mission with the one given carrying along the online clients.
@@ -6048,13 +6048,13 @@ end
 --- Set the mission briefing for a coalition.
 -- @param #number Coalition Briefing coalition ID, can be coalition.side.BLUE, coalition.side.RED or coalition.side.NEUTRAL
 -- @param #string Text Briefing text, can contain newlines, will be converted formatted properly for DCS
--- @param #string Picture Picture filename, can be a file in the DEFAULT folder inside the .miz
+-- @param #string Picture Picture file path, can be a file in the DEFAULT folder inside the .miz
 function UTILS.SetMissionBriefing(Coalition, Text, Picture)
     Text = Text or ""
     Text = Text:gsub("\n", "\\n")
     Picture = Picture or ""
     local coalName = string.lower(UTILS.GetCoalitionName(Coalition))
-    net.dostring_in("mission", string.format("a_set_briefing(\"%s\", getValueResourceByKey(\"%s\"), \"%s\")", coalName, Picture, Text))
+    net.dostring_in("mission", string.format("a_set_briefing(\"%s\", \"%s\", \"%s\")", coalName, Picture, Text))
 end
 
 --- Show a helper gate at a DCS#Vec3 position
@@ -143214,6 +143214,7 @@ do
 --          my_ctld.TroopUnloadDistHoverHook = 5 -- When hovering, unload troops this far behind the Chinook
 --          my_ctld.showstockinmenuitems = false -- When set to true, the menu lines will also show the remaining items in stock (that is, if you set any), downside is that the menu for all will be build every 30 seconds anew.
 --          my_ctld.onestepmenu = false -- When set to true, the menu will create Drop and build, Get and load, Pack and remove, Pack and load, Pack. it will be a 1 step solution.
+--          my_ctld.VehicleMoveFormation = AI.Task.VehicleFormation.VEE -- When a group moves to a MOVE zone, then it takes this formation. Can be a table of formations, which are then randomly chosen. Defaults to "Vee".
 -- 
 -- ## 2.1 CH-47 Chinook support
 -- 
@@ -143641,6 +143642,7 @@ CTLD = {
   LoadedGroupsTable = {},
   keeploadtable = true,
   allowCATransport = false,
+  VehicleMoveFormation = AI.Task.VehicleFormation.VEE,
 }
 
 ------------------------------
@@ -143761,7 +143763,7 @@ CTLD.FixedWingTypes = {
 
 --- CTLD class version.
 -- @field #string version
-CTLD.version="1.3.36"
+CTLD.version="1.3.37"
 
 --- Instantiate a new CTLD.
 -- @param #CTLD self
@@ -143900,6 +143902,8 @@ function CTLD:New(Coalition, Prefixes, Alias)
   self.movetroopstowpzone = true
   self.movetroopsdistance = 5000
   self.troopdropzoneradius = 100
+  
+  self.VehicleMoveFormation = AI.Task.VehicleFormation.VEE
   
   -- added support Hercules Mod
   self.enableHercules = false -- deprecated
@@ -146544,6 +146548,17 @@ function CTLD:_BuildObjectFromCrates(Group,Unit,Build,Repair,RepairLocation,Mult
   return self
 end
 
+--- (Internal) Function to get a vehicle formation for a moving group
+-- @param #CTLD self
+-- @return #string Formation
+function CTLD:_GetVehicleFormation()
+  local VehicleMoveFormation = self.VehicleMoveFormation or AI.Task.VehicleFormation.VEE
+  if type(self.VehicleMoveFormation)=="table" then
+    VehicleMoveFormation = self.VehicleMoveFormation[math.random(1,#self.VehicleMoveFormation)]
+  end
+  return VehicleMoveFormation
+end
+
 --- (Internal) Function to move group to WP zone.
 -- @param #CTLD self
 -- @param Wrapper.Group#GROUP Group The Group to move.
@@ -146558,18 +146573,20 @@ function CTLD:_MoveGroupToZone(Group)
     -- yes, we can ;)
     local groupname = Group:GetName()
     local zonecoord = zone:GetRandomCoordinate(20,125) -- Core.Point#COORDINATE
-    local coordinate = zonecoord:GetVec2()
+    local formation = self:_GetVehicleFormation()
+    --local coordinate = zonecoord:GetVec2()
     Group:SetAIOn()
     Group:OptionAlarmStateAuto()
     Group:OptionDisperseOnAttack(30)
-    Group:OptionROEOpenFirePossible()
-    Group:RouteToVec2(coordinate,5)
+    Group:OptionROEOpenFireWeaponFree()
+    Group:RouteGroundTo(zonecoord,5,formation)
     end
   return self
 end
 
 --- (Internal) Housekeeping - Cleanup crates when build
 -- @param #CTLD self
+-- 
 -- @param #table Crates Table of #CTLD_CARGO objects near the unit.
 -- @param #CTLD.Buildable Build Table build object.
 -- @param #number Number Number of objects in Crates (found) to limit search.
@@ -149481,6 +149498,16 @@ end
       local filepath = self.filepath
       self:__Save(interval,filepath,filename)
     end
+    
+    if type(self.VehicleMoveFormation) == "table" then
+      local Formations = {}
+      for _,_formation in pairs(self.VehicleMoveFormation) do
+        table.insert(Formations,_formation)
+      end
+      self.VehicleMoveFormation = nil
+      self.VehicleMoveFormation = Formations
+    end
+  
     return self
   end
 
@@ -150839,7 +150866,7 @@ end
 -- @image OPS_CSAR.jpg
 
 ---
--- Last Update May 2025
+-- Last Update July 2025
 
 -------------------------------------------------------------------------
 --- **CSAR** class, extends Core.Base#BASE, Core.Fsm#FSM
@@ -152007,7 +152034,7 @@ function CSAR:_EventHandler(EventData)
     -- all checks passed, get going.
     if self.csarUsePara == false or (self.csarUsePara and wetfeet ) then --shagrat check parameter LandingAfterEjection, if true don't spawn a Pilot from EJECTION event, wait for the Chute to land
       local _freq = self:_GenerateADFFrequency()
-      self:_AddCsar(_coalition, _unit:GetCountry(), initcoord , _unit:GetTypeName(),  _unit:GetName(), _event.IniPlayerName, _freq, false, "none")
+       self:_AddCsar(_coalition, _unit:GetCountry(), initcoord , _unit:GetTypeName(),  _unit:GetName(), _event.IniPlayerName, _freq, self.suppressmessages, "none")
       return self
     end
 
@@ -152072,8 +152099,8 @@ function CSAR:_EventHandler(EventData)
     if _coalition == self.coalition then
       local _freq = self:_GenerateADFFrequency()
       self:I({coalition=_coalition,country= _country, coord=_LandingPos, name=_unitname, player=_event.IniPlayerName, freq=_freq})
-      self:_AddCsar(_coalition, _country, _LandingPos, nil, _unitname, _event.IniPlayerName, _freq, false, "none")--shagrat add CSAR at Parachute location.
-
+      self:_AddCsar(_coalition, _country, _LandingPos, nil, _unitname, _event.IniPlayerName, _freq, self.suppressmessages, "none")--shagrat add CSAR at Parachute location.
+    
       Unit.destroy(_event.initiator) -- shagrat remove static Pilot model
     end
   end
@@ -153813,8 +153840,8 @@ function CSAR:onafterLoad(From, Event, To, path, filename)
     local typeName = dataset[8]
     local unitName = dataset[9]
     local freq = tonumber(dataset[10])
-
-    self:_AddCsar(coalition, country, point, typeName, unitName, playerName, freq, nil, description, nil)
+    
+    self:_AddCsar(coalition, country, point, typeName, unitName, playerName, freq, false, description, nil)    
   end
 
   return self
