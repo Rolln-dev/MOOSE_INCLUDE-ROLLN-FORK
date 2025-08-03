@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-08-01T14:02:57+02:00-13fa8f373e37f6445952c6da4661b58873ff06b1 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-08-02T18:34:25+02:00-2341014882d85bcb4058d1559bf370ed65fdcabd ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -16189,6 +16189,7 @@ end
 -- @field #table Table of any trigger zone properties from the ME. The key is the Name of the property, and the value is the property's Value.
 -- @field #number Surface Type of surface. Only determined at the center of the zone!
 -- @field #number Checktime Check every Checktime seconds, used for ZONE:Trigger()
+-- @field #boolean PartlyInside When called, a GROUP is considered inside as soon as any of its units enters the zone even if they are far apart.
 -- @extends Core.Fsm#FSM
 
 
@@ -16731,6 +16732,8 @@ end
 --
 --            -- Stop watching the zone after 1 hour
 --           triggerzone:__TriggerStop(3600)
+--            -- Call :SetPartlyInside() if you use SET_GROUP to count as inside when any of their units enters even when they are far apart.
+--            -- Make sure to call :SetPartlyInside() before :Trigger()!
 function ZONE_BASE:Trigger(Objects)
   --self:I("Added Zone Trigger")
   self:SetStartState("TriggerStopped")
@@ -16799,6 +16802,16 @@ function ZONE_BASE:Trigger(Objects)
   
 end
 
+  --- Toggle “partly-inside” handling for this zone. To be used before :Trigger().
+  -- * Default:* flag is **false** until you call the method.  
+  -- * Call with no argument or with **true** → enable.  
+  -- * Call with **false** → disable again (handy if it was enabled before).
+  -- @param #ZONE_BASE self
+  -- @return #ZONE_BASE self
+  function ZONE_BASE:SetPartlyInside(state)
+  self.PartlyInside = state or not ( state == false )
+  return self
+  end
 --- (Internal) Check the assigned objects for being in/out of the zone
 -- @param #ZONE_BASE self
 -- @param #boolean fromstart If true, do the init of the objects
@@ -16837,7 +16850,12 @@ function ZONE_BASE:_TriggerCheck(fromstart)
           obj.TriggerInZone[self.ZoneName] = false
         end
         -- is obj in zone?
-        local inzone = self:IsCoordinateInZone(obj:GetCoordinate())
+        local inzone
+        if self.PartlyInside and obj.ClassName == "GROUP" then
+            inzone = obj:IsAnyInZone(self)                     -- TRUE if any unit is inside
+        else
+            inzone = self:IsCoordinateInZone(obj:GetCoordinate()) -- original barycentre test
+        end
         --self:I("Object "..obj:GetName().." is in zone: "..tostring(inzone))
         if inzone and obj.TriggerInZone[self.ZoneName] then
           -- just count
@@ -29546,6 +29564,8 @@ do -- SET_ZONE
   --          
   --          -- Stop watching after 1 hour
   --          zoneset:__TriggerStop(3600)
+  --          -- Call :SetPartlyInside() on any zone (or SET_ZONE) if you want GROUPs to count as inside when any of their units enters even if they are far apart.
+  --          -- Make sure to call :SetPartlyInside() before :Trigger()!.
   function SET_ZONE:Trigger(Objects)
     --self:I("Added Set_Zone Trigger")
     self:AddTransition("*","TriggerStart","TriggerRunning")
@@ -29596,6 +29616,20 @@ do -- SET_ZONE
     -- @param Core.Zone#ZONE_BASE Zone The zone left.
   end
   
+  --- Toggle “partly-inside” handling for every zone in the set when those zones are used with :Trigger().
+  -- * Call with no argument or **true** → enable for all.  
+  -- * Call with **false** → disable again (handy if it was enabled before).
+  -- @param #SET_ZONE self
+  -- @return #SET_ZONE self
+  function SET_ZONE:SetPartlyInside(state)
+    for _,Zone in pairs(self.Set) do
+        if Zone.SetPartlyInside then
+            Zone:SetPartlyInside(state)
+        end
+    end
+    return self
+  end
+  
   --- (Internal) Check the assigned objects for being in/out of the zone
   -- @param #SET_ZONE self
   -- @param #boolean fromstart If true, do the init of the objects
@@ -29631,8 +29665,13 @@ do -- SET_ZONE
               -- has not been tagged previously - wasn't in set! 
               obj.TriggerInZone[_zone.ZoneName] = false 
             end
-            -- is obj in zone?
-            local inzone = _zone:IsCoordinateInZone(obj:GetCoordinate())
+            -- is obj in this zone?
+            local inzone
+            if _zone.PartlyInside and obj.ClassName == "GROUP" then
+                inzone = obj:IsAnyInZone(_zone)                 -- TRUE as soon as any unit is inside
+            else
+                inzone = _zone:IsCoordinateInZone(obj:GetCoordinate())  -- original centroid test
+            end
             --self:I("Object "..obj:GetName().." is in zone: "..tostring(inzone))
             if inzone and not obj.TriggerInZone[_zone.ZoneName] then
               -- wasn't in zone before
