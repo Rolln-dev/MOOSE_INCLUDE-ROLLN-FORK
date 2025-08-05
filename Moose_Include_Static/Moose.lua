@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-08-02T18:34:25+02:00-2341014882d85bcb4058d1559bf370ed65fdcabd ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-08-04T16:11:00+02:00-e9194c59f46d706d50f6b7f00ff8e33a8ad6975e ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -60134,15 +60134,19 @@ AIRBASE.SouthAtlantic={
 -- * AIRBASE.Sinai.Kibrit_Air_Base
 -- * AIRBASE.Sinai.Kom_Awshim
 -- * AIRBASE.Sinai.Melez
+-- * AIRBASE.Sinai.Mezzeh_Air_Base
 -- * AIRBASE.Sinai.Nevatim
 -- * AIRBASE.Sinai.Ovda
 -- * AIRBASE.Sinai.Palmachim
 -- * AIRBASE.Sinai.Quwaysina
+-- * AIRBASE.Sinai.Rafic_Hariri_Intl
+-- * AIRBASE.Sinai.Ramat_David
 -- * AIRBASE.Sinai.Ramon_Airbase
 -- * AIRBASE.Sinai.Ramon_International_Airport
 -- * AIRBASE.Sinai.Sde_Dov
 -- * AIRBASE.Sinai.Sharm_El_Sheikh_International_Airport
 -- * AIRBASE.Sinai.St_Catherine
+-- * AIRBASE.Sinai.Tabuk
 -- * AIRBASE.Sinai.Tel_Nof
 -- * AIRBASE.Sinai.Wadi_Abu_Rish
 -- * AIRBASE.Sinai.Wadi_al_Jandali
@@ -60182,15 +60186,19 @@ AIRBASE.Sinai = {
   ["Kibrit_Air_Base"] = "Kibrit Air Base",
   ["Kom_Awshim"] = "Kom Awshim",
   ["Melez"] = "Melez",
+  ["Mezzeh_Air_Base"] = "Mezzeh Air Base",
   ["Nevatim"] = "Nevatim",
   ["Ovda"] = "Ovda",
   ["Palmachim"] = "Palmachim",
   ["Quwaysina"] = "Quwaysina",
+  ["Rafic_Hariri_Intl"] = "Rafic Hariri Intl",
+  ["Ramat_David"] = "Ramat David",
   ["Ramon_Airbase"] = "Ramon Airbase",
   ["Ramon_International_Airport"] = "Ramon International Airport",
   ["Sde_Dov"] = "Sde Dov",
   ["Sharm_El_Sheikh_International_Airport"] = "Sharm El Sheikh International Airport",
   ["St_Catherine"] = "St Catherine",
+  ["Tabuk"] = "Tabuk",
   ["Tel_Nof"] = "Tel Nof",
   ["Wadi_Abu_Rish"] = "Wadi Abu Rish",
   ["Wadi_al_Jandali"] = "Wadi al Jandali",
