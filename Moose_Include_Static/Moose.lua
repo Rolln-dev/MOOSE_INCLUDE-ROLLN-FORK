@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-08-04T16:11:00+02:00-e9194c59f46d706d50f6b7f00ff8e33a8ad6975e ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-08-07T11:30:44+02:00-674c6eec81a5492c6d21a38be32964efc83af116 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -17690,6 +17690,10 @@ function ZONE_RADIUS:GetRandomVec2(inner, outer, surfacetypes)
   local Vec2 = self:GetVec2()
   local _inner = inner or 0
   local _outer = outer or self:GetRadius()
+  
+  math.random()
+  math.random()
+  math.random()
 
   if surfacetypes and type(surfacetypes)~="table" then
     surfacetypes={surfacetypes}
@@ -19055,6 +19059,11 @@ end
 function ZONE_POLYGON_BASE:GetRandomVec2()
     -- make sure we assign weights to the triangles based on their surface area, otherwise
     -- we'll be more likely to generate random points in smaller triangles
+    
+    math.random()
+    math.random()
+    math.random()
+    
     local weights = {}
     for _, triangle in pairs(self._Triangles) do
         weights[triangle] = triangle.SurfaceArea / self.SurfaceArea
@@ -32902,7 +32911,9 @@ do -- COORDINATE
   -- @return DCS#Vec2 Vec2
   function COORDINATE:GetRandomVec2InRadius( OuterRadius, InnerRadius )
     self:F2( { OuterRadius, InnerRadius } )
-
+    math.random()
+    math.random()
+    math.random()
     local Theta = 2 * math.pi * math.random()
     local Radials = math.random() + math.random()
     if Radials > 1 then
@@ -71149,6 +71160,7 @@ function SCORING:_EventOnHit( Event )
   local TargetUnitCoalition = nil
   local TargetUnitCategory = nil
   local TargetUnitType = nil
+  local TargetIsScenery = false
 
   if Event.IniDCSUnit then
 
@@ -71189,6 +71201,12 @@ function SCORING:_EventOnHit( Event )
     TargetCategory = Event.TgtCategory
     TargetType = Event.TgtTypeName
 
+    -- Scenery hit
+    if (not TargetCategory) and TargetUNIT ~= nil and TargetUnit:IsInstanceOf("SCENERY") then
+        TargetCategory = Unit.Category.STRUCTURE
+        TargetIsScenery = true
+    end
+    
     TargetUnitCoalition = _SCORINGCoalition[TargetCoalition]
     TargetUnitCategory = _SCORINGCategory[TargetCategory]
     TargetUnitType = TargetType
@@ -71281,17 +71299,22 @@ function SCORING:_EventOnHit( Event )
                                  MESSAGE.Type.Update )
                        :ToAllIf( self:IfMessagesHit() and self:IfMessagesToAll() )
                        :ToCoalitionIf( InitCoalition, self:IfMessagesHit() and self:IfMessagesToCoalition() )
-              else
+              elseif TargetIsScenery ~= true then
                 MESSAGE:NewType( self.DisplayMessagePrefix .. "Player '" .. InitPlayerName .. "' hit enemy target " .. TargetUnitCategory .. " ( " .. TargetType .. " ) " .. PlayerHit.ScoreHit .. " times. " ..
                                  "Score: " .. PlayerHit.Score .. ".  Score Total:" .. Player.Score - Player.Penalty,
                                  MESSAGE.Type.Update )
                        :ToAllIf( self:IfMessagesHit() and self:IfMessagesToAll() )
                        :ToCoalitionIf( InitCoalition, self:IfMessagesHit() and self:IfMessagesToCoalition() )
+              elseif TargetIsScenery == true then
+                MESSAGE:NewType( self.DisplayMessagePrefix .. "Player '" .. InitPlayerName .. "' hit scenery object." .. " Score: " .. PlayerHit.Score .. ".  Score Total:" .. Player.Score - Player.Penalty,
+                             MESSAGE.Type.Update )
+                   :ToAllIf( self:IfMessagesHit() and self:IfMessagesToAll() )
+                   :ToCoalitionIf( InitCoalition, self:IfMessagesHit() and self:IfMessagesToCoalition() )
               end
               self:ScoreCSV( InitPlayerName, TargetPlayerName, "HIT_SCORE", 1, 1, InitUnitName, InitUnitCoalition, InitUnitCategory, InitUnitType, TargetUnitName, TargetUnitCoalition, TargetUnitCategory, TargetUnitType )
             end
           else -- A scenery object was hit.
-            MESSAGE:NewType( self.DisplayMessagePrefix .. "Player '" .. InitPlayerName .. "' hit scenery object.",
+            MESSAGE:NewType( self.DisplayMessagePrefix .. "Player '" .. InitPlayerName .. "' hit nothing special.",
                              MESSAGE.Type.Update )
                    :ToAllIf( self:IfMessagesHit() and self:IfMessagesToAll() )
                    :ToCoalitionIf( InitCoalition, self:IfMessagesHit() and self:IfMessagesToCoalition() )
@@ -179897,7 +179920,7 @@ end
 
 --- Checks if a point is contained within the circle.
 -- @param #table point The point to check
--- @return #bool True if the point is contained, false otherwise
+-- @return #boolean True if the point is contained, false otherwise
 function CIRCLE:ContainsPoint(point)
     if ((point.x - self.CenterVec2.x) ^ 2 + (point.y - self.CenterVec2.y) ^ 2) ^ 0.5 <= self.Radius then
         return true
@@ -180051,6 +180074,11 @@ end
 --- Returns a random Vec2 within the circle.
 -- @return #table The random Vec2
 function CIRCLE:GetRandomVec2()
+
+    math.random()
+    math.random()
+    math.random()
+    
     local angle = math.random() * 2 * math.pi
 
     local rx = math.random(0, self.Radius) * math.cos(angle) + self.CenterVec2.x
@@ -180062,6 +180090,11 @@ end
 --- Returns a random Vec2 on the border of the circle.
 -- @return #table The random Vec2
 function CIRCLE:GetRandomVec2OnBorder()
+    
+    math.random()
+    math.random()
+    math.random()
+
     local angle = math.random() * 2 * math.pi
 
     local rx = self.Radius * math.cos(angle) + self.CenterVec2.x
@@ -181068,6 +181101,7 @@ end
 --- Returns a random Vec2 within the polygon. The Vec2 is weighted by the areas of the triangles that make up the polygon.
 -- @return #table The random Vec2
 function POLYGON:GetRandomVec2()
+
     local weights = {}
     for _, triangle in pairs(self.Triangles) do
         weights[triangle] = triangle.SurfaceArea / self.SurfaceArea
@@ -181247,6 +181281,11 @@ end
 -- @param #table points The points of the triangle, or 3 other points if you're just using the TRIANGLE class without an object of it
 -- @return #table The random Vec2
 function TRIANGLE:GetRandomVec2(points)
+
+    math.random()
+    math.random()
+    math.random()
+    
     points = points or self.Points
     local pt = {math.random(), math.random()}
     table.sort(pt)
