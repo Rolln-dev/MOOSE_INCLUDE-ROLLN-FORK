@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-08-25T12:08:27+02:00-27fe314c1ee5c85877e95e1e2cd8daf48195d679 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-08-26T06:22:57+02:00-417caf1b625c95018389de13f9847ea3d3b6ce6a ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -55664,6 +55664,10 @@ function GROUP:Respawn( Template, Reset )
 
   --UTILS.PrintTableToLog(Template)
 
+  if self.ValidateAndRepositionGroundUnits then
+    UTILS.ValidateAndRepositionGroundUnits(Template.units)
+  end
+
   -- Spawn new group.
   self:ScheduleOnce(0.1,_DATABASE.Spawn,_DATABASE,Template)
   --_DATABASE:Spawn(Template)
@@ -56625,6 +56629,16 @@ function GROUP:IsAAA()
   end
   return isAAA
 end
+
+--- This function uses Disposition and other fallback logic to find better ground positions for ground units.
+--- NOTE: This is not a spawn randomizer.
+--- It will try to find clear ground locations avoiding trees, water, roads, runways, map scenery, statics and other units in the area and modifies the provided positions table.
+--- Maintains the original layout and unit positions as close as possible by searching for the next closest valid position to each unit.
+--- Uses UTILS.ValidateAndRepositionGroundUnits.
+-- @param #boolean Enabled Enable/disable the feature.
+function GROUP:SetValidateAndRepositionGroundUnits(Enabled)
+    self.ValidateAndRepositionGroundUnits = Enabled
+end
 --- **Wrapper** - UNIT is a wrapper class for the DCS Class Unit.
 -- 
 -- ===
@@ -57003,6 +57017,10 @@ function UNIT:ReSpawnAt(Coordinate, Heading)
     SpawnGroupTemplate.groupId = nil
 
     --self:T( SpawnGroupTemplate )
+
+    if self.ValidateAndRepositionGroundUnits then
+        UTILS.ValidateAndRepositionGroundUnits(SpawnGroupTemplate.units)
+    end
 
     _DATABASE:Spawn(SpawnGroupTemplate)
 end
@@ -58564,6 +58582,16 @@ end
 -- @param #number Mode Illumination mode, can be -2: OFF, -1: AUTO, 0: NAVIGATION, 1: AC LAUNCH, 2: AC RECOVERY
 function UNIT:SetCarrierIlluminationMode(Mode)
     UTILS.SetCarrierIlluminationMode(self:GetID(), Mode)
+end
+
+--- This function uses Disposition and other fallback logic to find better ground positions for ground units.
+--- NOTE: This is not a spawn randomizer.
+--- It will try to find clear ground locations avoiding trees, water, roads, runways, map scenery, statics and other units in the area and modifies the provided positions table.
+--- Maintains the original layout and unit positions as close as possible by searching for the next closest valid position to each unit.
+--- Uses UTILS.ValidateAndRepositionGroundUnits.
+-- @param #boolean Enabled Enable/disable the feature.
+function UNIT:SetValidateAndRepositionGroundUnits(Enabled)
+    self.ValidateAndRepositionGroundUnits = Enabled
 end
 --- **Wrapper** - CLIENT wraps DCS Unit objects acting as a __Client__ or __Player__ within a mission.
 -- 
