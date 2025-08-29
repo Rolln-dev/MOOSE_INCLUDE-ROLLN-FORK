@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-08-27T14:23:36+02:00-f1636fc5a911b8ceeb013d0fb7dbcdaca2e141ae ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-08-28T19:58:19+02:00-297164a0ee2cd4f93e0a3a76563f2f637348f68a ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -6399,6 +6399,54 @@ function UTILS.ValidateAndRepositionGroundUnits(Positions, Anchor, MaxRadius, Sp
             end
         end
     end
+end
+
+--- This function uses Disposition and other fallback logic to find better ground positions for ground units.
+--- NOTE: This is not a spawn randomizer.
+--- It will try to find clear ground locations avoiding trees, water, roads, runways, map scenery, statics and other units in the area and modifies the provided positions table.
+--- Maintains the original layout and unit positions as close as possible by searching for the next closest valid position to each unit.
+-- @param #table Positions A table of DCS#Vec2 or DCS#Vec3, can be a units table from the group template.
+-- @param DCS#Vec2 Position DCS#Vec2 or DCS#Vec3 initial spawn location.
+-- @param #number MaxRadius (Optional) Max radius to search for valid ground locations in meters. Default is double the max radius of the static.
+-- @return DCS#Vec2 Initial Position if it's valid, else a valid spawn position. nil if no valid position found.
+function UTILS.ValidateAndRepositionStatic(Country, Category, Type, Position, ShapeName, MaxRadius)
+    local coord = COORDINATE:NewFromVec2(Position)
+    local st = SPAWNSTATIC:NewFromType(Type, Category, Country)
+    if ShapeName then
+        st:InitShape(ShapeName)
+    end
+    local sName = "s-"..timer.getTime().."-"..math.random(1,10000)
+    local tempStatic = st:SpawnFromCoordinate(coord, 0, sName)
+    if tempStatic then
+        local sRadius = tempStatic:GetBoundingRadius(2) or 3
+        tempStatic:Destroy()
+        sRadius = sRadius * 0.5
+        MaxRadius = MaxRadius or math.max(sRadius * 10, 100)
+        local positions = UTILS.GetSimpleZones(coord:GetVec3(), MaxRadius, sRadius, 20)
+        if positions and #positions > 0 then
+            local closestSpot
+            local closestDist = math.huge
+            for _, spot in pairs(positions) do -- Disposition sometimes returns points on roads, hence this filter.
+                if land.getSurfaceType(spot) == land.SurfaceType.LAND then
+                    local dist = UTILS.VecDist2D(Position, spot)
+                    if dist < closestDist then
+                        closestDist = dist
+                        closestSpot = spot
+                    end
+                end
+            end
+
+            if closestSpot then
+                if closestDist >= sRadius then
+                    return closestSpot
+                else
+                    return Position
+                end
+            end
+        end
+    end
+
+    return nil
 end
 --- **Utils** - Lua Profiler.
 --
@@ -39556,6 +39604,7 @@ end
 --- NOTE: This is not a spawn randomizer.
 --- It will try to find clear ground locations avoiding trees, water, roads, runways, map scenery, statics and other units in the area.
 --- Maintains the original layout and unit positions as close as possible by searching for the next closest valid position to each unit.
+-- @param #SPAWN self
 -- @param #boolean OnOff Enable/disable the feature.
 -- @param #number MaxRadius (Optional) Max radius to search for valid ground locations in meters. Default is double the max radius of the units.
 -- @param #number Spacing (Optional) Minimum spacing between units in meters. Default is 5% of the search radius or 5 meters, whichever is larger.
@@ -43031,6 +43080,20 @@ function SPAWNSTATIC:InitLinkToUnit(Unit, OffsetX, OffsetY, OffsetAngle)
   return self
 end
 
+--- Uses Disposition and other fallback logic to find a better and valid ground spawn position.
+--- NOTE: This is not a spawn randomizer.
+--- It will try to a find clear ground location avoiding trees, water, roads, runways, map scenery, other statics and other units in the area.
+--- Uses the initial position if it's a valid location.
+-- @param #SPAWNSTATIC self
+-- @param #boolean OnOff Enable/disable the feature.
+-- @param #number MaxRadius (Optional) Max radius to search for a valid ground location in meters. Default is 10 times the max radius of the static.
+-- @return #SPAWNSTATIC self
+function SPAWNSTATIC:InitValidateAndRepositionStatic(OnOff, MaxRadius)
+    self.ValidateAndRepositionStatic = OnOff
+    self.ValidateAndRepositionStaticMaxRadius = MaxRadius
+    return self
+end
+
 --- Allows to place a CallFunction hook when a new static spawns.
 -- The provided method will be called when a new group is spawned, including its given parameters.
 -- The first parameter of the SpawnFunction is the @{Wrapper.Static#STATIC} that was spawned.
@@ -43196,6 +43259,14 @@ function SPAWNSTATIC:_SpawnStatic(Template, CountryID)
 
   -- Add static to the game.
   local Static=nil  --DCS#StaticObject
+
+  if self.ValidateAndRepositionStatic then
+    local validPos = UTILS.ValidateAndRepositionStatic(CountryID, Template.category, Template.type, Template, Template.shape_name, self.ValidateAndRepositionStaticMaxRadius)
+    if validPos then
+        Template.x = validPos.x
+        Template.y = validPos.y
+    end
+  end
 
   if self.InitFarp then
 
@@ -56635,6 +56706,7 @@ end
 --- It will try to find clear ground locations avoiding trees, water, roads, runways, map scenery, statics and other units in the area and modifies the provided positions table.
 --- Maintains the original layout and unit positions as close as possible by searching for the next closest valid position to each unit.
 --- Uses UTILS.ValidateAndRepositionGroundUnits.
+-- @param #UNIT self
 -- @param #boolean Enabled Enable/disable the feature.
 function GROUP:SetValidateAndRepositionGroundUnits(Enabled)
     self.ValidateAndRepositionGroundUnits = Enabled
@@ -58589,6 +58661,7 @@ end
 --- It will try to find clear ground locations avoiding trees, water, roads, runways, map scenery, statics and other units in the area and modifies the provided positions table.
 --- Maintains the original layout and unit positions as close as possible by searching for the next closest valid position to each unit.
 --- Uses UTILS.ValidateAndRepositionGroundUnits.
+-- @param #UNIT self
 -- @param #boolean Enabled Enable/disable the feature.
 function UNIT:SetValidateAndRepositionGroundUnits(Enabled)
     self.ValidateAndRepositionGroundUnits = Enabled
