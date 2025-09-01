@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-08-31T13:27:24+02:00-6c1907f7e0f14497e08c2ca08281de5119b655f4 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-09-01T10:57:48+02:00-a917ee8f1e2e435feef2f4a4560f09d38eb8a6b5 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -3005,12 +3005,12 @@ function UTILS.HdgDiff(h1, h2)
   return math.abs(delta)
 end
 
---- Returns the heading from one vec3 to another vec3.
--- @param DCS#Vec3 a From vec3.
--- @param DCS#Vec3 b To vec3.
+--- Returns the heading from one vec2/vec3 to another vec2/vec3.
+-- @param DCS#Vec3 a From Vec2 or Vec3.
+-- @param DCS#Vec3 b To Vec2 or Vec3.
 -- @return #number Heading in degrees.
 function UTILS.HdgTo(a, b)
-  local dz=b.z-a.z
+  local dz=(b.z or b.y) - (a.z or a.y)
   local dx=b.x-a.x
   local heading=math.deg(math.atan2(dz, dx))
   if heading < 0 then
@@ -6401,7 +6401,7 @@ function UTILS.ValidateAndRepositionGroundUnits(Positions, Anchor, MaxRadius, Sp
     end
 end
 
---- This function uses Disposition and other fallback logic to find better ground positions for ground units.
+--- This function uses Disposition and other fallback logic to find better ground positions for statics.
 --- NOTE: This is not a spawn randomizer.
 --- It will try to find clear ground locations avoiding trees, water, roads, runways, map scenery, statics and other units in the area and modifies the provided positions table.
 --- Maintains the original layout and unit positions as close as possible by searching for the next closest valid position to each unit.
@@ -117095,6 +117095,8 @@ end
 --    * [USS America](https://en.wikipedia.org/wiki/USS_America_\(LHA-6\)) (LHA-6)
 --    * [Juan Carlos I](https://en.wikipedia.org/wiki/Spanish_amphibious_assault_ship_Juan_Carlos_I) (L61)
 --    * [HMAS Canberra](https://en.wikipedia.org/wiki/HMAS_Canberra_\(L02\)) (L02)
+--    * BONHOMMERICHARD [VWV Mod]
+--    * ENTERPRISE66 [VWV Mod]
 --
 -- **Supported Aircraft:**
 --
@@ -118820,7 +118822,7 @@ AIRBOSS.MenuF10Root = nil
 
 --- Airboss class version.
 -- @field #string version
-AIRBOSS.version = "1.4.1"
+AIRBOSS.version = "1.4.2"
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- TODO list
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -120182,8 +120184,8 @@ function AIRBOSS:EnableSRS(PathToSRS,Port,Culture,Gender,Voice,GoogleCreds,Volum
   self.SRS:SetCulture(Culture or "en-US")
   --self.SRS:SetFrequencies(Frequencies)
   self.SRS:SetGender(Gender or "male")
-  self.SRS:SetPath(PathToSRS)
-  self.SRS:SetPort(Port or 5002)
+  --self.SRS:SetPath(PathToSRS)
+  self.SRS:SetPort(Port or MSRS.port or 5002)
   self.SRS:SetLabel(self.AirbossRadio.alias or "AIRBOSS")
   self.SRS:SetCoordinate(self.carrier:GetCoordinate())
   self.SRS:SetVolume(Volume or 1)
@@ -120194,7 +120196,10 @@ function AIRBOSS:EnableSRS(PathToSRS,Port,Culture,Gender,Voice,GoogleCreds,Volum
   if Voice then
     self.SRS:SetVoice(Voice)
   end
-  self.SRS:SetVolume(Volume or 1.0)
+  if (not Voice) and self.SRS and self.SRS:GetProvider() == MSRS.Provider.GOOGLE then
+    self.SRS.voice = MSRS.poptions["gcloud"].voice or MSRS.Voices.Google.Standard.en_US_Standard_B
+  end
+  --self.SRS:SetVolume(Volume or 1.0)
   -- SRSQUEUE
   self.SRSQ = MSRSQUEUE:New("AIRBOSS")
   self.SRSQ:SetTransmitOnlyWithPlayers(true)
