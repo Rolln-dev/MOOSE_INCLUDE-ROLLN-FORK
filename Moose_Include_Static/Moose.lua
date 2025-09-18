@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-09-11T05:13:50+02:00-cda1432d048f5a8946e42833f7f560db16f57248 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-09-18T06:47:01+02:00-5e8676cf8a13aeb3f0f9ecf3b100a79ec9bed494 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -13735,7 +13735,9 @@ function EVENT:onEvent( Event )
         else  
           if Event.place:isExist() and Object.getCategory(Event.place) ~= Object.Category.SCENERY then
             Event.Place=AIRBASE:Find(Event.place)
-            Event.PlaceName=Event.Place:GetName()
+            if Event.Place then
+              Event.PlaceName=Event.Place:GetName()
+            end
           end
         end
       end
