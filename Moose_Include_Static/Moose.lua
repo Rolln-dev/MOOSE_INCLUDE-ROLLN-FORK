@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-09-22T11:13:59+02:00-f3d586d4556174d9284b916b00e581f5f6395ef9 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-09-23T15:26:54+02:00-d0cf68c2e2954be7ac3edd8a00bd3f9f6c15f82d ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -66624,7 +66624,7 @@ function STORAGE:LoadFromFile(Path,Filename)
         end
       end
     else
-        self:E("File for Liquids could not be found: "..tostring(Path).."\\"..tostring(Filename"_Liquids.csv"))
+        self:E("File for Liquids could not be found: "..tostring(Path).."\\"..tostring(Filename).."_Liquids.csv")
     end
   end
   
@@ -66644,7 +66644,7 @@ function STORAGE:LoadFromFile(Path,Filename)
         end
       end
     else
-        self:E("File for Aircraft could not be found: "..tostring(Path).."\\"..tostring(Filename"_Aircraft.csv"))
+        self:E("File for Aircraft could not be found: "..tostring(Path).."\\"..tostring(Filename).."_Aircraft.csv")
     end
   end
   
@@ -66676,7 +66676,7 @@ function STORAGE:LoadFromFile(Path,Filename)
         end
       end
     else
-        self:E("File for Weapons could not be found: "..tostring(Path).."\\"..tostring(Filename"_Weapons.csv"))
+        self:E("File for Weapons could not be found: "..tostring(Path).."\\"..tostring(Filename).."_Weapons.csv")
     end
   end
    
