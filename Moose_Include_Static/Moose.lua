@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-09-23T15:26:54+02:00-d0cf68c2e2954be7ac3edd8a00bd3f9f6c15f82d ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-09-25T12:13:29+02:00-8fb4d4c7c634d8602bdd14e4b9cb8804333b6b56 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -17459,14 +17459,12 @@ function ZONE_RADIUS:Scan( ObjectCategories, UnitCategories )
 
   local function EvaluateZone( ZoneObject )
     --if ZoneObject:isExist() then --FF: isExist always returns false for SCENERY objects since DCS 2.2 and still in DCS 2.5
-    if ZoneObject then
+    if ZoneObject and self:IsVec3InZone(ZoneObject:getPoint()) then
 
       -- Get object category.
       local ObjectCategory = Object.getCategory(ZoneObject)
 
       if ( ObjectCategory == Object.Category.UNIT and ZoneObject:isExist() and ZoneObject:isActive() ) or (ObjectCategory == Object.Category.STATIC and ZoneObject:isExist()) then
-
-        local CoalitionDCSUnit = ZoneObject:getCoalition()
 
         local Include = false
         if not UnitCategories then
@@ -19587,13 +19585,11 @@ function ZONE_POLYGON:Scan( ObjectCategories, UnitCategories )
 
   local function EvaluateZone( ZoneObject )
 
-    if ZoneObject then
+    if ZoneObject and self:IsVec3InZone(ZoneObject:getPoint()) then
 
       local ObjectCategory = Object.getCategory(ZoneObject)
 
       if ( ObjectCategory == Object.Category.UNIT and ZoneObject:isExist() and ZoneObject:isActive() ) or (ObjectCategory == Object.Category.STATIC and ZoneObject:isExist()) then
-
-        local CoalitionDCSUnit = ZoneObject:getCoalition()
 
         local Include = false
         if not UnitCategories then
@@ -19626,7 +19622,7 @@ function ZONE_POLYGON:Scan( ObjectCategories, UnitCategories )
       end
 
       -- trying with box search
-      if ObjectCategory == Object.Category.SCENERY and self:IsVec3InZone(ZoneObject:getPoint()) then
+      if ObjectCategory == Object.Category.SCENERY then
         local SceneryType = ZoneObject:getTypeName()
         local SceneryName = ZoneObject:getName()
         self.ScanData.Scenery[SceneryType] = self.ScanData.Scenery[SceneryType] or {}
@@ -144362,7 +144358,7 @@ CTLD.FixedWingTypes = {
 
 --- CTLD class version.
 -- @field #string version
-CTLD.version="1.3.37"
+CTLD.version="1.3.38"
 
 --- Instantiate a new CTLD.
 -- @param #CTLD self
@@ -146273,6 +146269,7 @@ function CTLD:_LoadCratesNearby(Group, Unit)
       self:_RefreshLoadCratesMenu(Group, Unit)
       -- clean up real world crates
       self:_CleanupTrackedCrates(crateidsloaded)
+      self:__CratesPickedUp(1, Group, Unit, loaded.Cargo) 
     end
   end
   return self
