@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-10-10T11:41:52+02:00-ef8c7c908448e21675dbc141a156cf32e02c39c9 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-10-12T19:14:59+02:00-2e0d1fd90f2669977a38e1e6e57454afebf3d786 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -66985,6 +66985,8 @@ DYNAMICCARGO.State = {
 -- @type DYNAMICCARGO.AircraftTypes
 DYNAMICCARGO.AircraftTypes = {
   ["CH-47Fbl1"] = "CH-47Fbl1",
+  ["Mi-8MTV2"] = "CH-47Fbl1",
+  ["Mi-8MT"] = "CH-47Fbl1",
 }
 
 --- Helo types possible.
@@ -66997,17 +66999,30 @@ DYNAMICCARGO.AircraftDimensions = {
     ["length"] = 11,
     ["ropelength"] = 30,
   },
+    ["Mi-8MTV2"] = {
+    ["width"] = 6,
+    ["height"] = 6,
+    ["length"] = 15,
+    ["ropelength"] = 30,
+  },
+    ["Mi-8MT"] = {
+    ["width"] = 6,
+    ["height"] = 6,
+    ["length"] = 15,
+    ["ropelength"] = 30,
+  },
 }
 
 --- DYNAMICCARGO class version.
 -- @field #string version
-DYNAMICCARGO.version="0.0.7"
+DYNAMICCARGO.version="0.0.9"
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- TODO list
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -- TODO: A lot...
+-- DONE: Added Mi-8 type and dimensions
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Constructor
@@ -143132,7 +143147,7 @@ end
 -- @module Ops.CTLD
 -- @image OPS_CTLD.jpg
 
--- Last Update July 2025
+-- Last Update Oct 2025
 
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -147667,7 +147682,7 @@ function CTLD:_RefreshF10Menus()
                   end
                 end
               else
-                if self.usesubcats then
+                if self.usesubcats == true then
                   local subcatmenus = {}
                   for catName, _ in pairs(self.subcats) do
                     subcatmenus[catName] = MENU_GROUP:New(_group, catName, cratesmenu)         -- fixed variable case
