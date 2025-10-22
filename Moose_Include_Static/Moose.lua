@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-10-13T18:51:22+02:00-f7d58a0b76b0e1e1b3f183eb3ecd9eb38f5d1495 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-10-22T07:23:37+02:00-e8246b3b906e95b5a4ff841623896acaca8117af ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
