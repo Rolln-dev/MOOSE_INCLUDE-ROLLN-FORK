@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-10-24T16:27:17+02:00-86798ae9ea7dc803059feb3f367cfedaf0fe1131 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-10-26T07:27:37+01:00-55242edbde03d158747c8f829b78643ecc81113b ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -5695,9 +5695,33 @@ function UTILS.SpawnFARPAndFunctionalStatics(Name,Coordinate,FARPType,Coalition,
   local FarpVec2 = Coordinate:GetVec2()
   
   if NumberPads > 1 then
-    local Grid = UTILS.GenerateGridPoints(FarpVec2, NumberPads, SpacingX, SpacingY) 
+    local Grid = UTILS.GenerateGridPoints(FarpVec2, NumberPads, SpacingX, SpacingY)
+    local groupData = {
+    ["visible"] = true,
+    ["hidden"] = false,
+    ["units"] = {},
+    ["y"] = 0,  -- Group center latitude
+    ["x"] = 0,  -- Group center longitude
+    ["name"] = Name,
+    } 
+    local unitData = {
+            ["category"] = "Heliports",
+            ["type"] = STypeName,  -- FARP type
+            ["y"] = 0,  -- Latitude coordinate (meters)
+            ["x"] = 0,  -- Longitude coordinate (meters)
+            ["name"] = Name,
+            ["heading"] = 0,  -- Heading in radians
+            ["heliport_modulation"] = mod,  -- 0 = AM, 1 = FM
+            ["heliport_frequency"] = freq,  -- Radio frequency in MHz
+            ["heliport_callsign_id"] = callsign,  -- Callsign ID
+            ["dead"] = false,
+            ["shape_name"] = SShapeName,
+            ["dynamicSpawn"] = DynamicSpawns,
+            ["allowHotStart"] = HotStart,
+    }
     for id,gridpoint in ipairs(Grid) do
       -- Spawn FARP
+      --[[
       local location = COORDINATE:NewFromVec2(gridpoint)
       local newfarp = SPAWNSTATIC:NewFromType(STypeName,"Heliports",Country) --  "Invisible FARP" "FARP"
       newfarp:InitShape(SShapeName) -- "invisiblefarp" "FARPS"
@@ -5705,8 +5729,32 @@ function UTILS.SpawnFARPAndFunctionalStatics(Name,Coordinate,FARPType,Coalition,
       local spawnedfarp = newfarp:SpawnFromCoordinate(location,0,Name.."-"..id)
       table.insert(ReturnObjects,spawnedfarp)
       
-      PopulateStorage(Name.."-"..id,liquids,equip,airframes)   
-    end    
+      PopulateStorage(Name.."-"..id,liquids,equip,airframes)
+      --]]
+      local UnitTemplate = UTILS.DeepCopy(unitData)
+      UnitTemplate.x = gridpoint.x
+      UnitTemplate.y = gridpoint.y
+      UnitTemplate.name = Name.."-"..id
+      table.insert(groupData.units,UnitTemplate)
+      if id==1 then
+        groupData.x = gridpoint.x
+        groupData.y = gridpoint.y
+      end   
+    end
+    --BASE:I("Spawning FARP")
+    --UTILS.PrintTableToLog(groupData,1)
+    local Static=coalition.addGroup(Country, -1, groupData)
+    -- Currently DCS >= 2.8 does not trigger birth events if FARPS are spawned!
+    -- We create such an event. The airbase is registered in Core.Event
+    local Event = {
+      id = EVENTS.Birth,
+      time = timer.getTime(),
+      initiator = Static
+      }
+    -- Create BIRTH event.
+    world.onEvent(Event)
+    
+    PopulateStorage(Name.."-1",liquids,equip,airframes)
   else
     -- Spawn FARP
     local newfarp = SPAWNSTATIC:NewFromType(STypeName,"Heliports",Country) --  "Invisible FARP" "FARP"
@@ -129713,8 +129761,8 @@ function AIRBOSS:GetHeadingIntoWind_new( vdeck, magnetic, coord )
   local magvar= magnetic and self.magvar or 0
 
   -- Ship heading so cross wind is min for the given wind.
-  -- local intowind = (540 + (windto - magvar + math.deg(theta) )) % 360 -- VNAO Edit: Using old heading into wind algorithm
-  local intowind = self:GetHeadingIntoWind_old(vdeck,magnetic) -- VNAO Edit: Using old heading into wind algorithm
+  local intowind = (540 + (windto - magvar + math.deg(theta) )) % 360
+
 
   return intowind, v
 end
@@ -130166,7 +130214,8 @@ function AIRBOSS:_LSOgrade( playerData )
   local nL=count(G, '_')/2
   local nS=count(G, '%(')
   local nN=N-nS-nL
-
+  
+  if TIG=="_OK_" then nL = nL -1 end --Circuit added to prevent grade deduction for perfect groove
 
   -- Groove time 15-18.99 sec for a unicorn. Or 60-65 for V/STOL unicorn.
   local Tgroove=playerData.Tgroove
@@ -130196,7 +130245,6 @@ function AIRBOSS:_LSOgrade( playerData )
     else
 
     if vtol then
-
       -- Add AV-8B Harrier devation allowances due to lower groundspeed and 3x conventional groove time, this allows to maintain LSO tolerances while respecting the deviations are not unsafe.--Pene testing
       -- Large devaitions still result in a No Grade, A Unicorn still requires a clean pass with no deviation.
 
