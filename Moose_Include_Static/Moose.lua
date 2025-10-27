@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-10-26T07:27:37+01:00-55242edbde03d158747c8f829b78643ecc81113b ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-10-26T16:19:10+01:00-8392788cdb43295355f30deab0ad201d60edf061 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -5721,20 +5721,10 @@ function UTILS.SpawnFARPAndFunctionalStatics(Name,Coordinate,FARPType,Coalition,
     }
     for id,gridpoint in ipairs(Grid) do
       -- Spawn FARP
-      --[[
-      local location = COORDINATE:NewFromVec2(gridpoint)
-      local newfarp = SPAWNSTATIC:NewFromType(STypeName,"Heliports",Country) --  "Invisible FARP" "FARP"
-      newfarp:InitShape(SShapeName) -- "invisiblefarp" "FARPS"
-      newfarp:InitFARP(callsign,freq,mod,DynamicSpawns,HotStart)
-      local spawnedfarp = newfarp:SpawnFromCoordinate(location,0,Name.."-"..id)
-      table.insert(ReturnObjects,spawnedfarp)
-      
-      PopulateStorage(Name.."-"..id,liquids,equip,airframes)
-      --]]
       local UnitTemplate = UTILS.DeepCopy(unitData)
       UnitTemplate.x = gridpoint.x
       UnitTemplate.y = gridpoint.y
-      UnitTemplate.name = Name.."-"..id
+      if id > 1 then UnitTemplate.name = Name.."-"..id end
       table.insert(groupData.units,UnitTemplate)
       if id==1 then
         groupData.x = gridpoint.x
@@ -34133,6 +34123,7 @@ do -- COORDINATE
       if AirbaseCategory == Airbase.Category.SHIP or AirbaseCategory == Airbase.Category.HELIPAD then
         RoutePoint.linkUnit = AirbaseID
         RoutePoint.helipadId = AirbaseID
+        RoutePoint.airdromeId = airbase:IsAirdrome() and AirbaseID or nil
       elseif AirbaseCategory == Airbase.Category.AIRDROME then
         RoutePoint.airdromeId = AirbaseID
       else
@@ -71086,8 +71077,8 @@ function SCORING:New( GameName, SavePath, AutoSave )
 
   -- Create the CSV file.
   self.AutoSavePath = SavePath
-  self.AutoSave = AutoSave or true
-  if self.AutoSave == true then
+  self.AutoSave = (AutoSave == nil or AutoSave == true) and true or false
+  if self.AutoSavePath and self.AutoSave == true then
     self:OpenCSV( GameName )
   end
 
