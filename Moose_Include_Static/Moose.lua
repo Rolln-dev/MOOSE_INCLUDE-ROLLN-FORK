@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-10-26T16:19:10+01:00-8392788cdb43295355f30deab0ad201d60edf061 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-10-29T07:02:10+01:00-6058160160f29d7bd91aba0825259b0535881980 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -47546,6 +47546,7 @@ do -- Cargo
       ["HL_DSHK"] = 6*POSITIONABLE.DefaultInfantryWeight,
       ["CCKW_353"] = 16*POSITIONABLE.DefaultInfantryWeight, --GMC CCKW 2½-ton 6×6 truck, estimating 16 soldiers,
       ["MaxxPro_MRAP"] = 7*POSITIONABLE.DefaultInfantryWeight,
+      ["Sd_Kfz_251"] = 10*POSITIONABLE.DefaultInfantryWeight,
     }
   }
 
