@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-10-29T07:02:10+01:00-6058160160f29d7bd91aba0825259b0535881980 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-10-31T06:28:04+01:00-2047e818efb46a9d47b5ab5b960efd58ac18044e ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -27903,8 +27903,8 @@ do -- SET_CLIENT
   -- @param #SET_CLIENT self
   -- @return #SET_CLIENT self
   function SET_CLIENT:HandleCASlots()
-    self:HandleEvent(EVENTS.PlayerEnterUnit,SET_CLIENT._EventPlayerEnterUnit)
-    self:HandleEvent(EVENTS.PlayerLeaveUnit,SET_CLIENT._EventPlayerLeaveUnit)
+    self:HandleEvent(EVENTS.PlayerEnterUnit,self._EventPlayerEnterUnit)
+    --self:HandleEvent(EVENTS.PlayerLeaveUnit,self._EventPlayerLeaveUnit) -- Already set in :FilterStart()
     self:FilterFunction(function(client) if client and client:IsAlive() and client:IsGround() then return true else return false end end)
     return self
   end  
