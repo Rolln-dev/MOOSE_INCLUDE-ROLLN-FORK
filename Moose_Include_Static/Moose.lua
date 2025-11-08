@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-11-05T06:22:03+01:00-0e82cb977e5ca034c9259fa16c1e33a77a3426a8 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-11-07T21:53:26+01:00-da516a01677cad763c1b7745a120916df7199410 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -46004,6 +46004,27 @@ function IDENTIFIABLE:GetCoalition()
   return nil
 end
 
+--- Returns true if identifiable is of RED coalition.
+-- @param #IDENTIFIABLE self
+-- @return #boolean If the identifiable is red.
+function IDENTIFIABLE:IsRed()
+  return self:GetCoalition() == coalition.side.RED
+end
+
+--- Returns true if identifiable is of BLUE coalition.
+-- @param #IDENTIFIABLE self
+-- @return #boolean If the identifiable is blue.
+function IDENTIFIABLE:IsBlue()
+  return self:GetCoalition() == coalition.side.BLUE
+end
+
+--- Returns true if identifiable is of NEUTRAL coalition.
+-- @param #IDENTIFIABLE self
+-- @return #boolean If the identifiable is neutral.
+function IDENTIFIABLE:IsNeutral()
+  return self:GetCoalition() == coalition.side.NEUTRAL
+end
+
 --- Returns the name of the coalition of the Identifiable.
 -- @param #IDENTIFIABLE self
 -- @return #string The name of the coalition.
@@ -55249,9 +55270,12 @@ function GROUP:GetTypeName()
   local DCSGroup = self:GetDCSObject()
 
   if DCSGroup then
-    local GroupTypeName = DCSGroup:getUnit(1):getTypeName()
-    --self:T3( GroupTypeName )
-    return( GroupTypeName )
+    local unit = DCSGroup:getUnit(1)
+    if unit then
+        local GroupTypeName = unit:getTypeName()
+        --self:T3( GroupTypeName )
+        return( GroupTypeName )
+    end
   end
 
   return nil
@@ -55266,9 +55290,12 @@ function GROUP:GetNatoReportingName()
   local DCSGroup = self:GetDCSObject()
 
   if DCSGroup then
-    local GroupTypeName = DCSGroup:getUnit(1):getTypeName()
-    --self:T3( GroupTypeName )
-    return UTILS.GetReportingName(GroupTypeName)
+    local unit = DCSGroup:getUnit(1)
+    if unit then
+        local GroupTypeName = unit:getTypeName()
+        --self:T3( GroupTypeName )
+        return UTILS.GetReportingName(GroupTypeName)
+    end
   end
 
   return "Bogey"
@@ -55284,9 +55311,12 @@ function GROUP:GetPlayerName()
   local DCSGroup = self:GetDCSObject()
 
   if DCSGroup then
-    local PlayerName = DCSGroup:getUnit(1):getPlayerName()
-    --self:T3( PlayerName )
-    return( PlayerName )
+    local unit = DCSGroup:getUnit(1)
+    if unit then
+        local PlayerName = unit:getPlayerName()
+        --self:T3( PlayerName )
+        return( PlayerName )
+    end
   end
 
   return nil
@@ -55302,9 +55332,12 @@ function GROUP:GetCallsign()
   local DCSGroup = self:GetDCSObject()
 
   if DCSGroup then
-    local GroupCallSign = DCSGroup:getUnit(1):getCallsign()
-    --self:T3( GroupCallSign )
-    return GroupCallSign
+    local unit = DCSGroup:getUnit(1)
+    if unit then
+        local GroupCallSign = unit:getCallsign()
+        --self:T3( GroupCallSign )
+        return GroupCallSign
+    end
   end
 
   BASE:E( { "Cannot GetCallsign", Positionable = self, Alive = self:IsAlive() } )
