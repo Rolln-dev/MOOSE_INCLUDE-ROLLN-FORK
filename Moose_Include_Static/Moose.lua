@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-11-09T17:19:29+01:00-046bd37fd52641b3afe9cd00df7b711c29619c2e ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-11-11T12:54:42+01:00-704bb8668f3d8e38c4ce46141aeb57ade2c9a6ef ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -67915,12 +67915,33 @@ function DYNAMICCARGO:_UpdatePosition()
     ---------------
     -- REMOVED Cargo
     --------------- 
-    if self.timer and self.timer:IsRunning() then self.timer:Stop() end
+    if self.timer and self.timer:IsRunning() then 
+            self.timer:Stop()
+            self.timer=nil
+    end
     self:T(self.lid.." dead! " ..self.CargoState.."-> REMOVED")
     self.CargoState = DYNAMICCARGO.State.REMOVED
     _DATABASE:CreateEventDynamicCargoRemoved(self)
   end
   return self
+end
+
+--- [USER] Destroy a DYNAMICCARGO object.
+-- @param #DYNAMICCARGO self
+-- @param #boolean GenerateEvent Set to false to remove an item silently. Defaults to true.
+-- @return #boolean Return Returns nil if the object could not be found, else returns true.
+function DYNAMICCARGO:Destroy(GenerateEvent)
+  local DCSObject = self:GetDCSObject()
+  if DCSObject then
+    local GenerateEvent = (GenerateEvent ~= nil and GenerateEvent == false) and false or true
+    if GenerateEvent and GenerateEvent == true then
+        self:CreateEventDead( timer.getTime(), DCSObject )
+    end  
+    DCSObject:destroy()
+    self:_UpdatePosition()
+    return true
+  end
+  return nil
 end
 
 --- [Internal] Track helos for loaded/unloaded decision making.
