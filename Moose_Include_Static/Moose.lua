@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-11-14T13:45:22+01:00-0c0d1cc79456bff1d38362383b7b17fbda1fc4a5 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-11-14T17:26:24+01:00-5089e7df25ac7fe4f06f98fc4505dbc4afb28cdd ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -50979,7 +50979,7 @@ do -- Route methods
   -- @param Core.Zone#ZONE Zone The zone where to route to.
   -- @param #boolean Randomize Defines whether to target point gets randomized within the Zone.
   -- @param #number Speed The speed in m/s. Default is 5.555 m/s = 20 km/h.
-  -- @param Core.Base#FORMATION Formation The formation string.
+  -- @param DCS#FORMATION Formation The formation string.
   function CONTROLLABLE:TaskRouteToZone( Zone, Randomize, Speed, Formation )
     self:F2( Zone )
 
@@ -51039,7 +51039,7 @@ do -- Route methods
   -- @param #CONTROLLABLE self
   -- @param DCS#Vec2 Vec2 The Vec2 where to route to.
   -- @param #number Speed The speed in m/s. Default is 5.555 m/s = 20 km/h.
-  -- @param Core.Base#FORMATION Formation The formation string.
+  -- @param DCS#FORMATION Formation The formation string.
   function CONTROLLABLE:TaskRouteToVec2( Vec2, Speed, Formation )
 
     local DCSControllable = self:GetDCSObject()
