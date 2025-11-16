@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-11-14T17:26:24+01:00-5089e7df25ac7fe4f06f98fc4505dbc4afb28cdd ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-11-15T16:48:05+01:00-26fbae8672e3e7959f55e44e01f014873b7f964d ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -117995,7 +117995,7 @@ end
 -- **Supported Aircraft:**
 --
 --    * [F/A-18C Hornet Lot 20](https://forums.eagle.ru/forumdisplay.php?f=557) (Player & AI)
---    * [F-14A/B Tomcat](https://forums.eagle.ru/forumdisplay.php?f=395) (Player & AI)
+--    * [F-14A/B/A Early Tomcat](https://forums.eagle.ru/forumdisplay.php?f=395) (Player & AI)
 --    * [A-4E Skyhawk Community Mod](https://forums.eagle.ru/showthread.php?t=224989) (Player & AI)
 --    * [AV-8B N/A Harrier](https://forums.eagle.ru/forumdisplay.php?f=555) (Player & AI)
 --    * [T-45C Goshawk](https://forum.dcs.world/topic/203816-vnao-t-45-goshawk/) (VNAO mod) (Player & AI)
@@ -118013,7 +118013,7 @@ end
 -- no other fixed wing aircraft (human or AI controlled) are supposed to land on these ships. Currently only Case I is supported. Case II/III take slightly different steps from the CVN carrier.
 -- However, if no offset is used for the holding radial this provides a very close representation of the V/STOL Case III, allowing for an approach to over the deck and a vertical landing.
 --
--- Heatblur's mighty F-14B Tomcat has been added (March 13th 2019) as well. Same goes for the A version.
+-- Heatblur's mighty F-14A/B/A Early Tomcat has been added as well.
 --
 -- The [DCS Supercarriers](https://www.digitalcombatsimulator.com/de/shop/modules/supercarrier/) are also supported.
 --
@@ -119226,6 +119226,7 @@ AIRBOSS = {
 -- @field #string A4EC A-4E Community mod.
 -- @field #string HORNET F/A-18C Lot 20 Hornet by Eagle Dynamics.
 -- @field #string F14A F-14A by Heatblur.
+-- @field #string F14A_Early F-14A-135-GR-Early by Heatblur.
 -- @field #string F14B F-14B by Heatblur.
 -- @field #string F14A_AI F-14A Tomcat (AI).
 -- @field #string FA18C F/A-18C Hornet (AI).
@@ -119244,6 +119245,7 @@ AIRBOSS.AircraftCarrier={
   HORNET="FA-18C_hornet",
   A4EC="A-4E-C",
   F14A="F-14A-135-GR",
+  F14A_Early="F-14A-135-GR-Early",
   F14B="F-14B",
   F14A_AI="F-14A",
   FA18C="F/A-18C",
@@ -123423,7 +123425,7 @@ function AIRBOSS:_GetAircraftAoA( playerData )
   local goshawk = playerData.actype == AIRBOSS.AircraftCarrier.T45C
   local skyhawk = playerData.actype == AIRBOSS.AircraftCarrier.A4EC
   local harrier = playerData.actype == AIRBOSS.AircraftCarrier.AV8B
-  local tomcat  = playerData.actype == AIRBOSS.AircraftCarrier.F14A or playerData.actype == AIRBOSS.AircraftCarrier.F14B
+  local tomcat  = playerData.actype == AIRBOSS.AircraftCarrier.F14A or playerData.actype == AIRBOSS.AircraftCarrier.F14B or playerData.actype == AIRBOSS.AircraftCarrier.F14A_Early
   local corsair = playerData.actype == AIRBOSS.AircraftCarrier.CORSAIR or playerData.actype == AIRBOSS.AircraftCarrier.CORSAIR_CW
 
   -- Table with AoA values.
@@ -123502,7 +123504,7 @@ function AIRBOSS:_AoAUnit2Deg( playerData, aoaunits )
   local degrees = aoaunits
 
   -- Check aircraft type of player.
-  if playerData.actype == AIRBOSS.AircraftCarrier.F14A or playerData.actype == AIRBOSS.AircraftCarrier.F14B then
+  if playerData.actype == AIRBOSS.AircraftCarrier.F14A or playerData.actype == AIRBOSS.AircraftCarrier.F14B or playerData.actype == AIRBOSS.AircraftCarrier.F14A_Early then
 
     -------------
     -- F-14A/B --
@@ -123545,7 +123547,7 @@ function AIRBOSS:_AoADeg2Units( playerData, degrees )
   local aoaunits = degrees
 
   -- Check aircraft type of player.
-  if playerData.actype == AIRBOSS.AircraftCarrier.F14A or playerData.actype == AIRBOSS.AircraftCarrier.F14B then
+  if playerData.actype == AIRBOSS.AircraftCarrier.F14A or playerData.actype == AIRBOSS.AircraftCarrier.F14B or playerData.actype == AIRBOSS.AircraftCarrier.F14A_Early then
 
     -------------
     -- F-14A/B --
@@ -129543,7 +129545,7 @@ function AIRBOSS:_AttitudeMonitor( playerData )
 
   local unitClient = Unit.getByName(unit:GetName()) -- VNAO Edit - Added
   local hornet = playerData.actype == AIRBOSS.AircraftCarrier.HORNET -- VNAO Edit - Added
-  local tomcat = playerData.actype == AIRBOSS.AircraftCarrier.F14A or playerData.actype == AIRBOSS.AircraftCarrier.F14B -- VNAO Edit - Added
+  local tomcat = playerData.actype == AIRBOSS.AircraftCarrier.F14A or playerData.actype == AIRBOSS.AircraftCarrier.F14B or playerData.actype == AIRBOSS.AircraftCarrier.F14A_Early -- VNAO Edit - Added
 
   if hornet then -- VNAO Edit - Added
     local nozzlePosL = 0  -- VNAO Edit - Added
@@ -129776,7 +129778,7 @@ function AIRBOSS:_NozzleArgumentLeft( unit ) -- VNAO Edit - Added
     else -- VNAO Edit - Added
       nozzlePosL = 0 -- VNAO Edit - Added
     end -- VNAO Edit - Added
-  elseif typeName == "F-14A-135-GR" or typeName == "F-14B" then -- VNAO Edit - Added
+  elseif typeName == "F-14A-135-GR" or typeName == "F-14B" or typeName == "F-14A-135-GR-Early" then -- VNAO Edit - Added
     nozzlePosL = unitClient:getDrawArgumentValue(434) -- VNAO Edit - Added
   end -- VNAO Edit - Added
   
@@ -129801,7 +129803,7 @@ function AIRBOSS:_NozzleArgumentRight( unit ) -- VNAO Edit - Added
     else -- VNAO Edit - Added
       nozzlePosR = 0 -- VNAO Edit - Added
     end -- VNAO Edit - Added
-  elseif typeName == "F-14A-135-GR" or typeName == "F-14B" then -- VNAO Edit - Added
+  elseif typeName == "F-14A-135-GR" or typeName == "F-14B" or typeName == "F-14A-135-GR-Early" then -- VNAO Edit - Added
     nozzlePosR = unitClient:getDrawArgumentValue(433) -- VNAO Edit - Added
   end -- VNAO Edit - Added
   return nozzlePosR -- VNAO Edit - Added
@@ -133016,7 +133018,7 @@ function AIRBOSS:_GetACNickname( actype )
     nickname = "Hawkeye"
   elseif actype == AIRBOSS.AircraftCarrier.C2A then
     nickname = "Greyhound"
-  elseif actype == AIRBOSS.AircraftCarrier.F14A_AI or actype == AIRBOSS.AircraftCarrier.F14A or actype == AIRBOSS.AircraftCarrier.F14B then
+  elseif actype == AIRBOSS.AircraftCarrier.F14A_AI or actype == AIRBOSS.AircraftCarrier.F14A or actype == AIRBOSS.AircraftCarrier.F14B or actype == AIRBOSS.AircraftCarrier.F14A_Early then
     nickname = "Tomcat"
   elseif actype == AIRBOSS.AircraftCarrier.FA18C or actype == AIRBOSS.AircraftCarrier.HORNET then
     nickname = "Hornet"
