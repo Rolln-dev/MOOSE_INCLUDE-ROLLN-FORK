@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-11-15T16:48:05+01:00-26fbae8672e3e7959f55e44e01f014873b7f964d ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-11-22T15:17:26+01:00-5955c2d61f8208b6230cb993f9d26294393f2229 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -14269,7 +14269,7 @@ function EVENT:onEvent( Event )
           -- SCENERY
           ---
           Event.TgtDCSUnit = Event.target
-          Event.TgtDCSUnitName = Event.TgtDCSUnit.getName and Event.TgtDCSUnit.getName() or nil
+          Event.TgtDCSUnitName = Event.TgtDCSUnit.getName and Event.TgtDCSUnit:getName() or nil
           if Event.TgtDCSUnitName~=nil then
             Event.TgtUnitName = Event.TgtDCSUnitName
             Event.TgtUnit = SCENERY:Register( Event.TgtDCSUnitName, Event.target )
@@ -18011,7 +18011,7 @@ function ZONE_RADIUS:Scan( ObjectCategories, UnitCategories )
   self.ScanData.SceneryTable = {}
   self.ScanData.Units = {}
 
-  local ZoneCoord = self:GetCoordinate()
+  local ZoneCoord = self:GetCoordinate():SetAlt()
   local ZoneRadius = self:GetRadius()
 
   --self:F({ZoneCoord = ZoneCoord, ZoneRadius = ZoneRadius, ZoneCoordLL = ZoneCoord:ToStringLLDMS()})
@@ -24587,7 +24587,8 @@ do -- SET_BASE
   function SET_BASE:IsInSet(Object)
     --self:F3(Object)
     local outcome = false
-    local name = Object:GetName()
+    if Object == nil then return false end
+    local name = (Object ~= nil and Object.GetName) and Object:GetName() or "none"
     --self:I("SET_BASE: Objectname = "..name)
     self:ForEach(
       function(object)
@@ -63677,7 +63678,13 @@ end
 -- @field #string SceneryName Name of the scenery object.
 -- @field DCS#Object SceneryObject DCS scenery object.
 -- @field #number Life0 Initial life points.
--- @field #table Properties
+-- @field #table Properties.
+-- @field #number ID.
+-- @field Core.Zone#ZONE_POLYGON SceneryZone.
+-- @field Core.Point#COORDINATE Coordinate.
+-- @field DCS#Vec2 Vec2.
+-- @field DCS#Vec3 Vec3.
+-- @field Core.Vector#VECTOR Vector.
 -- @extends Wrapper.Positionable#POSITIONABLE
 
 
@@ -63694,27 +63701,72 @@ SCENERY = {
   ClassName = "SCENERY",
 }
 
+_SCENERY = {}
+
 --- Register scenery object as POSITIONABLE.
 --@param #SCENERY self
 --@param #string SceneryName Scenery name.
 --@param DCS#Object SceneryObject DCS scenery object.
+--@param Core.Zone#ZONE_POLYGON SceneryZone (optional) The zone object.
 --@return #SCENERY Scenery object.
-function SCENERY:Register( SceneryName, SceneryObject )
-
+function SCENERY:Register( SceneryName, SceneryObject, SceneryZone )
+  
+  local ID = (SceneryObject and SceneryObject.getID) and SceneryObject:getID() or SceneryName
+  
+  if _SCENERY[ID] and _SCENERY[ID].SceneryObject == nil then 
+  
+    _SCENERY[ID].SceneryObject=SceneryObject 
+    SCENERY._UpdateFromDCSObject(_SCENERY[ID])
+    
+  end
+  
+  if _SCENERY[ID] then return _SCENERY[ID] end
+    
   local self = BASE:Inherit( self, POSITIONABLE:New( SceneryName ) )
   
   self.SceneryName = tostring(SceneryName)
-  
+  self.ID = ID
   self.SceneryObject = SceneryObject
+  self.SceneryZone = SceneryZone
+  
+  if SceneryZone then
+    self.Vec3 = SceneryZone:GetVec3()
+    self.Vec2 = SceneryZone:GetVec2()
+    self.Vector = (self.Vec3 and VECTOR) and VECTOR:NewFromVec(self.Vec3) or nil
+  end
   
   if self.SceneryObject and self.SceneryObject.getLife then -- fix some objects do not have all functions
-    self.Life0 = self.SceneryObject:getLife() or 0
+    self.Life0 = self.SceneryObject:getLife() or 1
   else
-    self.Life0 = 0
+    self.Life0 = 1
   end
   
   self.Properties = {}
   
+  _SCENERY[self.ID] = self
+  
+  return self
+end
+
+
+--- [INTERNAL] Update data 
+-- @param Wrapper.Scenery#SCENERY Scenery The object to update.
+function SCENERY._UpdateFromDCSObject(Scenery)
+  env.info("APPLE _UpdateFromDCSObject "..tostring(Scenery.SceneryName))
+  local self=Scenery
+  if self.Vec2 == nil and self.SceneryObject ~= nil then
+    self.Vec3 = self.SceneryObject:getPoint()
+    if self.Vec3 then
+      self.Vec2 = {x=self.Vec3.x,y=self.Vec3.z}
+      self.Vector = VECTOR:NewFromVec(self.Vec3)
+    end
+  end
+  if not self.Life0 or self.Life0 == 1 then 
+    if self.SceneryObject and self.SceneryObject.getLife() then
+      self.Life = self.SceneryObject:getLife() or 1
+      self.Life0 = self.Life
+    end
+  end
   return self
 end
 
@@ -63758,11 +63810,51 @@ function SCENERY:GetName()
   return self.SceneryName
 end
 
+--- Obtain object coordinate.
+--@param #SCENERY self
+--@return Core.Point#COORDINATE Coordinate
+function SCENERY:GetCoordinate()
+  if self.Coordinate then
+    return self.Coordinate
+  elseif self.Vec3 then
+    self.Coordinate = COORDINATE:NewFromVec3(self.Vec3):SetAlt()
+  end
+  return self.Coordinate
+end
+
+--- Obtain object coordinate.
+--@param #SCENERY self
+--@return DCS#Vec3 Vec3
+function SCENERY:GetVec3()
+  return self.Vec3
+end
+
+--- Obtain object coordinate.
+--@param #SCENERY self
+--@return DCS#Vec2 Vec2
+function SCENERY:GetVec2()
+  return self.Vec2
+end
+
+--- Obtain object coordinate.
+--@param #SCENERY self
+--@return Core.Vector#VECTOR Vector
+function SCENERY:GetVector()
+  return self.Vector
+end
+
 --- Obtain DCS Object from the SCENERY Object.
 --@param #SCENERY self
 --@return DCS#Object DCS scenery object.
 function SCENERY:GetDCSObject()
   return self.SceneryObject
+end
+
+--- Obtain object ID.
+--@param #SCENERY self
+--@return #string Name
+function SCENERY:GetID()
+  return self.ID
 end
 
 --- Get current life points from the SCENERY Object. Note - Some scenery objects always have 0 life points.
@@ -63772,12 +63864,14 @@ end
 --@param #SCENERY self
 --@return #number life
 function SCENERY:GetLife()
-  local life = 0
+  local life = 1
   if self.SceneryObject and self.SceneryObject.getLife then
     life = self.SceneryObject:getLife()
     if life > self.Life0 then
       self.Life0 = math.floor(life * 1.2)
     end
+  elseif self.Life then
+    life = self.Life
   end
   return life
 end
@@ -63835,12 +63929,19 @@ end
 --- Find a SCENERY object from its name or id. Since SCENERY isn't registered in the Moose database (just too many objects per map), we need to do a scan first
 -- to find the correct object.
 --@param #SCENERY self
---@param #string Name The name/id of the scenery object as taken from the ME. Ex. '595785449'
---@param Core.Point#COORDINATE Coordinate Where to find the scenery object
---@param #number Radius (optional) Search radius around coordinate, defaults to 100
---@return #SCENERY Scenery Object or `nil` if it cannot be found
-function SCENERY:FindByName(Name, Coordinate, Radius, Role)
-
+--@param #string Name The name/id of the scenery object as taken from the ME. Ex. '595785449'.
+--@param Core.Point#COORDINATE Coordinate Where to find the scenery object.
+--@param #number Radius (optional) Search radius around coordinate, defaults to 100.
+--@param #string Role (optional) The role if set on the zone object.
+--@param Core.Zone#ZONE_POLYGON Zone (optional) The Zone where the scenery is located.
+--@return #SCENERY Scenery Object or `nil` if it cannot be found.
+function SCENERY:FindByName(Name, Coordinate, Radius, Role, Zone)
+  
+  --BASE:I("Coordinate x = "..Coordinate.x .. " y = "..Coordinate.y.." z = "..Coordinate.z)
+  
+  local findme = self:_FindByName(Name)
+  if findme then return findme end
+  
   local radius = Radius or 100
   local name = Name or "unknown"
   local scenery = nil
@@ -63852,12 +63953,13 @@ function SCENERY:FindByName(Name, Coordinate, Radius, Role)
   local function SceneryScan(scoordinate, sradius, sname)
     if scoordinate ~= nil then
       local Vec2 = scoordinate:GetVec2()
-      local scanzone = ZONE_RADIUS:New("Zone-"..sname,Vec2,sradius,true)
+      local scanzone = ZONE_RADIUS:New("Zone-"..sname,Vec2,sradius)
       scanzone:Scan({Object.Category.SCENERY})
       local scanned = scanzone:GetScannedSceneryObjects()
       local rscenery = nil -- Wrapper.Scenery#SCENERY
       for _,_scenery in pairs(scanned) do
         local scenery = _scenery -- Wrapper.Scenery#SCENERY
+        --BASE:I({tostring(scenery.SceneryName),tostring(sname)})
         if tostring(scenery.SceneryName) == tostring(sname) then
           rscenery = scenery
           if Role then rscenery:SetProperty("ROLE",Role) end
@@ -63870,11 +63972,34 @@ function SCENERY:FindByName(Name, Coordinate, Radius, Role)
   end
   
   if Coordinate then
-    --BASE:I("Coordinate Scenery Scan")
     scenery = SceneryScan(Coordinate, radius, name)
   end
-
+  
+  if not scenery then scenery = SCENERY:Register(Name,nil,Zone) end
+    
   return scenery  
+end
+
+--- Find a SCENERY object that was previously registered(!) by it's ID.
+-- @param #SCENERY self
+-- @param #number ID
+-- @return Wrapper.Scenery#SCENERY Scenery or nil if it could not be found 
+function SCENERY:FindByID(ID)
+  return _SCENERY[ID]
+end
+
+--- Find a SCENERY object that was previously registered(!) by it's name.
+-- @param #SCENERY self
+-- @param #string Name
+-- @return Wrapper.Scenery#SCENERY Scenery or nil if it could not be found 
+function SCENERY:_FindByName(Name)
+  for _id,_object in pairs(_SCENERY) do
+    if _object and _object.GetName and _object:GetName() then
+      local name = _object:GetName()
+      if Name == name then return _object end
+    end
+  end
+  return nil
 end
 
 --- Find a SCENERY object from its name or id. Since SCENERY isn't registered in the Moose database (just too many objects per map), we need to do a scan first
@@ -63890,8 +64015,8 @@ function SCENERY:FindByNameInZone(Name, Zone, Radius)
   if type(Zone) == "string" then
     Zone = ZONE:FindByName(Zone)
   end
-  local coordinate = Zone:GetCoordinate()
-  return self:FindByName(Name,coordinate,Radius,Zone:GetProperty("ROLE"))
+  local coordinate = Zone:GetCoordinate():SetAlt()
+  return self:FindByName(Name,coordinate,Radius,Zone:GetProperty("ROLE"),Zone)
 end
 
 --- Find a SCENERY object from its zone name. Since SCENERY isn't registered in the Moose database (just too many objects per map), we need to do a scan first
@@ -63900,14 +64025,18 @@ end
 --@param #string ZoneName The name of the scenery zone as created with a right-click on the map in the mission editor and select "assigned to...". Can be handed over as ZONE object.
 --@return #SCENERY First found Scenery Object or `nil` if it cannot be found
 function SCENERY:FindByZoneName( ZoneName )
+  --BASE:I(ZoneName)
+
   local zone = ZoneName -- Core.Zone#ZONE_BASE
+
   if type(ZoneName) == "string" then
     zone = ZONE:FindByName(ZoneName)  -- Core.Zone#ZONE_POLYGON
   end
+
   local _id = zone:GetProperty('OBJECT ID')
-  --local properties = zone:GetAllProperties() or {}
-  --BASE:I(string.format("Object ID is: %s",_id or "none"))
-  --BASE:T("Object ID ".._id)
+
+  --BASE:I("Object ID ".._id)
+
   if not _id then
     -- this zone has no object ID
     BASE:E("**** Zone without object ID: "..ZoneName.." | Type: "..tostring(zone.ClassName))
@@ -63916,23 +64045,27 @@ function SCENERY:FindByZoneName( ZoneName )
       local scanned = zone:GetScannedSceneryObjects()
       for _,_scenery in (scanned) do
         local scenery = _scenery -- Wrapper.Scenery#SCENERY
-        if scenery:IsAlive() then
+        --if scenery:IsAlive() then
           local role = zone:GetProperty("ROLE")
           if role then scenery:SetProperty("ROLE",role) end
           return scenery
-        end
+        --end
       end
       return nil
     else
-      return self:FindByName(_id, zone:GetCoordinate(),nil,zone:GetProperty("ROLE"))
+      local coordinate = zone:GetCoordinate()
+      coordinate:SetAlt()
+      return self:FindByName(_id, coordinate,nil,zone:GetProperty("ROLE"),zone)
     end
   else
-    return self:FindByName(_id, zone:GetCoordinate(),nil,zone:GetProperty("ROLE"))
+    local coordinate = zone:GetCoordinate()
+    coordinate:SetAlt()
+    return self:FindByName(_id, coordinate,nil,zone:GetProperty("ROLE"),zone)
   end
 end
 
 --- Scan and find all SCENERY objects from a zone by zone-name. Since SCENERY isn't registered in the Moose database (just too many objects per map), we need to do a scan first
--- to find the correct object.
+-- to find the correct object. Might return nil!
 --@param #SCENERY self
 --@param #string ZoneName The name of the zone, can be handed as ZONE_RADIUS or ZONE_POLYGON object
 --@return #table of SCENERY Objects, or `nil` if nothing found
@@ -63954,7 +64087,7 @@ function SCENERY:FindAllByZoneName( ZoneName )
       return nil
     end
   else
-    local obj = self:FindByName(_id, zone:GetCoordinate(),nil,zone:GetProperty("ROLE"))
+    local obj = self:FindByName(_id, zone:GetCoordinate():SetAlt(),nil,zone:GetProperty("ROLE"), zone)
     if obj then
       return {obj}
     else
@@ -71274,7 +71407,8 @@ end -- CARGO_GROUP
 -- @image Scoring.JPG
 
 --- @type SCORING
--- @field Players A collection of the current players that have joined the game.
+-- @field #table Players A collection of the current players that have joined the game.
+-- @field Core.Set#SET_SCENERY ScoringScenery 
 -- @extends Core.Base#BASE
 
 --- SCORING class
@@ -71413,7 +71547,8 @@ SCORING = {
   ClassID = 0,
   Players = {},
   AutoSave = true,
-  version = "1.18.4"
+  version = "1.18.4",
+  ScoringScenery = nil, -- Core.Set#SET_SCENERY
 }
 
 local _SCORINGCoalition = {
@@ -71509,6 +71644,8 @@ function SCORING:New( GameName, SavePath, AutoSave )
     self:OpenCSV( GameName )
   end
 
+  self:I("SCORING "..tostring(GameName).." started! v"..self.version)
+
   return self
 
 end
@@ -71561,7 +71698,7 @@ function SCORING:AddUnitScore( ScoreUnit, Score )
   return self
 end
 
---- Removes a @{Wrapper.Unit} for additional scoring when the @{Wrapper.Unit} is destroyed.
+--- Removes a @{Wrapper.Unit} for scoring when the @{Wrapper.Unit} is destroyed.
 -- @param #SCORING self
 -- @param Wrapper.Unit#UNIT ScoreUnit The @{Wrapper.Unit} for which the Score needs to be given.
 -- @return #SCORING
@@ -71578,10 +71715,26 @@ end
 -- Note that if there was already a @{Wrapper.Static} declared within the scoring with the same name,
 -- then the old @{Wrapper.Static}  will be replaced with the new @{Wrapper.Static}.
 -- @param #SCORING self
--- @param Wrapper.Static#UNIT ScoreStatic The @{Wrapper.Static} for which the Score needs to be given.
+-- @param Wrapper.Static#STATIC ScoreStatic The @{Wrapper.Static} for which the Score needs to be given.
 -- @param #number Score The Score value.
 -- @return #SCORING
 function SCORING:AddStaticScore( ScoreStatic, Score )
+  return self:AddScoreStatic( ScoreStatic, Score ) 
+end
+
+--- Add a @{Wrapper.Static} for additional scoring when the @{Wrapper.Static} is destroyed.
+-- Note that if there was already a @{Wrapper.Static} declared within the scoring with the same name,
+-- then the old @{Wrapper.Static}  will be replaced with the new @{Wrapper.Static}.
+-- @param #SCORING self
+-- @param Wrapper.Static#STATIC ScoreStatic The @{Wrapper.Static} for which the Score needs to be given.
+-- @param #number Score The Score value.
+-- @return #SCORING
+function SCORING:AddScoreStatic( ScoreStatic, Score )
+
+  if ScoreStatic == nil then
+    BASE:E("SCORING.AddStaticScore: Parameter ScoreStatic is nil!")
+    return self
+  end
 
   local StaticName = ScoreStatic:GetName()
 
@@ -71590,7 +71743,61 @@ function SCORING:AddStaticScore( ScoreStatic, Score )
   return self
 end
 
---- Removes a @{Wrapper.Static} for additional scoring when the @{Wrapper.Static} is destroyed.
+--- Add a @{Wrapper.Scenery} for additional scoring when the @{Wrapper.Scenery} is destroyed.
+-- @param #SCORING self
+-- @param Wrapper.Scenery#SCENERY ScoreScenery The @{Wrapper.Scenery} for which the Score needs to be given.
+-- @param #number Score The Score value.
+-- @return #SCORING
+function SCORING:AddScoreScenery( ScoreScenery, Score )
+
+  if ScoreScenery == nil then
+    self:E("SCORING.ScoreScenery: Parameter ScoreScenery is nil!")
+    return self
+  end
+  
+  if not self.ScoringScenery then
+    self.ScoringScenery = SET_SCENERY:New() -- Core.Set#SET_SCENERY
+  end
+  
+  local StaticName = ScoreScenery:GetName()
+  self:T("Scenery name = ".. StaticName)
+
+  self.ScoringScenery:AddScenery(ScoreScenery)
+
+  return self
+end
+
+--- Removes a @{Wrapper.Scenery} for scoring when the @{Wrapper.Scenery} is destroyed.
+-- @param #SCORING self
+-- @param Wrapper.Scenery#SCENERY ScoreStatic The @{Wrapper.Scenery} for which the Score needs to be given.
+-- @return #SCORING
+function SCORING:RemoveSceneryScore( ScoreScenery )
+
+  local StaticName = ScoreScenery:GetName()
+
+  self.ScoringObjects[StaticName] = nil
+
+  return self
+end
+
+--- Specify a special additional score for a @{Core.Set#SET_SCENERY}.
+-- @param #SCORING self
+-- @param Core.Set#SET_SCENERY Set The @{Core.Set#SET_SCENERY} for which each @{Wrapper.Scenery} in the SET a Score is given.
+-- @param #number Score The Score value.
+-- @return #SCORING
+function SCORING:AddScoreSetScenery(Set, Score)
+  local set = Set.Set
+  
+  for _,_static in pairs (set) do
+    if _static ~= nil then
+      self:AddScoreScenery(_static,Score)
+    end
+  end
+ 
+  return self
+end
+
+--- Removes a @{Wrapper.Static} for scoring when the @{Wrapper.Static} is destroyed.
 -- @param #SCORING self
 -- @param Wrapper.Static#UNIT ScoreStatic The @{Wrapper.Static} for which the Score needs to be given.
 -- @return #SCORING
@@ -71645,6 +71852,31 @@ function SCORING:AddScoreSetGroup(Set, Score)
   return self
 end
 
+--- Specify a special additional score for a @{Core.Set#SET_STATIC}.
+-- @param #SCORING self
+-- @param Core.Set#SET_STATIC Set The @{Core.Set#SET_STATIC} for which each @{Wrapper.Static} in the SET a Score is given.
+-- @param #number Score The Score value.
+-- @return #SCORING
+function SCORING:AddScoreSetStatic(Set, Score)
+  local set = Set:GetSetObjects()
+  
+  for _,_static in pairs (set) do
+    if _static and _static:IsAlive() then
+      self:AddStaticScore(_static,Score)
+    end
+  end
+  
+  local function AddScore(static)
+    self:AddStaticScore(static,Score)
+  end
+  
+  function Set:OnAfterAdded(From,Event,To,ObjectName,Object)
+    AddScore(Object)
+  end
+  
+  return self
+end
+
 --- Add a @{Core.Zone} to define additional scoring when any object is destroyed in that zone.
 -- Note that if a @{Core.Zone} with the same name is already within the scoring added, the @{Core.Zone} (type) and Score will be replaced!
 -- This allows for a dynamic destruction zone evolution within your mission.
@@ -71664,7 +71896,24 @@ function SCORING:AddZoneScore( ScoreZone, Score )
   return self
 end
 
---- Remove a @{Core.Zone} for additional scoring.
+--- Add a @{Core.Set#SET_ZONE} to define additional scoring when any object is destroyed in that zone.
+-- Note that if a @{Core.Zone} with the same name is already within the scoring added, the @{Core.Zone} (type) and Score will be replaced!
+-- This allows for a dynamic destruction zone evolution within your mission.
+-- @param #SCORING self
+-- @param Core.Set#SET_ZONE ScoreZoneSet The @{Core.Set#SET_ZONE} which defines the destruction score perimeters.
+-- Note that a zone can be a polygon or a moving zone.
+-- @param #number Score The Score value.
+-- @return #SCORING
+function SCORING:AddZoneScoreSet( ScoreZoneSet, Score )
+  
+  for _,_zone in pairs(ScoreZoneSet.Set or {}) do
+    self:AddZoneScore(_zone,Score)
+  end
+ 
+  return self
+end
+
+--- Remove a @{Core.Zone} for scoring.
 -- The scoring will search if any @{Core.Zone} is added with the given name, and will remove that zone from the scoring.
 -- This allows for a dynamic destruction zone evolution within your mission.
 -- @param #SCORING self
@@ -72142,7 +72391,7 @@ end
 -- @param #SCORING self
 -- @param Core.Event#EVENTDATA Event
 function SCORING:_EventOnHit( Event )
-  self:F( { Event } )
+  --self:F( { Event } )
 
   local InitUnit = nil
   local InitUNIT = nil
@@ -72172,6 +72421,7 @@ function SCORING:_EventOnHit( Event )
   local TargetUnitCategory = nil
   local TargetUnitType = nil
   local TargetIsScenery = false
+  local TargetSceneryObject = nil
 
   if Event.IniDCSUnit then
 
@@ -72193,7 +72443,7 @@ function SCORING:_EventOnHit( Event )
     InitUnitCategory = _SCORINGCategory[InitCategory]
     InitUnitType = InitType
 
-    self:T( { InitUnitName, InitGroupName, InitPlayerName, InitCoalition, InitCategory, InitType, InitUnitCoalition, InitUnitCategory, InitUnitType } )
+    --self:T( { InitUnitName, InitGroupName, InitPlayerName, InitCoalition, InitCategory, InitType, InitUnitCoalition, InitUnitCategory, InitUnitType } )
   end
 
   if Event.TgtDCSUnit then
@@ -72211,18 +72461,23 @@ function SCORING:_EventOnHit( Event )
     -- TargetCategory = TargetUnit:getDesc().category
     TargetCategory = Event.TgtCategory
     TargetType = Event.TgtTypeName
+    
 
     -- Scenery hit
-    if (not TargetCategory) and TargetUNIT ~= nil and TargetUnit:IsInstanceOf("SCENERY") then
+    if TargetUNIT ~= nil and TargetUNIT:IsInstanceOf("SCENERY") then
         TargetCategory = Unit.Category.STRUCTURE
         TargetIsScenery = true
+        TargetType = "Scenery"
+        TargetSceneryObject = TargetUNIT
+        self:T("***** Target is Scenery and TargetUNIT is SCENERY object!")
+        UTILS.PrintTableToLog(TargetSceneryObject)
     end
     
     TargetUnitCoalition = _SCORINGCoalition[TargetCoalition]
     TargetUnitCategory = _SCORINGCategory[TargetCategory]
     TargetUnitType = TargetType
 
-    self:T( { TargetUnitName, TargetGroupName, TargetPlayerName, TargetCoalition, TargetCategory, TargetType, TargetUnitCoalition, TargetUnitCategory, TargetUnitType } )
+    --self:T( { TargetUnitName=TargetUnitName, TargetGroupName=TargetGroupName, TargetPlayerName=TargetPlayerName, TargetCoalition=TargetCoalition, TargetCategory=TargetCategory, TargetType=TargetType, TargetUnitCoalition=TargetUnitCoalition, TargetUnitCategory=TargetUnitCategory, TargetUnitType=TargetUnitType } )
   end
 
   if InitPlayerName ~= nil then -- It is a player that is hitting something
@@ -72235,7 +72490,7 @@ function SCORING:_EventOnHit( Event )
       self:T( "Hitting Something" )
 
       -- What is he hitting?
-      if TargetCategory then
+      if (TargetCategory ~=nil) and (TargetIsScenery == false) then
 
         -- A target got hit, score it.
         -- Player contains the score data from self.Players[InitPlayerName]
@@ -72255,7 +72510,7 @@ function SCORING:_EventOnHit( Event )
         PlayerHit.TimeStamp = PlayerHit.TimeStamp or 0
         PlayerHit.UNIT = PlayerHit.UNIT or TargetUNIT
         -- After an instant kill we can't compute the threat level anymore. To fix this we compute at OnEventBirth
-        if PlayerHit.UNIT.ThreatType == nil then
+        if PlayerHit.UNIT and PlayerHit.UNIT.ThreatType == nil then
           PlayerHit.ThreatLevel, PlayerHit.ThreatType = PlayerHit.UNIT:GetThreatLevel()
           -- if this fails for some reason, set a good default value
           if PlayerHit.ThreatType == nil or PlayerHit.ThreatType == "" then
@@ -72341,21 +72596,21 @@ function SCORING:_EventOnHit( Event )
 
   -- It is a weapon initiated by a player, that is hitting something
   -- This seems to occur only with scenery and static objects.
-  if Event.WeaponPlayerName ~= nil then
-    self:_AddPlayerFromUnit( Event.WeaponUNIT )
-    if self.Players[Event.WeaponPlayerName] then -- This should normally not happen, but i'll test it anyway.
-      if TargetPlayerName ~= nil then -- It is a player hitting another player ...
-        self:_AddPlayerFromUnit( TargetUNIT )
-      end
+  if Event.WeaponPlayerName ~= nil or TargetIsScenery == true then
+    
+    local playername = Event.WeaponPlayerName or Event.IniPlayerName or "Ghost"
+  
+    --self:_AddPlayerFromUnit( Event.WeaponUNIT )
+    if self.Players[playername] then -- This should normally not happen, but i'll test it anyway.
 
-      self:T( "Hitting Scenery" )
+      self:T( "Hitting Scenery or Static" )
 
       -- What is he hitting?
-      if TargetCategory then
+      if Event.TgtObjectCategory then
 
         -- A scenery or static got hit, score it.
         -- Player contains the score data from self.Players[WeaponPlayerName]
-        local Player = self.Players[Event.WeaponPlayerName]
+        local Player = self.Players[playername]
 
         -- Ensure there is a hit table per TargetCategory and TargetUnitName.
         Player.Hit[TargetCategory] = Player.Hit[TargetCategory] or {}
@@ -72363,15 +72618,17 @@ function SCORING:_EventOnHit( Event )
 
         -- PlayerHit contains the score counters and data per unit that was hit.
         local PlayerHit = Player.Hit[TargetCategory][TargetUnitName]
-
+        
+        -- Init player scores
         PlayerHit.Score = PlayerHit.Score or 0
         PlayerHit.Penalty = PlayerHit.Penalty or 0
         PlayerHit.ScoreHit = PlayerHit.ScoreHit or 0
         PlayerHit.PenaltyHit = PlayerHit.PenaltyHit or 0
         PlayerHit.TimeStamp = PlayerHit.TimeStamp or 0
         PlayerHit.UNIT = PlayerHit.UNIT or TargetUNIT
+        
         -- After an instant kill we can't compute the threat level anymore. To fix this we compute at OnEventBirth
-        if PlayerHit.UNIT.ThreatType == nil then
+        if PlayerHit.UNIT and PlayerHit.UNIT.ThreatType == nil then
           PlayerHit.ThreatLevel, PlayerHit.ThreatType = PlayerHit.UNIT:GetThreatLevel()
           -- if this fails for some reason, set a good default value
           if PlayerHit.ThreatType == nil then
@@ -72379,8 +72636,8 @@ function SCORING:_EventOnHit( Event )
             PlayerHit.ThreatType = "Unknown"
           end
         else
-          PlayerHit.ThreatLevel = PlayerHit.UNIT.ThreatLevel
-          PlayerHit.ThreatType = PlayerHit.UNIT.ThreatType
+          PlayerHit.ThreatLevel = PlayerHit.UNIT and PlayerHit.UNIT.ThreatLevel or 1
+          PlayerHit.ThreatType = PlayerHit.UNIT and PlayerHit.UNIT.ThreatType or "Unknown"
         end
 
         -- Only grant hit scores if there was more than one second between the last hit.        
@@ -72388,50 +72645,68 @@ function SCORING:_EventOnHit( Event )
           PlayerHit.TimeStamp = timer.getTime()
 
           local Score = 0
-
-          if InitCoalition then -- A coalition object was hit, probably a static.
-            if InitCoalition == TargetCoalition then
-              -- TODO: Penalty according scale
-              local Penalty = 10
-              Player.Penalty = Player.Penalty + Penalty --* self.ScaleDestroyPenalty
-              PlayerHit.Penalty = PlayerHit.Penalty + Penalty --* self.ScaleDestroyPenalty
-              PlayerHit.PenaltyHit = PlayerHit.PenaltyHit + 1 * self.ScaleDestroyPenalty
-      
-              MESSAGE
-                :NewType( self.DisplayMessagePrefix .. "Player '" .. Event.WeaponPlayerName .. "' hit friendly target " .. 
-                      TargetUnitCategory .. " ( " .. TargetType .. " ) " .. 
-                      "Penalty: -" .. Penalty .. " = " .. Player.Score - Player.Penalty,
-                      MESSAGE.Type.Update
-                    )
-                :ToAllIf( self:IfMessagesHit() and self:IfMessagesToAll() )
-                :ToCoalitionIf( Event.WeaponCoalition, self:IfMessagesHit() and self:IfMessagesToCoalition() )
-              self:ScoreCSV( Event.WeaponPlayerName, TargetPlayerName, "HIT_PENALTY", 1, -10, Event.WeaponName, Event.WeaponCoalition, Event.WeaponCategory, Event.WeaponTypeName, TargetUnitName, TargetUnitCoalition, TargetUnitCategory, TargetUnitType )
-            else
+          
+          local TgtName = Event.TgtDCSUnit and Event.TgtDCSUnit.getName and Event.TgtDCSUnit:getName() or "Unknown"
+          
+          --if InitCoalition then -- A coalition object was hit, probably a static.
+            if TargetIsScenery == true and self.ScoringScenery:IsInSet(TargetSceneryObject) then
               Player.Score = Player.Score + self.ScoreIncrementOnHit
               PlayerHit.Score = PlayerHit.Score + self.ScoreIncrementOnHit
               PlayerHit.ScoreHit = PlayerHit.ScoreHit + 1
-              MESSAGE:NewType( self.DisplayMessagePrefix .. "Player '" .. Event.WeaponPlayerName .. "' hit enemy target " .. TargetUnitCategory .. " ( " .. TargetType .. " ) " ..
+              MESSAGE:NewType( self.DisplayMessagePrefix .. "Player '" .. playername .. "' hit scenery target " .. TargetUnitCategory .. " ( " .. TargetType .. " ) " ..
                                "Score: " .. PlayerHit.Score .. ".  Score Total:" .. Player.Score - Player.Penalty,
                                MESSAGE.Type.Update )
                      :ToAllIf( self:IfMessagesHit() and self:IfMessagesToAll() )
                      :ToCoalitionIf( Event.WeaponCoalition, self:IfMessagesHit() and self:IfMessagesToCoalition() )
 
-              self:ScoreCSV( Event.WeaponPlayerName, TargetPlayerName, "HIT_SCORE", 1, 1, Event.WeaponName, Event.WeaponCoalition, Event.WeaponCategory, Event.WeaponTypeName, TargetUnitName, TargetUnitCoalition, TargetUnitCategory, TargetUnitType )
-            end
-          else -- A scenery object was hit.
-            MESSAGE:NewType( self.DisplayMessagePrefix .. "Player '" .. Event.WeaponPlayerName .. "' hit scenery object.",
-                             MESSAGE.Type.Update )
-                   :ToAllIf( self:IfMessagesHit() and self:IfMessagesToAll() )
-                   :ToCoalitionIf( InitCoalition, self:IfMessagesHit() and self:IfMessagesToCoalition() )
+              self:ScoreCSV( playername, TargetPlayerName, "HIT_SCORE", 1, 1, Event.WeaponName, Event.WeaponCoalition, Event.WeaponCategory, Event.WeaponTypeName, TargetUnitName, TargetUnitCoalition, TargetUnitCategory, TargetUnitType )
+           elseif TargetIsScenery == false and Event.TgtObjectCategory == Object.Category.STATIC and self.ScoringObjects[TgtName] then
+              Player.Score = Player.Score + self.ScoreIncrementOnHit
+              PlayerHit.Score = PlayerHit.Score + self.ScoreIncrementOnHit
+              PlayerHit.ScoreHit = PlayerHit.ScoreHit + 1
+              MESSAGE:NewType( self.DisplayMessagePrefix .. "Player '" .. playername .. "' hit static target " .. TargetUnitCategory .. " ( " .. TargetType .. " ) " ..
+                               "Score: " .. PlayerHit.Score .. ".  Score Total:" .. Player.Score - Player.Penalty,
+                               MESSAGE.Type.Update )
+                     :ToAllIf( self:IfMessagesHit() and self:IfMessagesToAll() )
+                     :ToCoalitionIf( Event.WeaponCoalition, self:IfMessagesHit() and self:IfMessagesToCoalition() )
 
-            self:ScoreCSV( Event.WeaponPlayerName, "", "HIT_SCORE", 1, 0, Event.WeaponName, Event.WeaponCoalition, Event.WeaponCategory, Event.WeaponTypeName, TargetUnitName, "", "Scenery", TargetUnitType )
-          end
+              self:ScoreCSV( playername, TargetPlayerName, "HIT_SCORE", 1, 1, Event.WeaponName, Event.WeaponCoalition, Event.WeaponCategory, Event.WeaponTypeName, TargetUnitName, TargetUnitCoalition, TargetUnitCategory, TargetUnitType )
+            
+            else
+              self:E("Hit unregistered scenery or static object - NO target! ("..TgtName..")")
+            end
+          --end
         end
       end
     end
+  
+    -- Check if there are Zones where the destruction happened.
+  for ZoneName, ScoreZoneData in pairs( self.ScoringZones ) do
+    self:F( { ScoringZone = ScoreZoneData } )
+    local hit=Event.TgtUnit
+    local ScoreZone = ScoreZoneData.ScoreZone -- Core.Zone#ZONE_BASE
+    local Score = ScoreZoneData.Score
+    if TargetUNIT and ScoreZone:IsVec2InZone( TargetUNIT:GetVec2() ) then
+      -- A scenery or static got hit, score it.
+      -- Player contains the score data from self.Players[WeaponPlayerName]
+      local PlayerName = Event.IniPlayerName or "Ghost"
+      local Player = self.Players[PlayerName]
+        
+      Player.Score = Player.Score + Score
+      Player.Score = Player.Score + self.ScoreIncrementOnHit
+      MESSAGE:NewType( self.DisplayMessagePrefix .. "hit in zone '" .. ScoreZone:GetName() .. "'." ..
+                       "Player '" .. PlayerName .. "' receives an extra " .. Score .. " points! " .. "Total: " .. Player.Score - Player.Penalty,
+                       MESSAGE.Type.Information )
+             :ToAllIf( self:IfMessagesZone() and self:IfMessagesToAll() )
+             :ToCoalitionIf( InitCoalition, self:IfMessagesZone() and self:IfMessagesToCoalition() )
+  
+      self:ScoreCSV( PlayerName, "", "HIT_SCORE", 1, Score, InitUnitName, InitUnitCoalition, InitUnitCategory, InitUnitType, TargetUnitName, "", "Zone", TargetUnitType )
+      end
+    end
   end
-end
-
+  
+ end
+ 
 --- Track  DEAD or CRASH events for the scoring.
 -- @param #SCORING self
 -- @param Core.Event#EVENTDATA Event
@@ -72489,7 +72764,7 @@ function SCORING:_EventOnDeadOrCrash( Event )
       local Destroyed = false
 
       -- What is the player destroying?
-      if Player and Player.Hit and Player.Hit[TargetCategory] and Player.Hit[TargetCategory][TargetUnitName] and Player.Hit[TargetCategory][TargetUnitName].TimeStamp ~= 0 and (TargetUnit.BirthTime == nil or Player.Hit[TargetCategory][TargetUnitName].TimeStamp > TargetUnit.BirthTime) then -- Was there a hit for this unit for this player before registered???
+      if Player and Player.Hit and Player.Hit[TargetCategory] and Player.Hit[TargetCategory][TargetUnitName] and Player.Hit[TargetCategory][TargetUnitName].TimeStamp ~= 0 and TargetUnit and (TargetUnit.BirthTime == nil or Player.Hit[TargetCategory][TargetUnitName].TimeStamp > TargetUnit.BirthTime) then -- Was there a hit for this unit for this player before registered???
 
         local TargetThreatLevel = Player.Hit[TargetCategory][TargetUnitName].ThreatLevel
         local TargetThreatType = Player.Hit[TargetCategory][TargetUnitName].ThreatType
