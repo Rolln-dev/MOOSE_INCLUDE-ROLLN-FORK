@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-11-24T09:24:37+01:00-dacf5125bfbdd10a9661ff54518687805713c0e5 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-11-26T10:10:10+01:00-4e342a59bec9f922d0dff9cf25d92c21c6d19449 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -95151,7 +95151,7 @@ end
 --
 -- ### Author: **funkyfranky**
 --
--- ### Contributions: FlightControl
+-- ### Contributions: FlightControl, Applevangelist
 --
 -- ====
 -- @module Functional.Artillery
@@ -95904,7 +95904,7 @@ ARTY.db={
 
 --- Arty script version.
 -- @field #string version
-ARTY.version="1.3.3"
+ARTY.version="1.3.4"
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -97392,7 +97392,7 @@ function ARTY._FuncTrack(weapon, self, target)
     if _dist<target.radius then
   
       -- Get random coordinate within a certain radius.
-      local _cr=_coord:GetRandomCoordinateInRadius(_data.target.radius)
+      local _cr=_coord:GetRandomCoordinateInRadius(target.radius)
   
       -- Fire smoke at this coordinate.
       _cr:Smoke(self.smokeColor)
