@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-11-26T10:10:10+01:00-4e342a59bec9f922d0dff9cf25d92c21c6d19449 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-11-27T09:21:17+01:00-6ed031762b77c57a9d2e45950c5dfbc922258f35 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -5097,6 +5097,22 @@ function UTILS.BearingToCardinal(Heading)
   end
 end
 
+--- Adjust given heading so that is is in [0, 360).
+-- @param #number Heading The heading in degrees.
+-- @return #number Adjust heading in [0,360).
+function UTILS.AdjustHeading360(Heading)
+
+  while Heading>=360 or Heading<0 do
+    if Heading>=360 then
+      Heading=Heading-360
+    elseif Heading<0 then
+      Heading=Heading+360
+    end
+  end
+
+  return Heading
+end
+
 --- Create a BRAA NATO call string BRAA between two GROUP objects
 -- @param Wrapper.Group#GROUP FromGrp GROUP object
 -- @param Wrapper.Group#GROUP ToGrp GROUP object
@@ -6076,25 +6092,27 @@ function UTILS.SpawnFARPAndFunctionalStatics(Name,Coordinate,FARPType,Coalition,
   
   local function PopulateStorage(Name,liquids,equip,airframes)
     local newWH = STORAGE:New(Name)
-    if liquids and liquids > 0 then
-      -- Storage fill-up
-      newWH:SetLiquid(STORAGE.Liquid.DIESEL,liquids) -- kgs to tons
-      newWH:SetLiquid(STORAGE.Liquid.GASOLINE,liquids)
-      newWH:SetLiquid(STORAGE.Liquid.JETFUEL,liquids)
-      newWH:SetLiquid(STORAGE.Liquid.MW50,liquids)
-    end
-    
-    if equip and equip > 0 then
-      for cat,nitem in pairs(ENUMS.Storage.weapons) do
-        for name,item in pairs(nitem) do
-          newWH:SetItem(item,equip)
+    if newWH then
+      if liquids and liquids > 0 then
+        -- Storage fill-up
+        newWH:SetLiquid(STORAGE.Liquid.DIESEL,liquids) -- kgs to tons
+        newWH:SetLiquid(STORAGE.Liquid.GASOLINE,liquids)
+        newWH:SetLiquid(STORAGE.Liquid.JETFUEL,liquids)
+        newWH:SetLiquid(STORAGE.Liquid.MW50,liquids)
+      end
+      
+      if equip and equip > 0 then
+        for cat,nitem in pairs(ENUMS.Storage.weapons) do
+          for name,item in pairs(nitem) do
+            newWH:SetItem(item,equip)
+          end
         end
       end
-    end
-    
-    if airframes and airframes > 0 then
-      for typename in pairs (CSAR.AircraftType) do
-        newWH:SetItem(typename,airframes)
+      
+      if airframes and airframes > 0 then
+        for typename in pairs (CSAR.AircraftType) do
+          newWH:SetItem(typename,airframes)
+        end
       end
     end
   end
@@ -6173,8 +6191,6 @@ function UTILS.SpawnFARPAndFunctionalStatics(Name,Coordinate,FARPType,Coalition,
       }
     -- Create BIRTH event.
     world.onEvent(Event)
-    
-    PopulateStorage(Name.."-1",liquids,equip,airframes)
   else
     -- Spawn FARP
     local newfarp = SPAWNSTATIC:NewFromType(STypeName,"Heliports",Country) --  "Invisible FARP" "FARP"
@@ -6182,10 +6198,11 @@ function UTILS.SpawnFARPAndFunctionalStatics(Name,Coordinate,FARPType,Coalition,
     newfarp:InitFARP(callsign,freq,mod,DynamicSpawns,HotStart)
     local spawnedfarp = newfarp:SpawnFromCoordinate(farplocation,0,Name)
     table.insert(ReturnObjects,spawnedfarp)
-    
-    PopulateStorage(Name,liquids,equip,airframes)  
+
   end
-  
+    
+  PopulateStorage(Name,liquids,equip,airframes)  
+     
   -- Spawn Objects
   local FARPStaticObjectsNato = {
     ["FUEL"] = { TypeName = "FARP Fuel Depot", ShapeName = "GSM Rus", Category = "Fortifications"},
@@ -40858,6 +40875,9 @@ function SPAWN:SpawnWithIndex( SpawnIndex, NoBirth )
 
         -- If RandomizeUnits, then Randomize the formation at the start point.
         if self.SpawnRandomizeUnits then
+          if self.SpawnRandomizePosition then
+            PointVec3 = COORDINATE:New( SpawnTemplate.x, SpawnTemplate.route.points[1].alt, SpawnTemplate.y )
+          end
           for UnitID = 1, #SpawnTemplate.units do
             local RandomVec2 = PointVec3:GetRandomVec2InRadius( self.SpawnOuterRadius, self.SpawnInnerRadius )
             if (SpawnZone) then
@@ -89706,7 +89726,6 @@ end
 -- @field Core.Menu#MENU_MISSION menuF10root Specific user defined root F10 menu.
 -- @field #number ceilingaltitude Range ceiling altitude in ft MSL.  Aircraft above this altitude are not considered to be in the range. Default is 20000 ft.
 -- @field #boolean ceilingenabled Range has a ceiling and is not unlimited.  Default is false.
-
 -- @extends Core.Fsm#FSM
 
 --- *Don't only practice your art, but force your way into its secrets; art deserves that, for it and knowledge can raise man to the Divine.* - Ludwig van Beethoven
@@ -90868,6 +90887,9 @@ function RANGE:SetSRS(PathToSRS, Port, Coalition, Frequency, Modulation, Volume,
     self.controlmsrs:SetCoalition(Coalition or coalition.side.BLUE)
     self.controlmsrs:SetLabel("RANGEC")
     self.controlmsrs:SetVolume(Volume or 1.0)
+    if self.rangezone then
+      self.controlmsrs:SetCoordinate(self.rangezone:GetCoordinate())
+    end
     self.controlsrsQ = MSRSQUEUE:New("CONTROL")
 
     self.instructmsrs=MSRS:New(PathToSRS or MSRS.path, Frequency or 305, Modulation or radio.modulation.AM)
@@ -90875,6 +90897,9 @@ function RANGE:SetSRS(PathToSRS, Port, Coalition, Frequency, Modulation, Volume,
     self.instructmsrs:SetCoalition(Coalition or coalition.side.BLUE)
     self.instructmsrs:SetLabel("RANGEI")
     self.instructmsrs:SetVolume(Volume or 1.0)
+    if self.rangezone then
+      self.instructmsrs:SetCoordinate(self.rangezone:GetCoordinate())
+    end
     self.instructsrsQ = MSRSQUEUE:New("INSTRUCT")
     
     if PathToGoogleKey then 
@@ -90913,8 +90938,13 @@ function RANGE:SetSRSRangeControl( frequency, modulation, voice, culture, gender
   self.rangecontrol = true
   if relayunitname then
     local unit = UNIT:FindByName(relayunitname)
-    local Coordinate = unit:GetCoordinate()
-    self.rangecontrolrelayname = relayunitname
+    if unit then
+      local Coordinate = unit:GetCoordinate()
+      self.rangecontrolrelayname = relayunitname
+      self.controlmsrs:SetCoordinate(Coordinate)
+    else
+      MESSAGE:New("RANGE: Control Relay Unit "..relayunitname.." not found!",15,"ERROR"):ToAllIf(self.Debug):ToLog()
+    end
   end
   return self
 end
@@ -90942,9 +90972,13 @@ function RANGE:SetSRSRangeInstructor( frequency, modulation, voice, culture, gen
   self.instructor = true
   if relayunitname then
     local unit = UNIT:FindByName(relayunitname)
-    local Coordinate = unit:GetCoordinate()
-    self.instructmsrs:SetCoordinate(Coordinate)
-    self.instructorrelayname = relayunitname
+    if unit then
+      local Coordinate = unit:GetCoordinate()
+      self.instructmsrs:SetCoordinate(Coordinate)
+      self.instructorrelayname = relayunitname
+    else
+      MESSAGE:New("RANGE: Instructor Relay Unit "..relayunitname.." not found!",15,"ERROR"):ToAllIf(self.Debug):ToLog()
+    end
   end
   return self
 end
