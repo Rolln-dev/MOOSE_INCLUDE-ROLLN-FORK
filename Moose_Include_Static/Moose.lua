@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-12-06T11:43:19+01:00-04f7bb7cc733c84724f4afe1775cc56dcfe03a95 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-12-07T13:39:23+01:00-3327c3b24da81daa0a3bbdafaac74a05883ff7b2 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -56709,7 +56709,7 @@ end
 -- @return #table The mission route defined by points.
 function GROUP:GetTaskRoute()
   --self:F2( self.GroupName )
-  if _DATABASE.Templates.Groups[self.GroupName].Template and _DATABASE.Templates.Groups[self.GroupName].Template.route and _DATABASE.Templates.Groups[self.GroupName].Template.route.points then
+  if _DATABASE.Templates.Groups[self.GroupName] and _DATABASE.Templates.Groups[self.GroupName].Template and _DATABASE.Templates.Groups[self.GroupName].Template.route and _DATABASE.Templates.Groups[self.GroupName].Template.route.points then
     return UTILS.DeepCopy( _DATABASE.Templates.Groups[self.GroupName].Template.route.points )
   else
     return {}
@@ -56737,7 +56737,7 @@ function GROUP:CopyRoute( Begin, End, Randomize, Radius )
 
   --self:T3( { GroupName } )
 
-  local Template = _DATABASE.Templates.Groups[GroupName].Template
+  local Template = _DATABASE.Templates.Groups[GroupName] and _DATABASE.Templates.Groups[GroupName].Template or nil
 
   if Template then
     if not Begin then
@@ -56761,7 +56761,7 @@ function GROUP:CopyRoute( Begin, End, Randomize, Radius )
     end
     return Points
   else
-    error( "Template not found for Group : " .. GroupName )
+    BASE:E( "Template not found for Group : " .. GroupName )
   end
 
   return nil
@@ -145707,7 +145707,7 @@ CTLD.FixedWingTypes = {
 
 --- CTLD class version.
 -- @field #string version
-CTLD.version="1.3.40"
+CTLD.version="1.3.41"
 
 --- Instantiate a new CTLD.
 -- @param #CTLD self
@@ -146895,7 +146895,7 @@ end
     self:T(self.lid .. " _ExtractTroops")
     -- landed or hovering over load zone?
     local grounded = not self:IsUnitInAir(Unit)
-    local hoverload = self:CanHoverLoad(Unit)
+    local hoverload = self:IsCorrectHover(Unit) -- correct call now for extracting troops while hovering
     local hassecondaries = false
     
     if not grounded and not hoverload then
@@ -151291,6 +151291,7 @@ end
   -- @return #boolean Outcome
   function CTLD:IsCorrectHover(Unit)
     self:T(self.lid .. " IsCorrectHover")
+    if self:IsFixedWing(Unit) then return false end -- FW cannot hover
     local outcome = false
     -- see if we are in air and within parameters.
     if self:IsUnitInAir(Unit) then
