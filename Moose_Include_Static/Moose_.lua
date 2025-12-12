@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2025-12-10T09:58:13+01:00-98539eee877fd9e17a467ef4d7832f522f755216 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2025-12-11T15:43:33+01:00-a88750908e71f74e912ab6f7b399ce7554dce692 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -53019,7 +53019,8 @@ end
 return 0,0,0,0
 end
 local templategroupname=group:GetName()
-local Descriptors=group:GetUnit(1):GetDesc()
+local unit=group:GetUnit(1)
+local Descriptors=(unit and unit:IsAlive())and unit:GetDesc()or{}
 local Category=group:GetCategory()
 local TypeName=group:GetTypeName()
 local SpeedMax=group:GetSpeedMax()
@@ -75097,6 +75098,8 @@ self.EngineersInField={}
 self.EngineerSearch=2000
 self.nobuildmenu=false
 self.CrateDistance=35
+self.UnitDistance=90
+self.maxUnitsNearby=3
 self.PackDistance=35
 self.ExtractFactor=3.33
 self.prefixes=Prefixes or{"Cargoheli"}
@@ -75907,14 +75910,14 @@ if canLoad and not isHerc then
 MENU_GROUP_COMMAND:New(Group,"Get and Load",parentMenu,self._GetAndLoad,self,Group,Unit,cargoObj,1)
 else
 local msg
-if isHerc then
-msg="Use C-130 system to load"
-elseif maxMassSets and(not capacitySets or capacitySets>=1)and maxMassSets<1 then
+if not isHerc then
+if maxMassSets and(not capacitySets or capacitySets>=1)and maxMassSets<1 then
 msg="Weight limit reached"
 else
 msg="Crate limit reached"
 end
 MENU_GROUP_COMMAND:New(Group,msg,parentMenu,self._SendMessage,self,msg,10,false,Group)
+end
 end
 parentMenu:Refresh()
 return self
@@ -75931,14 +75934,14 @@ if canLoad and not isHerc then
 MENU_GROUP_COMMAND:New(Group,"Get and Load",qMenu,self._GetAndLoad,self,Group,Unit,cargoObj,quantity)
 else
 local msg
-if isHerc then
-msg="Use C-130 system to load"
-elseif maxMassSets and(not capacitySets or capacitySets>=quantity)and maxMassSets<quantity then
+if not isHerc then
+if maxMassSets and(not capacitySets or capacitySets>=quantity)and maxMassSets<quantity then
 msg="Weight limit reached"
 else
 msg="Crate limit reached"
 end
 MENU_GROUP_COMMAND:New(Group,msg,qMenu,self._SendMessage,self,msg,10,false,Group)
+end
 end
 end
 return self
@@ -75967,20 +75970,50 @@ if not inzone then
 self:_SendMessage("You are not close enough to a logistics zone!",10,false,Group)
 return self
 end
+local coord=Unit:GetCoordinate()or Group:GetCoordinate()
+local capabilities=self:_GetUnitCapabilities(Unit)
+local innerDist=(capabilities.length and capabilities.length/2)or 15
+local maxUnitsNearby=self.maxUnitsNearby or 3
+local searchRadius=self.UnitDistance or 90
+local checkZone=ZONE_RADIUS:New("CTLD_C130UnitsZone",coord:GetVec2(),searchRadius,false)
+local nearGroups=SET_GROUP:New():FilterCoalitions("blue"):FilterZones({checkZone}):FilterOnce()
+local nearbyCount=0
+for _,gr in pairs(nearGroups.Set)do
+local gc=gr:GetCoordinate()
+if gc then
+local dist=coord:Get2DDistance(gc)
+if dist>innerDist then
+for _,ucfg in pairs(self.C130GetUnits or{})do
+local templ=ucfg.Templates or{}
+if type(templ)=="string"then
+templ={templ}
+end
+local matched=false
+for _,tName in pairs(templ)do
+if string.match(gr:GetName(),tName)then
+nearbyCount=nearbyCount+1
+matched=true
+break
+end
+end
+if matched or nearbyCount>=maxUnitsNearby then break end
+end
+end
+end
+if nearbyCount>=maxUnitsNearby then break end
+end
+if nearbyCount>=maxUnitsNearby then
+self:_SendMessage(string.format("You already have %d units nearby!",maxUnitsNearby),10,false,Group)
+return self
+end
 local temptable=cfg.Templates or{}
 if type(temptable)=="string"then
 temptable={temptable}
 end
-local coord=Unit:GetCoordinate()or Group:GetCoordinate()
-local capabilities=self:_GetUnitCapabilities(Unit)
-local length=capabilities.length or 30
+local length=(capabilities.length+5)or 30
 local heading=(Unit:GetHeading()+180)%360
 local canmove=cfg.CanMove~=false
 local spawnedUnits={}
-local coord=Unit:GetCoordinate()or Group:GetCoordinate()
-local capabilities=self:_GetUnitCapabilities(Unit)
-local length=capabilities.length or 30
-local heading=(Unit:GetHeading()+180)%360
 local idx=1
 for _,_template in pairs(temptable)do
 local cratedistance=(idx-1)*2.5+length
@@ -75991,7 +76024,7 @@ local tc=self.TroopCounter
 local alias=string.format("%s-%d",_template,math.random(1,100000))
 if canmove then
 SPAWN:NewWithAlias(_template,alias)
-:InitRandomizeUnits(true,20,2)
+:InitRandomizeUnits(true,10,2)
 :InitValidateAndRepositionGroundUnits(self.validateAndRepositionUnits)
 :InitDelayOff()
 :OnSpawnGroup(function(grp,TimeStamp)
@@ -76003,6 +76036,7 @@ end)
 :SpawnFromVec2(randomcoord)
 else
 SPAWN:NewWithAlias(_template,alias)
+:InitRandomizeUnits(true,10,2)
 :InitDelayOff()
 :InitValidateAndRepositionGroundUnits(self.validateAndRepositionUnits)
 :OnSpawnGroup(function(grp,TimeStamp)
@@ -76335,11 +76369,17 @@ self:T(self.lid.." _C130RemoveUnitsNearby")
 if not _group or not _unit then return self end
 local location=_group:GetCoordinate()
 if not location then return self end
+local capabilities=self:_GetUnitCapabilities(_unit)
+local innerDist=(capabilities.length and capabilities.length/2)or 15
 local finddist=self.PackDistance or(self.CrateDistance or 35)
 local zone=ZONE_RADIUS:New("CTLD_C130RemoveZone",location:GetVec2(),finddist,false)
 local nearestGroups=SET_GROUP:New():FilterCoalitions("blue"):FilterZones({zone}):FilterOnce()
 local removedAny=false
 for _,gr in pairs(nearestGroups.Set)do
+local gc=gr:GetCoordinate()
+if gc then
+local dist=location:Get2DDistance(gc)
+if dist>innerDist then
 local didRemoveThis=false
 for _,cfg in pairs(self.C130GetUnits or{})do
 local templ=cfg.Templates or{}
@@ -76357,6 +76397,8 @@ break
 end
 end
 if didRemoveThis then break end
+end
+end
 end
 end
 if not removedAny then
@@ -78784,8 +78826,9 @@ local entry={}
 entry.Name=Name
 entry.Templates=Templates
 entry.Type=Type
-entry.Stock=Stock
-entry.SubCategory=SubCategory
+entry.Stock=Stock or nil
+entry.Stock0=Stock or nil
+entry.SubCategory=SubCategory or"Other"
 entry.UnitTypes=UnitTypes
 entry.CanMove=true
 table.insert(self.C130GetUnits,entry)
@@ -78803,7 +78846,8 @@ entry.Name=Name
 entry.Templates=Templates
 entry.Type=Type
 entry.Stock=Stock
-entry.SubCategory=SubCategory
+entry.Stock0=Stock
+entry.SubCategory=SubCategory or"Other"
 entry.UnitTypes=UnitTypes
 entry.CanMove=false
 table.insert(self.C130GetUnits,entry)
@@ -79588,6 +79632,23 @@ Troopstable[genname].GenericCargo=generic
 end
 end
 end
+for _id,_unit in pairs(self.C130GetUnits or{})do
+local genname=_unit.Name
+local stock0=_unit.Stock0 or 0
+if stock0>0 and not Troopstable[genname]then
+local stock=_unit.Stock or 0
+local rel=stock0>0 and math.floor((stock/stock0)*100)or 100
+Troopstable[genname]={
+Stock0=stock0,
+Stock=stock,
+StockR=rel,
+Infield=0,
+Inhelo=0,
+CratesInfield=0,
+Sum=stock,
+}
+end
+end
 for _id,_cargo in pairs(self.Cargo_Troops)do
 local generic=_cargo
 local genname=generic:GetName()
@@ -79618,7 +79679,28 @@ Troopstable[genname].Infield=Troopstable[genname].Infield+1
 Troopstable[genname].Sum=Troopstable[genname].Infield+Troopstable[genname].Stock+Troopstable[genname].Inhelo
 end
 else
+local gname=_group:GetName()
+local uName=nil
+for _,cfg in pairs(self.C130GetUnits or{})do
+local templ=cfg.Templates or{}
+if type(templ)=="string"then
+templ={templ}
+end
+for _,tName in pairs(templ)do
+if string.find(gname,tName,1,true)then
+uName=cfg.Name
+break
+end
+end
+if uName then break end
+end
+if uName and Troopstable[uName]then
+self:T("Found C-130 unit "..uName.." in the field. Adding.")
+Troopstable[uName].Infield=Troopstable[uName].Infield+1
+Troopstable[uName].Sum=Troopstable[uName].Infield+Troopstable[uName].Stock+Troopstable[uName].Inhelo
+else
 self:E(self.lid.."Group without Cargo Generic: ".._group:GetName())
+end
 end
 end
 end
@@ -79892,6 +79974,26 @@ for _id,_troop in pairs(gentroops)do
 if _troop.Name==name then
 _troop:RemoveStock(number)
 self:_RefreshQuantityMenusForGroup()
+end
+end
+return self
+end
+function CTLD:RemoveStockUnits(Name,Number)
+local name=Name or"none"
+local number=Number or 1
+local units=self.C130GetUnits or{}
+for _id,_unit in pairs(units)do
+if _unit.Name==name then
+local stock=_unit.Stock
+if stock==nil or stock==-1 then
+_unit.Stock=-1
+else
+_unit.Stock=stock-number
+if _unit.Stock<0 then
+_unit.Stock=0
+end
+end
+break
 end
 end
 return self
@@ -80627,6 +80729,17 @@ if cargotype==CTLD_CARGO.Enum.VEHICLE or cargotype==CTLD_CARGO.Enum.FOB then
 local injectvehicle=CTLD_CARGO:New(nil,cargoname,cargotemplates,cargotype,true,true,size,nil,true,mass)
 injectvehicle:SetStaticTypeAndShape(StaticCategory,StaticType,StaticShape)
 self:InjectVehicles(dropzone,injectvehicle,self.surfacetypes,self.useprecisecoordloads,structure,timestamp)
+if self.C130GetUnits then
+for _,_unit in pairs(self.C130GetUnits)do
+if _unit.Name==cargoname then
+if type(_unit.Stock)=="number"and _unit.Stock~=-1 then
+_unit.Stock0=_unit.Stock0 or _unit.Stock
+_unit.Stock=math.max(0,(_unit.Stock or 0)-1)
+end
+break
+end
+end
+end
 elseif cargotype==CTLD_CARGO.Enum.TROOPS or cargotype==CTLD_CARGO.Enum.ENGINEERS then
 local injecttroops=CTLD_CARGO:New(nil,cargoname,cargotemplates,cargotype,true,true,size,nil,true,mass)
 self:InjectTroops(dropzone,injecttroops,self.surfacetypes,self.useprecisecoordloads,structure,timestamp)
