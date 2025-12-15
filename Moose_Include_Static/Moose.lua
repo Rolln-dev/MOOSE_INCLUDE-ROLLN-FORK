@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-12-11T15:43:33+01:00-a88750908e71f74e912ab6f7b399ce7554dce692 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-12-15T12:13:04+01:00-33ff723bd8fa1e611a6586b9b9c1767f4c8ac74c ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -18200,7 +18200,7 @@ end
 --    myzone:Scan({Object.Category.UNIT},{Unit.Category.GROUND_UNIT})
 --    local IsAttacked = myzone:IsSomeInZoneOfCoalition( self.Coalition )
 function ZONE_RADIUS:Scan( ObjectCategories, UnitCategories )
-
+  
   self.ScanData = {}
   self.ScanData.Coalitions = {}
   self.ScanData.Scenery = {}
@@ -18210,7 +18210,7 @@ function ZONE_RADIUS:Scan( ObjectCategories, UnitCategories )
   local ZoneCoord = self:GetCoordinate():SetAlt()
   local ZoneRadius = self:GetRadius()
 
-  --self:F({ZoneCoord = ZoneCoord, ZoneRadius = ZoneRadius, ZoneCoordLL = ZoneCoord:ToStringLLDMS()})
+  --self:I({x = ZoneCoord.x, y=ZoneCoord.y, z=ZoneCoord.z, ZoneRadius = ZoneRadius})
 
   local SphereSearch = {
     id = world.VolumeType.SPHERE,
@@ -18222,6 +18222,7 @@ function ZONE_RADIUS:Scan( ObjectCategories, UnitCategories )
 
   local function EvaluateZone( ZoneObject )
     --if ZoneObject:isExist() then --FF: isExist always returns false for SCENERY objects since DCS 2.2 and still in DCS 2.5
+
     if ZoneObject and self:IsVec3InZone(ZoneObject:getPoint()) then
 
       -- Get object category.
@@ -18307,38 +18308,48 @@ end
 
 --- Get a set of scanned units.
 -- @param #ZONE_RADIUS self
+-- @param #number Coalition (optional) Filter for this coalition only.
 -- @return Core.Set#SET_UNIT Set of units and statics inside the zone.
-function ZONE_RADIUS:GetScannedSetUnit()
+function ZONE_RADIUS:GetScannedSetUnit(Coalition)
 
-  local SetUnit = SET_UNIT:New()
-
+  self.SetUnit = self.SetUnit or SET_UNIT:New()
+  self.SetUnit:Clear(false)
+  self.SetUnit.Set={}
+  
   if self.ScanData then
     for ObjectID, UnitObject in pairs( self.ScanData.Units ) do
       local UnitObject = UnitObject -- DCS#Unit
       if UnitObject:isExist() then
         local FoundUnit = UNIT:FindByName( UnitObject:getName() )
-        if FoundUnit then
-          SetUnit:AddUnit( FoundUnit )
+        local FoundCoalition = FoundUnit and FoundUnit:GetCoalition() or nil
+        local includeoncoalition = true
+        if Coalition ~= nil and FoundCoalition==Coalition then includeoncoalition = true else includeoncoalition = false end
+        if Coalition == nil then includeoncoalition = true end
+        --self:I(string.format("Unit name %s coalition %s filter coalition = %s include = %s",FoundUnit:GetName(),tostring(FoundCoalition),tostring(Coalition),tostring(includeoncoalition)))
+        if FoundUnit and includeoncoalition then
+          self.SetUnit:AddUnit( FoundUnit )
         else
           local FoundStatic = STATIC:FindByName( UnitObject:getName(), false )
           if FoundStatic then
-            SetUnit:AddUnit( FoundStatic )
+            self.SetUnit:AddUnit( FoundStatic )
           end
         end
       end
     end
   end
 
-  return SetUnit
+  return self.SetUnit
 end
 
 --- Get a set of scanned groups.
 -- @param #ZONE_RADIUS self
+-- @param #number Coalition (optional) Filter for this coalition only.
 -- @return Core.Set#SET_GROUP Set of groups.
-function ZONE_RADIUS:GetScannedSetGroup()
+function ZONE_RADIUS:GetScannedSetGroup(Coalition)
 
   self.ScanSetGroup=self.ScanSetGroup or SET_GROUP:New() --Core.Set#SET_GROUP
-
+  
+  self.ScanSetGroup:Clear(false)
   self.ScanSetGroup.Set={}
 
   if self.ScanData then
@@ -18347,7 +18358,12 @@ function ZONE_RADIUS:GetScannedSetGroup()
       if UnitObject:isExist() then
 
         local FoundUnit=UNIT:FindByName(UnitObject:getName())
-        if FoundUnit then
+        local FoundCoalition = FoundUnit and FoundUnit:GetCoalition() or nil
+        local includeoncoalition = true
+        if Coalition ~= nil and FoundCoalition==Coalition then includeoncoalition = true else includeoncoalition = false end
+        if Coalition == nil then includeoncoalition = true end
+        --self:I(string.format("Unit name %s coalition %s filter coalition = %s include = %s",FoundUnit:GetName(),tostring(FoundCoalition),tostring(Coalition),tostring(includeoncoalition)))
+        if FoundUnit and includeoncoalition then
           local group=FoundUnit:GetGroup()
           self.ScanSetGroup:AddGroup(group)
         end
@@ -20422,7 +20438,7 @@ function ZONE_POLYGON:Scan( ObjectCategories, UnitCategories )
         self.ScanData.Scenery[SceneryType] = self.ScanData.Scenery[SceneryType] or {}
         self.ScanData.Scenery[SceneryType][SceneryName] = SCENERY:Register( SceneryName, ZoneObject )
         table.insert(self.ScanData.SceneryTable,self.ScanData.Scenery[SceneryType][SceneryName])
-        --self:T( { SCENERY =  self.ScanData.Scenery[SceneryType][SceneryName] } )
+        --self:I( { SCENERY =  self.ScanData.Scenery[SceneryType][SceneryName] } )
       end
 
     end
@@ -59569,6 +59585,16 @@ function GROUP:EnableEmission(switch)
 
   end
 
+  return self
+end
+
+
+--- Set a formation for this group.
+-- @param #GROUP self
+-- @param #number Formation See. ENUMS.Formation or [Formations](https://wiki.hoggitworld.com/view/DCS_enum_formation) for options.
+-- @return #GROUP self
+function GROUP:SetFormation(Formation)
+  self:SetOption(AI.Option.Air.id.FORMATION,Formation)
   return self
 end
 
@@ -117166,7 +117192,7 @@ end
 -- @module Functional.Mantis
 -- @image Functional.Mantis.jpg
 --
--- Last Update: August 2025
+-- Last Update: December 2025
 
 -------------------------------------------------------------------------
 --- **MANTIS** class, extends Core.Base#BASE
@@ -117205,10 +117231,13 @@ end
 -- @field #boolean checkforfriendlies If true, do not activate a SAM installation if a friendly aircraft is in firing range.
 -- @field #table FilterZones Table of Core.Zone#ZONE Zones Consider SAM groups in this zone(s) only for this MANTIS instance, must be handed as #table of Zone objects.
 -- @field #boolean SmokeDecoy If true, smoke short range SAM units as decoy if a plane is in firing range.
--- @field #number SmokeDecoyColor Color to use, defaults to SMOKECOLOR.White
+-- @field #number SmokeDecoyColor Color to use, defaults to SMOKECOLOR.White.
 -- @field #number checkcounter Counter for SAM Table refreshes.
 -- @field #number DLinkCacheTime Seconds after which cached contacts in DLink will decay.
--- @field #boolean logsamstatus Log SAM status in dcs.log every cycle if true
+-- @field #boolean logsamstatus Log SAM status in dcs.log every cycle if true.
+-- @field #boolean DetectAccoustic Set if we can also detect units accousticly.
+-- @field #number DetectAccousticRadius We can hear in this range.
+-- @field #table DetectAccousticCategories We can hear these categories.
 -- @extends Core.Base#BASE
 
 
@@ -117424,7 +117453,7 @@ end
 MANTIS = {
   ClassName             = "MANTIS",
   name                  = "mymantis",
-  version               = "0.9.34",
+  version               = "0.9.41",
   SAM_Templates_Prefix  = "",
   SAM_Group             = nil,
   EWR_Templates_Prefix  = "",
@@ -117475,6 +117504,9 @@ MANTIS = {
   checkcounter          = 1,
   DLinkCacheTime        = 120,
   logsamstatus          = false,
+  DetectAccoustic       = false,
+  DetectAccousticRadius = 2000,
+  DetectAccousticCategories = {Unit.Category.HELICOPTER},
 }
 
 --- Advanced state enumerator
@@ -117542,7 +117574,7 @@ MANTIS.SamData = {
   ["HQ-2"] = { Range=50, Blindspot=6, Height=35, Type="Medium", Radar="HQ_2_Guideline_LN" },
   ["TAMIR IDFA"] = { Range=20, Blindspot=0.6, Height=12.3, Type="Short", Radar="IRON_DOME_LN" },
   ["STUNNER IDFA"] = { Range=250, Blindspot=1, Height=45, Type="Long", Radar="DAVID_SLING_LN" },
-  ["NIKE"] = { Range=155, Blindspot=6, Height=30, Type="Long", Radar="HIPAR" },
+  ["Nike"] = { Range=155, Blindspot=6, Height=30, Type="Long", Radar="HIPAR" },
   ["Dog Ear"] = { Range=11, Blindspot=0, Height=9, Type="Point", Radar="Dog Ear", Point="true" },
   -- CH Added to DCS core 2.9.19.x
   ["Pantsir S1"] = { Range=20, Blindspot=1.2, Height=15, Type="Point", Radar="PantsirS1" , Point="true" }, 
@@ -117668,7 +117700,7 @@ do
   --@param #string samprefix Prefixes for the SAM groups from the ME, e.g. all groups starting with "Red Sam..."
   --@param #string ewrprefix Prefixes for the EWR groups from the ME, e.g. all groups starting with "Red EWR..."
   --@param #string hq Group name of your HQ (optional)
-  --@param #string coalition Coalition side of your setup, e.g. "blue", "red" or "neutral"
+  --@param #string Coalition Coalition side of your setup, e.g. "blue", "red" or "neutral"
   --@param #boolean dynamic Use constant (true) filtering or just filter once (false, default) (optional)
   --@param #string awacs Group name of your Awacs (optional)
   --@param #boolean EmOnOff Make MANTIS switch Emissions on and off instead of changing the alarm state between RED and GREEN (optional)
@@ -117692,7 +117724,7 @@ do
   --        mybluemantis = MANTIS:New("bluemantis","Blue SAM","Blue EWR",nil,"blue",false,"Blue Awacs")
   --        mybluemantis:Start()
   --
-  function MANTIS:New(name,samprefix,ewrprefix,hq,coalition,dynamic,awacs, EmOnOff, Padding, Zones)
+  function MANTIS:New(name,samprefix,ewrprefix,hq,Coalition,dynamic,awacs, EmOnOff, Padding, Zones)
     
     
     -- Inherit everything from BASE class.
@@ -117705,12 +117737,14 @@ do
     -- DONE: Treat Awacs separately, since they might be >80km off site
     -- DONE: Allow tables of prefixes for the setup
     -- DONE: Auto-Mode with range setups for various known SAM types.
+    -- DONE: Added reaction on HIT and UNIT LOST events.
     
     self.name = name or "mymantis"
     self.SAM_Templates_Prefix = samprefix or "Red SAM"
     self.EWR_Templates_Prefix = ewrprefix or "Red EWR"
     self.HQ_Template_CC = hq or nil
-    self.Coalition = coalition or "red"
+    self.Coalition = Coalition or "red"
+    self.coalition = Coalition == "blue" and coalition.side.BLUE or coalition.side.RED
     self.SAM_Table = {}
     self.SAM_Table_Long = {}
     self.SAM_Table_Medium = {}
@@ -117860,6 +117894,8 @@ do
   self:AddTransition("*",             "SeadSuppressionStart",    "*")           -- SEAD has switched off one group.
   self:AddTransition("*",             "SeadSuppressionEnd",      "*")           -- SEAD has switched on one group.
   self:AddTransition("*",             "SeadSuppressionPlanned",  "*")           -- SEAD has planned a suppression.
+  self:AddTransition("*",             "SAMUnitHit",              "*")           -- A SAM unit was hit
+  self:AddTransition("*",             "SAMUnitLost",             "*")           -- A SAM Unit was lost
   self:AddTransition("*",             "Stop",                    "Stopped")     -- Stop FSM.
 
   ------------------------
@@ -117970,12 +118006,162 @@ do
   -- @param Wrapper.Group#GROUP Group The suppressed GROUP object
   -- @param #string Name Name of the suppressed group
   
+  --- On After "SAMUnitHit" event. A SAM Unit was hit.
+  -- @function [parent=#MANTIS] OnAfterSeadSuppressionEnd
+  -- @param #MANTIS self
+  -- @param #string From The From State
+  -- @param #string Event The Event
+  -- @param #string To The To State
+  -- @param Wrapper.Group#GROUP Group The GROUP of the hit UNIT object
+  -- @param #string Name Name of the suppressed group
+  
+  --- On After "SAMUnitLoast" event. A SAM Unit was lost.
+  -- @function [parent=#MANTIS] OnAfterSeadSuppressionEnd
+  -- @param #MANTIS self
+  -- @param #string From The From State
+  -- @param #string Event The Event
+  -- @param #string To The To State
+  -- @param Wrapper.Group#GROUP Group The GROUP of the lost UNIT object
+  -- @param #string Name Name of the suppressed group
+  
   return self
  end
 
 -----------------------------------------------------------------------
 -- MANTIS helper functions
 -----------------------------------------------------------------------
+
+  --- Set to accept accoustic detection. Set this *before* MANTIS starts!
+  -- @param #MANTIS self
+  -- @param #number Radius Radius in which we can "hear" units. Defaults to 2000 meters.
+  -- @param #table UnitCategories Set what Unit Categories we can "hear". Defaults to `{Unit.Category.HELICOPTER}`
+  -- @return #MANTIS self
+  function MANTIS:SetAccousticDetectionOn(Radius,UnitCategories)
+    self.DetectAccoustic = true
+    self.DetectAccousticRadius = Radius or 2000
+    self.DetectAccousticCategories = UnitCategories or {Unit.Category.HELICOPTER}
+    return self
+  end
+  
+  --- Switch off accoustic detection.
+  -- @param #MANTIS self
+  -- @return #MANTIS self
+  function MANTIS:SetAccousticDetectionOff()
+    self.DetectAccoustic = false
+    return self
+  end
+  
+  --- [Internal] Function to manage hits on SAM units
+  -- @param #MANTIS self
+  -- @param Core.Event#EVENTDATA EventData The EVENT data
+  -- @return #MANTIS self
+  function MANTIS:_EventHandler(EventData)
+   self:T(self.lid .. "_EventHandler")
+   
+   local function IsOneOfOurs(name)
+      for _,_name in pairs(self.ewr_templates) do
+        if string.find(name,_name,1,true) then
+          return true
+        end
+      end
+      return false
+   end
+   
+   local function SwitchSAMOn(Name,Group)
+    local suppressed = self.SuppressedGroups[Name] or false
+    if not suppressed and self.SamStateTracker[Name] == "GREEN" then
+      self.SamStateTracker[Name] = "RED"
+      if self.UseEmOnOff then
+        -- DONE: add emissions on/off
+        Group:EnableEmission(true)
+      elseif (not self.UseEmOnOff) then
+        Group:OptionAlarmStateRed()          
+      end
+      self:__RedState(1,Group)
+      if self.SmokeDecoy == true then
+        self:_SmokeUnits(Group)
+      end
+    end
+   end
+   
+   local coordinate -- Core.Point#COORDINATE
+   local Name -- #string
+   local Group -- Wrapper.Group#GROUP
+   local lasthit = 0
+   local firsthit = false
+   local alerton = false
+   
+   -- Check if we can get a location
+   
+   local data = EventData -- Core.Event#EVENTDATA
+   if data.id == EVENTS.Hit then
+    -- Unit hit, one of ours?
+    if data.TgtGroupName and IsOneOfOurs(data.TgtGroupName) then
+      self:T("Unit hit in group: "..data.TgtGroupName)
+      if data.TgtGroup then
+        lasthit = data.TgtGroup:GetProperty("MANTIS_LASTHIT")
+        firsthit = (lasthit==nil) and true or false
+        if firsthit == true then alerton = true end
+        if lasthit ~= nil and timer.getTime()-lasthit > self.ShoradTime then alerton = true end
+        coordinate = data.TgtGroup:GetCoordinate()
+        Name = data.TgtGroupName
+        Group = data.TgtGroup
+        if alerton == true then
+          self:__SAMUnitHit(1,Group,Name)
+          SwitchSAMOn(Name,Group) 
+        end
+        if coordinate and self.debug then
+          local text = coordinate:ToStringMGRS()
+          self:I("Location: "..text)
+        end
+      end
+    end
+   end
+      
+   if data.id == EVENTS.UnitLost then 
+    if data.IniGroupName and IsOneOfOurs(data.IniGroupName) then
+      self:T("Unit lost in group: "..data.IniGroupName)
+      if data.IniGroup then
+        lasthit = data.IniGroup:GetProperty("MANTIS_LASTHIT")
+        firsthit = (lasthit==nil) and true or false
+        if firsthit == true then alerton = true end
+        if lasthit ~= nil and timer.getTime()-lasthit > self.ShoradTime then alerton = true end
+        coordinate = data.IniGroup:GetCoordinate()
+        Name = data.IniGroupName
+        Group = data.IniGroup
+        alerton = true
+        SwitchSAMOn(Name,Group) 
+        self:__SAMUnitLost(1,Group,Name)    
+        if coordinate and self.debug then
+          local text = coordinate:ToStringMGRS()
+          self:I("Location: "..text)
+        end
+      end
+    end
+   end
+   
+   if firsthit == true or alerton == true then
+    Group:SetProperty("MANTIS_LASTHIT",timer.getTime())
+   end
+   
+   
+   if coordinate ~= nil and Name ~= nil and Group ~=nil and alerton == true then
+    if self.ShoradLink then
+      self:T("Shorad activated for: "..Name)
+      local Shorad = self.Shorad -- Functional.Shorad#SHORAD
+      local radius = self.checkradius
+      local ontime = self.ShoradTime
+      Shorad:WakeUpShorad(Name, radius, ontime, nil, true)
+      self:__ShoradActivated(1,Name, radius, ontime)
+    end
+    if self.autorelocate and Group then
+      Group:RelocateGroundRandomInRadius(20,500,true,true,nil,true)
+    end
+   end
+   
+   return self
+  end
+
 
   --- [Internal] Function to get the self.SAM_Table
   -- @param #MANTIS self
@@ -118469,11 +118655,12 @@ do
     return inzone
   end
   
-  --- [Internal] Function to prefilter height based
+  --- [Internal] Function to prefilter height based and check for Helo activity.
   -- @param #MANTIS self
   -- @param #number height
+  -- @param Core.Point#COORDINATE SamCoordinate
   -- @return #table set
-  function MANTIS:_PreFilterHeight(height)
+  function MANTIS:_PreFilterHeight(height,SamCoordinate)
     self:T(self.lid.."_PreFilterHeight")   
     local set = {}
     local dlink = self.Detection -- Ops.Intel#INTEL_DLINK
@@ -118482,8 +118669,22 @@ do
       local contact = _contact -- Ops.Intel#INTEL.Contact
       local grp = contact.group -- Wrapper.Group#GROUP
       if grp:IsAlive() then
-        if grp:GetHeight(true) < height then
-          local coord = grp:GetCoordinate()
+        local coord = grp:GetCoordinate()
+        local dist = 0
+        local include = true
+        if grp:IsGround() then include = false end
+        if grp:GetCoalition() == self.coalition then include = false end
+        if coord and SamCoordinate and grp:IsHelicopter() then
+          dist = coord:Get2DDistance(SamCoordinate) or 0
+          if dist > self.ShoradActDistance then include = false end -- we do not want long range shooting at helos
+        end
+        if self.debug then
+          local text = "Looking at Group: "..grp:GetName() or "N/A"
+          text = text .. " Include = "..tostring(include)
+          MESSAGE:New(text,10,"MANTIS"):ToAllIf(self.verbose):ToLog()
+        end
+        local grpalt = grp:GetHeight(true)
+        if grpalt < height and grpalt > 10 and include == true then          
           table.insert(set,coord)
         end
       end
@@ -118507,7 +118708,7 @@ do
     local set = dectset
     if dlink then
       -- DEBUG
-      set = self:_PreFilterHeight(height)
+      set = self:_PreFilterHeight(height,samcoordinate)
     end
     --self.friendlyset -- Core.Set#SET_GROUP
     if self.checkforfriendlies == true and self.friendlyset == nil then
@@ -118588,14 +118789,18 @@ do
     
     self.intelset = {}
     
-    local IntelOne = INTEL:New(groupset,self.Coalition,self.name.." IntelOne")
-    --IntelOne:SetClusterAnalysis(true,true)
-    --IntelOne:SetClusterRadius(5000)
+    local IntelOne = INTEL:New(groupset,self.coalition,self.name.." IntelOne")
+    IntelOne.DetectAccoustic = self.DetectAccoustic
+    IntelOne.DetectAccousticRadius = self.DetectAccousticRadius or 2000
+    IntelOne.DetectAccousticUnitTypes = self.DetectAccousticCategories or {Unit.Category.HELICOPTER}
+    --IntelOne:SetClusterAnalysis(true,true,true)
     IntelOne:Start()
     
-    local IntelTwo = INTEL:New(samset,self.Coalition,self.name.." IntelTwo")
-    --IntelTwo:SetClusterAnalysis(true,true)
-    --IntelTwo:SetClusterRadius(5000)
+    local IntelTwo = INTEL:New(samset,self.coalition,self.name.." IntelTwo")
+    IntelTwo.DetectAccoustic = self.DetectAccoustic
+    IntelTwo.DetectAccousticRadius = self.DetectAccousticRadius or 2000
+    IntelTwo.DetectAccousticUnitTypes = self.DetectAccousticCategories or {Unit.Category.HELICOPTER}
+    --IntelTwo:SetClusterAnalysis(true,true,true)
     IntelTwo:Start()
     
     local CacheTime = self.DLinkCacheTime or 120
@@ -118924,6 +119129,27 @@ do
     self.ShoradLink = false
     return self
   end
+  
+   --- [Internal] Function to smoke a group in decoy.
+  -- @param #MANTIS self
+  -- @param Wrapper.Group#GROUP Group
+  -- @return #MANTIS self
+  function MANTIS:_SmokeUnits(Group)
+    self:T("Smoking")
+    local LastSmoketime=Group:GetProperty("MANTIS_LASTSMOKE_TIME") or 0
+    local TNow = timer.getTime()
+    if TNow - LastSmoketime > 290 then -- Smoking lasts 5 minutes
+      Group:SetProperty("MANTIS_LASTSMOKE_TIME",TNow)
+      local units = Group:GetUnits() or {}
+      local smoke = self.SmokeDecoyColor or SMOKECOLOR.White
+      for _,unit in pairs(units) do
+        if unit and unit:IsAlive() then
+          unit:GetCoordinate():Smoke(smoke)
+        end
+      end
+    end
+    return self
+  end
 
 -----------------------------------------------------------------------
 -- MANTIS main functions
@@ -118951,7 +119177,7 @@ do
       local radius = _data[3]
       local height = _data[4]
       local blind = _data[5] * 1.25 + 1
-      local shortsam = (_data[6] == MANTIS.SamType.SHORT) and true or false
+      local shortsam = (_data[6] ~= MANTIS.SamType.LONG) and true or false
       if not shortsam then
         shortsam = (_data[6] == MANTIS.SamType.POINT) and true or false
       end
@@ -118978,18 +119204,11 @@ do
           end
           if self.SamStateTracker[name] ~= "RED" and switch then
             self:__RedState(1,samgroup)
-            self.SamStateTracker[name] = "RED"
           end
-          -- TODO doesn't work
-          if shortsam == true and self.SmokeDecoy == true then
+          -- DONE Restrict on Distance
+          if shortsam == true and self.SmokeDecoy == true and Distance < self.DetectAccousticRadius*1.5 then 
             self:T("Smoking")
-            local units = samgroup:GetUnits() or {}
-            local smoke = self.SmokeDecoyColor or SMOKECOLOR.White
-            for _,unit in pairs(units) do
-              if unit and unit:IsAlive() then
-                unit:GetCoordinate():Smoke(smoke)
-              end
-            end
+            self:_SmokeUnits(samgroup)
           end
           -- link in to SHORAD if available
           -- DONE: Test integration fully
@@ -119180,7 +119399,7 @@ do
     end
     --]]
     if self.autoshorad then
-      self.Shorad = SHORAD:New(self.name.."-SHORAD","SHORAD",self.SAM_Group,self.ShoradActDistance,self.ShoradTime,self.coalition,self.UseEmOnOff)
+      self.Shorad = SHORAD:New(self.name.."-SHORAD","SHORAD",self.SAM_Group,self.ShoradActDistance,self.ShoradTime,self.Coalition,self.UseEmOnOff,self.SmokeDecoy,self.SmokeDecoyColor)
       self.Shorad:SetDefenseLimits(80,95)
       self.ShoradLink = true
       self.Shorad.Groupset=self.ShoradGroupSet
@@ -119189,6 +119408,10 @@ do
     if self.shootandscoot and self.SkateZones and self.Shorad then
       self.Shorad:AddScootZones(self.SkateZones,self.SkateNumber or 3,self.ScootRandom,self.ScootFormation)
     end
+    
+    self:HandleEvent(EVENTS.Hit,self._EventHandler)
+    self:HandleEvent(EVENTS.UnitLost,self._EventHandler)
+    
     self:__Status(-math.random(1,10))
     return self
   end
@@ -119458,7 +119681,9 @@ end
 -- @field #number minscootdist Min distance of the next zone
 -- @field #number maxscootdist Max distance of the next zone
 -- @field #boolean scootrandomcoord If true, use a random coordinate in the zone and not the center
--- @field #string scootformation Formation to take for scooting, e.g. "Vee" or "Cone"  
+-- @field #string scootformation Formation to take for scooting, e.g. "Vee" or "Cone" 
+-- @field #boolean SmokeDecoy = false,
+-- @field #number SmokeDecoyColor = SMOKECOLOR.White  
 -- @extends Core.Base#BASE
 
 
@@ -119524,7 +119749,9 @@ SHORAD = {
   SkateZones = nil,
   minscootdist = 100,
   maxscootdist = 3000,
-  scootrandomcoord = false,  
+  scootrandomcoord = false, 
+  SmokeDecoy = false,
+  SmokeDecoyColor = SMOKECOLOR.White 
 }
 
 -----------------------------------------------------------------------
@@ -119571,8 +119798,10 @@ do
   -- @param #number ActiveTimer Determines how many seconds the systems stay on red alert after wake-up call
   -- @param #string Coalition Coalition, i.e. "blue", "red", or "neutral"
   -- @param #boolean UseEmOnOff Use Emissions On/Off rather than Alarm State Red/Green (default: use Emissions switch)
+  -- @param #boolean SmokeDecoy Throw smoke decoy when getting activated. Defaults to false.
+  -- @param #number SmokeDecoyColor SMOLECOLOR to use. Defaults to SMOLECOLOR.White
   -- @return #SHORAD self
-  function SHORAD:New(Name, ShoradPrefix, Samset, Radius, ActiveTimer, Coalition, UseEmOnOff) 
+  function SHORAD:New(Name, ShoradPrefix, Samset, Radius, ActiveTimer, Coalition, UseEmOnOff, SmokeDecoy, SmokeDecoyColor) 
     local self = BASE:Inherit( self, FSM:New() )
     self:T({Name, ShoradPrefix, Samset, Radius, ActiveTimer, Coalition})
     
@@ -119581,6 +119810,7 @@ do
     self.name = Name or "MyShorad"
     self.Prefixes = ShoradPrefix or "SAM SHORAD"
     self.Radius = Radius or 20000
+    if type(Coalition) == "number" then Coalition = string.lower(UTILS.GetCoalitionName(Coalition)) end
     self.Coalition = Coalition or "blue"
     self.Samset = Samset or GroupSet
     self.ActiveTimer = ActiveTimer or 600
@@ -119591,8 +119821,15 @@ do
     self.DefenseLowProb = 70 -- probability to detect a missile shot, low margin
     self.DefenseHighProb = 90  -- probability to detect a missile shot, high margin
     self.UseEmOnOff = true -- Decide if we are using Emission on/off (default) or AlarmState red/green
+    
     if UseEmOnOff == false then self.UseEmOnOff = UseEmOnOff end
-    self:I("*** SHORAD - Started Version 0.3.4")
+    
+    if SmokeDecoy then
+      self.SmokeDecoy = SmokeDecoy
+      self.SmokeDecoyColor = SmokeDecoyColor or SMOKECOLOR.White
+    end
+    
+    self:I("*** SHORAD - Started Version 0.3.5")
     -- Set the string id for output to DCS.log file.
     self.lid=string.format("SHORAD %s | ", self.name)
     self:_InitState()
@@ -119861,6 +120098,32 @@ do
     return returnname
   end
   
+  --- Smoke a SHORAD Group
+  -- @param #SHORAD self
+  -- @param Wrapper.Group#GROUP Group The Shorad Group to Smoke
+  -- @return self
+  function SHORAD:_SmokeUnits(Group)
+    if self.SmokeDecoy == true then
+      if Group and Group:IsAlive() then
+        local units = Group:GetUnits()
+        for _,_unit in pairs(units) do
+          local unit = _unit -- Wrapper.Unit#UNIT
+          if unit and unit:IsAlive() then
+            local coordinate = unit:GetCoordinate()
+            if coordinate then
+              coordinate:SwitchSmokeOffsetOn()
+              coordinate:Smoke(self.SmokeDecoyColor,Duration,nil,Name,true,1,20)
+              coordinate:Smoke(self.SmokeDecoyColor,Duration,nil,Name,true,180,20)
+              coordinate:Smoke(self.SmokeDecoyColor,Duration,nil,Name,true,270,20)
+              coordinate:Smoke(self.SmokeDecoyColor,Duration,nil,Name,true,90,20)
+            end
+          end
+        end
+      end
+    end
+    return self
+  end
+  
   --- Calculate if the missile shot is detected
   -- @param #SHORAD self
   -- @return #boolean Returns true for a detection, else false
@@ -119947,7 +120210,7 @@ do
         local text = string.format("Shot at SHORAD %s! Evading!", _group:GetName())
         self:T(text)
         local m = MESSAGE:New(text,10,"SHORAD"):ToAllIf(self.debug)
-        
+        self:_SmokeUnits(_group)
         --Shoot and Scoot
         if self.shootandscoot then
           self:__ShootAndScoot(1,_group)
@@ -119962,6 +120225,7 @@ do
           _group:EnableEmission(true)
         end
         _group:OptionAlarmStateRed()
+        self:_SmokeUnits(_group)
         if self.ActiveGroups[groupname] == nil then -- no timer yet for this group
           self.ActiveGroups[groupname] = { Timing = ActiveTimer }
           local endtime = timer.getTime() + (ActiveTimer * math.random(75,100) / 100 ) -- randomize wakeup a bit
@@ -203909,6 +204173,9 @@ end
 -- @field #number prediction Seconds default to be used with CalcClusterFuturePosition.
 -- @field #boolean detectStatics If `true`, detect STATIC objects. Default `false`.
 -- @field #number statusupdate Time interval in seconds after which the status is refreshed. Default 60 sec. Should be negative.
+-- @field #boolean DetectAccoustic If true, also detect by sound (ie proximity).
+-- @field #number DetectAccousticRadius Radius dfor accoustic detection, defaults to 2000 meters.
+-- @field #table DetectAccousticUnitTypes Types of units we can detect accousticly. Defaults to {Unit.Category.HELICOPTER}
 -- @extends Core.Fsm#FSM
 
 --- Top Secret!
@@ -203972,6 +204239,9 @@ INTEL = {
   clusterarrows   = false,
   prediction      =   300,
   detectStatics   = false,
+  DetectAccoustic = false,
+  DetectAccousticRadius = 1000,
+  DetectAccousticUnitTypes =  {Unit.Category.HELICOPTER},
 }
 
 --- Detected item info.
@@ -204030,7 +204300,7 @@ INTEL.Ctype={
 
 --- INTEL class version.
 -- @field #string version
-INTEL.version="0.3.6"
+INTEL.version="0.3.7"
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- ToDo list
@@ -204265,6 +204535,26 @@ end
 -- @return #INTEL self
 function INTEL:SetAcceptZones(AcceptZoneSet)
   self.acceptzoneset=AcceptZoneSet or SET_ZONE:New()
+  return self
+end
+
+--- Set to accept accoustic detection.
+-- @param #INTEL self
+-- @param #number Radius Radius in which we can "hear" units. Defaults to 1000 meters.
+-- @param #table UnitCategories Set what Unit Categories we can "hear". Defaults to `{Unit.Category.GROUND_UNIT,Unit.Category.HELICOPTER}`
+-- @return #INTEL self
+function INTEL:SetAccousticDetectionOn(Radius,UnitCategories)
+  self.DetectAccoustic = true
+  self.DetectAccousticRadius = Radius or 1000
+  self.DetectAccousticUnitTypes =  UnitCategories or {Unit.Category.HELICOPTER}
+  return self
+end
+
+--- Switch off accoustic detection.
+-- @param #INTEL self
+-- @return #INTEL self
+function INTEL:SetAccousticDetectionOff()
+  self.DetectAccoustic = false
   return self
 end
 
@@ -204701,6 +204991,18 @@ function INTEL:UpdateIntel()
         self:GetDetectedUnits(recce, DetectedUnits, RecceDetecting, self.DetectVisual, self.DetectOptical, self.DetectRadar, self.DetectIRST, self.DetectRWR, self.DetectDLINK)
 
       end
+      
+      if self.DetectAccoustic then
+        local recce = group:GetFirstUnitAlive()
+        local detectionzone = group:GetProperty("INTEL_DETECT_ACCZONE")
+        if not detectionzone then
+          detectionzone = ZONE_GROUP:New(group.IdentifiableName.."INTEL_DETECT_ACCZONE",group,self.DetectAccousticRadius or 2000)
+          group:SetProperty("INTEL_DETECT_ACCZONE",detectionzone)
+        end
+        if recce and recce:IsGround() then
+          self:GetDetectedUnitsAccoustic(recce,DetectedUnits,RecceDetecting,detectionzone)
+        end
+      end
 
     end
   end
@@ -204976,7 +205278,7 @@ function INTEL:CreateDetectedItems(DetectedGroups, DetectedStatics, RecceDetecti
   return self
 end
 
---- (Internal) Return the detected target groups of the controllable as a @{Core.Set#SET_GROUP}.
+--- (Internal) Return the detected target groups of the controllable as a table.
 -- The optional parameters specify the detection methods that can be applied.
 -- If no detection method is given, the detection will use all the available methods by default.
 -- @param #INTEL self
@@ -205067,6 +205369,33 @@ function INTEL:GetDetectedUnits(Unit, DetectedUnits, RecceDetecting, DetectVisua
       else
         -- Warning!
         self:T(self.lid..string.format("WARNING: Could not get name of detected object ID=%s! Detected by %s", DetectedObject.id_, reccename))
+      end
+    end
+  end
+end
+
+--- (Internal) Return the detected target groups of the controllable as a @{Core.Set#SET_GROUP}.
+-- @param #INTEL self
+-- @param Wrapper.Unit#UNIT Recce The unit detecting.
+-- @param #table DetectedUnits Table of detected units to be filled.
+-- @param #table RecceDetecting Table of recce per unit to be filled.
+-- @param Core.Zone#ZONE_GROUP detectionzone The zone where to look.
+function INTEL:GetDetectedUnitsAccoustic(Recce,DetectedUnits,RecceDetecting,detectionzone)
+  local othercoalition = self.coalition == coalition.side.BLUE and coalition.side.RED or coalition.side.BLUE
+  self:T("Other coalition = "..othercoalition)
+  if detectionzone then
+    -- Get detected units
+    local reccename = Recce:GetName()
+    local DetectAccousticUnitTypes = self.DetectAccousticUnitTypes or {Unit.Category.HELICOPTER}
+    detectionzone:Scan({Object.Category.UNIT},DetectAccousticUnitTypes)
+    local unitset = detectionzone:GetScannedSetUnit(othercoalition) -- Core.Set#SET_UNIT
+    self:T("Accoustic detection found #Units "..unitset:CountAlive())
+    for _,_unit in pairs(unitset.Set or {}) do
+      if _unit and _unit:IsAlive() and _unit:GetCoalition() ~= self.coalition then
+        local name = _unit:GetName() or "none"
+        DetectedUnits[name]=_unit
+        RecceDetecting[name]=reccename
+        self:T("Unit name = "..name)
       end
     end
   end
