@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2025-12-16T08:39:02+01:00-157f9a82b1ba340674a0f8651d0a92aa342f441c ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2025-12-17T11:31:55+01:00-a39f39646dcd60d4395968e36b642c9b66550224 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -22596,20 +22596,17 @@ MARKEROPS_BASE={
 ClassName="MARKEROPS",
 Tag="mytag",
 Keywords={},
-version="0.1.4",
+version="0.1.5",
 debug=false,
 Casesensitive=true,
 }
-function MARKEROPS_BASE:New(Tagname,Keywords,Casesensitive)
+function MARKEROPS_BASE:New(Tagname,Keywords)
 local self=BASE:Inherit(self,FSM:New())
 self.lid=string.format("MARKEROPS_BASE %s | ",tostring(self.version))
 self.Tag=Tagname or"mytag"
 self.Keywords=Keywords or{}
 self.debug=false
 self.Casesensitive=true
-if Casesensitive and Casesensitive==false then
-self.Casesensitive=false
-end
 self:SetStartState("Stopped")
 self:AddTransition("Stopped","Start","Running")
 self:AddTransition("*","MarkAdded","*")
@@ -22672,9 +22669,11 @@ end
 end
 function MARKEROPS_BASE:_MatchTag(Eventtext)
 local matches=false
-if not self.Casesensitive then
+self:I(self.lid.."Casesensitive "..tostring(self.Casesensitive))
+if self.Casesensitive==false then
+self:I(self.lid.."Marker non-casesensitive "..Eventtext)
 local type=string.lower(self.Tag)
-if string.find(string.lower(Eventtext),type)then
+if string.find(string.lower(Eventtext),type,1,true)then
 matches=true
 end
 else
@@ -22709,6 +22708,14 @@ self:T({self.lid,From,Event,To})
 self:UnHandleEvent(EVENTS.MarkAdded)
 self:UnHandleEvent(EVENTS.MarkChange)
 self:UnHandleEvent(EVENTS.MarkRemoved)
+end
+function MARKEROPS_BASE:SwitchCaseSensitiveOff()
+self.Casesensitive=false
+return self
+end
+function MARKEROPS_BASE:SwitchCaseSensitiveOn()
+self.Casesensitive=true
+return self
 end
 TEXTANDSOUND={
 ClassName="TEXTANDSOUND",
