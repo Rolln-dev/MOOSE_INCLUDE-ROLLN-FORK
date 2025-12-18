@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-12-17T11:31:55+01:00-a39f39646dcd60d4395968e36b642c9b66550224 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-12-18T10:19:13+01:00-8d8b886ad6d8cf14796dccd2364493f301397be8 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -23284,7 +23284,7 @@ function DATABASE:_EventOnPlayerEnterUnit( Event )
 
   if Event.IniDCSUnit then
     -- Player entering a CA slot
-    if Event.IniObjectCategory == 1 and Event.IniGroup and Event.IniGroup:IsGround() then
+    if Event.IniObjectCategory == 1 and Event.IniUnit and Event.IniUnit:IsGround() then
         
       local IsPlayer = Event.IniDCSUnit:getPlayerName()
       if IsPlayer then
@@ -45055,9 +45055,9 @@ end
 -- @return #boolean
 function MARKEROPS_BASE:_MatchTag(Eventtext)
   local matches = false
-  self:I(self.lid .. "Casesensitive "..tostring(self.Casesensitive))
+  --self:I(self.lid .. "Casesensitive "..tostring(self.Casesensitive))
   if self.Casesensitive == false then
-    self:I(self.lid .. "Marker non-casesensitive "..Eventtext)
+    --self:I(self.lid .. "Marker non-casesensitive "..Eventtext)
     local type = string.lower(self.Tag) -- #string
     if string.find(string.lower(Eventtext),type,1,true) then
       matches = true --event text contains tag
