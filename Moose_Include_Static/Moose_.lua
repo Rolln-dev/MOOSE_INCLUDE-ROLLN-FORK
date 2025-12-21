@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2025-12-20T14:06:06+01:00-26742432f5fb053c27e2073e832353c200240460 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2025-12-21T12:49:43+01:00-a5eef3087b8aa169f56edffbf77f468d62dd22e7 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -24548,12 +24548,18 @@ end
 BASE:T({"Cannot GetBoundingRadius",Positionable=self,Alive=self:IsAlive()})
 return nil
 end
-function POSITIONABLE:GetAltitude()
+function POSITIONABLE:GetAltitude(FromGround)
 self:F2()
 local DCSPositionable=self:GetDCSObject()
 if DCSPositionable then
-local PositionablePointVec3=DCSPositionable:getPoint()
-return PositionablePointVec3.y
+local altitude=0
+local point=DCSPositionable:getPoint()
+altitude=point.y
+if FromGround then
+local land=land.getHeight({x=point.x,y=point.z})or 0
+altitude=altitude-land
+end
+return altitude
 end
 BASE:E({"Cannot GetAltitude",Positionable=self,Alive=self:IsAlive()})
 return nil
@@ -56540,7 +56546,7 @@ end
 MANTIS={
 ClassName="MANTIS",
 name="mymantis",
-version="0.9.41",
+version="0.9.42",
 SAM_Templates_Prefix="",
 SAM_Group=nil,
 EWR_Templates_Prefix="",
@@ -56639,6 +56645,10 @@ MANTIS.SamData={
 ["SA-17"]={Range=50,Blindspot=3,Height=50,Type="Medium",Radar="SA-17"},
 ["SA-20A"]={Range=150,Blindspot=5,Height=27,Type="Long",Radar="S-300PMU1"},
 ["SA-20B"]={Range=200,Blindspot=4,Height=27,Type="Long",Radar="S-300PMU2"},
+["SA-21"]={Range=380,Blindspot=5,Height=30,Type="Long",Radar="92N6E"},
+["S-300VM"]={Range=200,Blindspot=5,Height=30,Type="Long",Radar="9S32M"},
+["S-300V4"]={Range=380,Blindspot=5,Height=30,Type="Long",Radar="9S32M"},
+["S-400"]={Range=250,Blindspot=5,Height=27,Type="Long",Radar="92N6E"},
 ["HQ-2"]={Range=50,Blindspot=6,Height=35,Type="Medium",Radar="HQ_2_Guideline_LN"},
 ["TAMIR IDFA"]={Range=20,Blindspot=0.6,Height=12.3,Type="Short",Radar="IRON_DOME_LN"},
 ["STUNNER IDFA"]={Range=250,Blindspot=1,Height=45,Type="Long",Radar="DAVID_SLING_LN"},
@@ -81495,6 +81505,8 @@ CreateRadioBeacons=true,
 UserSetGroup=nil,
 AllowIRStrobe=false,
 IRStrobeRuntime=300,
+FARPRescueDistance=500,
+EnableMenuSmokeMASH=true,
 }
 CSAR.AircraftType={}
 CSAR.AircraftType["SA342Mistral"]=2
@@ -81595,12 +81607,13 @@ self.loadtimemax=135
 self.radioSound="beacon.ogg"
 self.beaconRefresher=29
 self.allowFARPRescue=true
-self.FARPRescueDistance=1000
+self.FARPRescueDistance=500
 self.max_units=6
 self.useprefix=true
 self.csarPrefix={"helicargo","MEDEVAC"}
 self.template=Template or"generic"
 self.mashprefix={"MASH"}
+self.EnableMenuSmokeMASH=true
 self.autosmoke=false
 self.autosmokedistance=2000
 self.limitmaxdownedpilots=true
@@ -82020,7 +82033,7 @@ end
 self.takenOff[_event.IniUnitName]=nil
 local _place=_event.Place
 if _place==nil then
-self:T(self.lid.." Landing Place Nil")
+self:T(self.lid.." Landing Place nil")
 return self
 end
 if self.inTransitGroups[_event.IniUnitName]==nil then
@@ -82404,6 +82417,12 @@ self:T(self.lid.."[Drop off debug] Check distance to MASH for "..heliname.." Dis
 return
 end
 self:T(self.lid.."[Drop off debug] Check distance to MASH for "..heliname.." Distance km: "..math.floor(_dist/1000))
+if self.verbose>0 then
+local debugtext=string.format("Distance %dm | Rescuedist %dm | IsAirport %s | IsInAir %s | IsHeloBase %s\n",_dist,self.FARPRescueDistance,tostring(isairport),tostring(_heliUnit:InAir()),tostring(IsHeloBase))
+self:T("*******************************")
+self:T(debugtext)
+self:T("*******************************")
+end
 if(_dist<self.FARPRescueDistance or isairport)and((_heliUnit:InAir()==false)or(IsHeloBase==true))then
 self:T(self.lid.."[Drop off debug] Distance ok, door check")
 if self.pilotmustopendoors and self:_IsLoadingDoorOpen(heliname)==false then
@@ -82695,6 +82714,37 @@ self:_DisplayMessageToSAR(_heli,string.format("No Pilots within %s",_distance),s
 end
 return self
 end
+function CSAR:_ReqsmokeMash(_unitName)
+self:T(self.lid.." _ReqsmokeMash")
+local _heli=self:_GetSARHeli(_unitName)
+if _heli==nil then
+return
+end
+local smokedist=8000
+if smokedist<self.approachdist_far then smokedist=self.approachdist_far end
+local distance,name,coordinate=self:_GetClosestMASH(_heli)
+if coordinate and distance then
+local disttext
+if _SETTINGS:IsImperial()then
+disttext=string.format("%.1fnm",UTILS.MetersToNM(distance))
+else
+disttext=string.format("%.1fkm",distance/1000)
+end
+local _msg=string.format("%s - Popping smoke at the closest rescue point: %s",self:_GetCustomCallSign(_unitName),disttext)
+self:_DisplayMessageToSAR(_heli,_msg,self.messageTime,false,true,true)
+local color=self.smokecolor
+coordinate:Smoke(color)
+else
+local _distance=string.format("%.1fkm",smokedist/1000)
+if _SETTINGS:IsImperial()then
+_distance=string.format("%.1fnm",UTILS.MetersToNM(smokedist))
+else
+_distance=string.format("%.1fkm",smokedist/1000)
+end
+self:_DisplayMessageToSAR(_heli,string.format("No rescue point within %s",_distance),self.messageTime,false,false,true)
+end
+return self
+end
 function CSAR:_GetClosestMASH(_heli)
 self:T(self.lid.." _GetClosestMASH")
 local _mashset=self.mash
@@ -82706,11 +82756,21 @@ local _shortestDistance=-1
 local _distance=0
 local _helicoord=_heli:GetCoordinate()
 local MashName=nil
+local Coordinate=nil
 if self.allowFARPRescue then
 local position=_heli:GetCoordinate()
 local afb,distance=position:GetClosestAirbase(nil,self.coalition)
 _shortestDistance=distance
 MashName=(afb~=nil)and afb:GetName()or"Unknown"
+Coordinate=(afb~=nil)and afb:GetCoordinate()
+if afb then
+local afbzone=afb:GetZone()
+if afbzone then
+if afbzone:IsCoordinateInZone(Coordinate)and distance>self.FARPRescueDistance then
+distance=100
+end
+end
+end
 end
 for _,_mashes in pairs(MashSets)do
 for _,_mashUnit in pairs(_mashes or{})do
@@ -82724,11 +82784,12 @@ _distance=self:_GetDistance(_helicoord,_mashcoord)
 if _distance~=nil and(_shortestDistance==-1 or _distance<_shortestDistance)then
 _shortestDistance=_distance
 MashName=_mashUnit:GetName()or"Unknown"
+Coordinate=_mashcoord
 end
 end
 end
 if _shortestDistance~=-1 then
-return _shortestDistance,MashName
+return _shortestDistance,MashName,Coordinate
 else
 return-1
 end
@@ -82783,6 +82844,9 @@ local _rootMenu3=MENU_GROUP_COMMAND:New(_group,"Request Signal Flare",_rootPath,
 local _rootMenu4=MENU_GROUP_COMMAND:New(_group,"Request Smoke",_rootPath,self._Reqsmoke,self,_unitName)
 if self.AllowIRStrobe then
 local _rootMenu5=MENU_GROUP_COMMAND:New(_group,"Request IR Strobe",_rootPath,self._ReqIRStrobe,self,_unitName):Refresh()
+end
+if self.EnableMenuSmokeMASH then
+local _rootMenu6=MENU_GROUP_COMMAND:New(_group,"Smoke Closest MASH",_rootPath,self._ReqsmokeMash,self,_unitName)
 else
 _rootMenu4:Refresh()
 end
@@ -83257,7 +83321,7 @@ if path~=nil then
 filename=path.."\\"..filename
 end
 local text=string.format("Loading CSAR state from file %s",filename)
-MESSAGE:New(text,10):ToAllIf(self.Debug)
+MESSAGE:New(text,10):ToAllIf(self.verbose>0)
 self:I(self.lid..text)
 local file=assert(io.open(filename,"rb"))
 local loadeddata={}
