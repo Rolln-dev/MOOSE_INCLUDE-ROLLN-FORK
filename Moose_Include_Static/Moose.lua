@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-12-21T12:49:43+01:00-a5eef3087b8aa169f56edffbf77f468d62dd22e7 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-12-22T14:09:37+01:00-a72d3afd1c43565a3d7eb2b5c0565a72ff7dc577 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -118257,13 +118257,111 @@ do
     return self
   end
   
+  --- Add a single reject zone to MANTIS.
+  -- @param #MANTIS self
+  -- @param Core.Zone#ZONE Zone The zone to be added
+  -- @return #MANTIS self
+  function MANTIS:AddRejectZone(Zone)
+    if Zone and Zone:IsInstanceOf("ZONE_BASE") then
+      table.insert(self.RejectZones,Zone)
+      self.usezones = true
+    end
+    return self
+  end
+  
+  --- Add a single accept zone to MANTIS.
+  -- @param #MANTIS self
+  -- @param Core.Zone#ZONE Zone The zone to be added
+  -- @return #MANTIS self
+  function MANTIS:AddAcceptZone(Zone)
+    if Zone and Zone:IsInstanceOf("ZONE_BASE") then
+      table.insert(self.AcceptZones,Zone)
+      self.usezones = true
+    end
+    return self
+  end
+  
+  --- Add a single conflict zone to MANTIS.
+  -- @param #MANTIS self
+  -- @param Core.Zone#ZONE Zone The zone to be added
+  -- @return #MANTIS self
+  function MANTIS:AddConflictZone(Zone)
+    if Zone and Zone:IsInstanceOf("ZONE_BASE") then
+      table.insert(self.ConflictZones,Zone)
+      self.usezones = true
+    end
+    return self
+  end
+  
+  --- Function to set corridor zones.
+  -- @param #MANTIS self
+  -- @param Core.Set#SET_ZONE CorridorZones Can be handed in as SET\_ZONE or single ZONE object.
+  -- @return #MANTIS self
+  function MANTIS:SetCorridorZones(CorridorZones)
+    self:T(self.lid .. "SetCorridorZones")
+    if CorridorZones and CorridorZones:IsInstanceOf("SET_ZONE") then
+      self.corridorzones = CorridorZones
+      self.usecorridors = true
+    elseif CorridorZones and CorridorZones:IsInstanceOf("ZONE_BASE") then
+      if not self.corridorzones then self.corridorzones = SET_ZONE:New() end
+      self.corridorzones:AddZone(CorridorZones)
+      self.usecorridors = true
+    end
+    if self.intelset then
+      for _,_intel in pairs(self.intelset) do
+        _intel:SetCorridorZones(self.corridorzones)
+      end
+    end
+    return self
+  end
+  
+  --- Function to add one corridor zone.
+  -- @param #MANTIS self
+  -- @param Core.Zone#ZONE CorridorZone The ZONE object to be added.
+  -- @return #MANTIS self
+  function MANTIS:AddCorridorZone(CorridorZone)
+    self:T(self.lid .. "AddCorridorZone")
+    self:SetCorridorZones(CorridorZone)
+    return self
+  end
+  
+  --- Function to set corridor zone floor and ceiling in FEET.
+  -- @param #MANTIS self
+  -- @param #number Floor Floor altitude ASL in feet.
+  -- @param #number Ceiling Ceiling altitude ASL in feet.
+  -- @return #MANTIS self
+  function MANTIS:SetCorridorZoneFloorAndCeiling(Floor,Ceiling)
+    self.corridorfloor = UTILS.FeetToMeters(Floor)
+    self.corridorceiling = UTILS.FeetToMeters(Ceiling)
+    if self.intelset then
+      for _,_intel in pairs(self.intelset) do
+        _intel:SetCorridorLimits(self.corridorfloor,self.corridorceiling)
+      end
+    end
+    return self
+  end
+  
+  --- Function to set corridor zone floor and ceiling in METERS.
+  -- @param #MANTIS self
+  -- @param #number Floor Floor altitude ASL in meters.
+  -- @param #number Ceiling Ceiling altitude ASL in meters.
+  -- @return #MANTIS self
+  function MANTIS:SetCorridorZoneFloorAndCeilingMeters(Floor,Ceiling)
+    self.corridorfloor = Floor    
+    self.corridorceiling = Ceiling
+    if self.intelset then
+      for _,_intel in pairs(self.intelset) do
+        _intel:SetCorridorLimits(self.corridorfloor,self.corridorceiling)
+      end
+    end
+    return self
+  end
+  
   --- Function to set the detection radius of the EWR in meters. (Deprecated, SAM range is used)
   -- @param #MANTIS self
   -- @param #number radius Radius of the EWR detection zone
   function MANTIS:SetEWRRange(radius)
     self:T(self.lid .. "SetEWRRange")
-    --local radius = radius or 80000
-    -- self.acceptrange = radius
     return self
   end
 
@@ -118818,6 +118916,12 @@ do
     IntelOne.DetectAccousticRadius = self.DetectAccousticRadius or 2000
     IntelOne.DetectAccousticUnitTypes = self.DetectAccousticCategories or {Unit.Category.HELICOPTER}
     --IntelOne:SetClusterAnalysis(true,true,true)
+    if self.usecorridors == true then
+      IntelOne:SetCorridorZones(self.corridorzones)
+      if self.corridorfloor or self.corridorceiling then
+        IntelOne:SetCorridorLimits(self.corridorfloor,self.corridorceiling)
+      end
+    end
     IntelOne:Start()
     
     local IntelTwo = INTEL:New(samset,self.coalition,self.name.." IntelTwo")
@@ -118825,6 +118929,12 @@ do
     IntelTwo.DetectAccousticRadius = self.DetectAccousticRadius or 2000
     IntelTwo.DetectAccousticUnitTypes = self.DetectAccousticCategories or {Unit.Category.HELICOPTER}
     --IntelTwo:SetClusterAnalysis(true,true,true)
+    if self.usecorridors == true then
+      IntelTwo:SetCorridorZones(self.corridorzones)
+      if self.corridorfloor or self.corridorceiling then
+        IntelTwo:SetCorridorLimits(self.corridorfloor,self.corridorceiling)
+      end
+    end
     IntelTwo:Start()
     
     local CacheTime = self.DLinkCacheTime or 120
@@ -119417,11 +119527,7 @@ do
     else
       self.Detection = self:StartIntelDetection()
     end
-    --[[
-    if self.advAwacs and not self.automode then
-      self.AWACS_Detection = self:StartAwacsDetection()
-    end
-    --]]
+
     if self.autoshorad then
       self.Shorad = SHORAD:New(self.name.."-SHORAD","SHORAD",self.SAM_Group,self.ShoradActDistance,self.ShoradTime,self.Coalition,self.UseEmOnOff,self.SmokeDecoy,self.SmokeDecoyColor)
       self.Shorad:SetDefenseLimits(80,95)
@@ -179106,7 +179212,7 @@ do
 -- @field #AWACS
 AWACS = {
   ClassName = "AWACS", -- #string
-  version = "0.2.73", -- #string
+  version = "0.2.74", -- #string
   lid = "", -- #string
   coalition = coalition.side.BLUE, -- #number
   coalitiontxt = "blue", -- #string
@@ -180654,6 +180760,55 @@ function AWACS:SetRejectionZone(Zone,Draw)
       MARKER:New(Zone:GetCoordinate(),"Rejection Zone"):ToCoalition(self.coalition)
     end
   end
+  return self
+end
+
+--- Function to set corridor zones.
+-- @param #AWACS self
+-- @param Core.Set#SET_ZONE CorridorZones Can be handed in as SET\_ZONE or single ZONE object.
+-- @return #AWACS self
+function AWACS:SetCorridorZones(CorridorZones)
+  self:T(self.lid .. "SetCorridorZones")
+  if CorridorZones and CorridorZones:IsInstanceOf("SET_ZONE") then
+    self.corridorzones = CorridorZones
+    self.usecorridors = true
+  elseif CorridorZones and CorridorZones:IsInstanceOf("ZONE_BASE") then
+    if not self.corridorzones then self.corridorzones = SET_ZONE:New() end
+    self.corridorzones:AddZone(CorridorZones)
+    self.usecorridors = true
+  end
+  return self
+end
+
+--- Function to add one corridor zone.
+-- @param #AWACS self
+-- @param Core.Zone#ZONE CorridorZone The ZONE object to be added.
+-- @return #AWACS self
+function AWACS:AddCorridorZone(CorridorZone)
+  self:T(self.lid .. "AddCorridorZone")
+  self:SetCorridorZones(CorridorZone)
+  return self
+end
+
+--- Function to set corridor zone floor and ceiling in FEET.
+-- @param #AWACS self
+-- @param #number Floor Floor altitude ASL in feet.
+-- @param #number Ceiling Ceiling altitude ASL in feet.
+-- @return #AWACS self
+function AWACS:SetCorridorZoneFloorAndCeiling(Floor,Ceiling)
+  self.corridorfloor = UTILS.FeetToMeters(Floor)
+  self.corridorceiling = UTILS.FeetToMeters(Ceiling)
+  return self
+end
+
+--- Function to set corridor zone floor and ceiling in METERS.
+-- @param #AWACS self
+-- @param #number Floor Floor altitude ASL in meters.
+-- @param #number Ceiling Ceiling altitude ASL in meters.
+-- @return #AWACS self
+function AWACS:SetCorridorZoneFloorAndCeilingMeters(Floor,Ceiling)
+  self.corridorfloor = Floor    
+  self.corridorceiling = Ceiling
   return self
 end
 
@@ -182931,6 +183086,14 @@ function AWACS:_StartIntel(awacs)
     intel:SetFilterCategory({Unit.Category.AIRPLANE})
   else
     intel:SetFilterCategory({Unit.Category.AIRPLANE,Unit.Category.HELICOPTER})
+  end
+  
+  -- Corridors
+  if self.usecorridors == true then
+    intel:SetCorridorZones(self.corridorzones)
+    if self.corridorceiling or self.corridorfloor then
+      intel:SetCorridorLimits(self.corridorfloor,self.corridorceiling)
+    end
   end
   
   -- Callbacks
@@ -204404,6 +204567,9 @@ end
 -- @field Core.Set#SET_ZONE acceptzoneset Set of accept zones. If defined, only contacts in these zones are considered.
 -- @field Core.Set#SET_ZONE rejectzoneset Set of reject zones. Contacts in these zones are not considered, even if they are in accept zones.
 -- @field Core.Set#SET_ZONE conflictzoneset Set of conflict zones. Contacts in these zones are considered, even if they are not in accept zones or if they are in reject zones.
+-- @field Core.Set#SET_ZONE corridorzoneset Set of corridor zones. Contacts in these zones are never considered. Also see corridorfloorheight and corridorfloorceiling.
+-- @field #number corridorfloor [Air] Contacts below this height (ASL!) are considered, even if they are in a corridor zone.
+-- @field #number corridorceiling [Air] Contacts above this height (ASL!) are considered, even if they are in a corridor zone.
 -- @field #table Contacts Table of detected items.
 -- @field #table ContactsLost Table of lost detected items.
 -- @field #table ContactsUnknown Table of new detected items.
@@ -204543,7 +204709,7 @@ INTEL.Ctype={
 
 --- INTEL class version.
 -- @field #string version
-INTEL.version="0.3.7"
+INTEL.version="0.3.9"
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- ToDo list
@@ -204558,6 +204724,7 @@ INTEL.version="0.3.7"
 -- NOGO: SetAttributeZone --> return groups of generalized attributes in a zone.
 -- DONE: Loose units only if they remain undetected for a given time interval. We want to avoid fast oscillation between detected/lost states. Maybe 1-5 min would be a good time interval?!
 -- DONE: Combine units to groups for all, new and lost.
+-- DONE: Add corridor zones.
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Constructor
@@ -204649,6 +204816,7 @@ function INTEL:New(DetectionSet, Coalition, Alias)
   self:SetForgetTime()
   self:SetAcceptZones()
   self:SetRejectZones()
+  self:SetCorridorZones()
   self:SetConflictZones()
 
   ------------------------
@@ -204878,7 +205046,63 @@ function INTEL:RemoveConflictZone(ConflictZone)
   return self
 end
 
---- **OBSOLETE, will be removed in next version!**  Set forget contacts time interval.
+--- Set corrdidor zones. Contacts detected in this/these zone(s) are never reported by the detection.
+-- Note that corrdidor zones overrule all other zones, for exceptions see corridor floor and corridor ceiling heights.
+-- @param #INTEL self
+-- @param Core.Set#SET_ZONE CorridorZoneSet Set of corrdidor zone(s).
+-- @return #INTEL self
+function INTEL:SetCorridorZones(CorridorZoneSet)
+  self.corridorzoneset=CorridorZoneSet or SET_ZONE:New()
+  return self
+end
+
+--- Add a corrdidor zone. Contacts detected in this zone are corrdidored and not reported by the detection.
+-- Note that corrdidor zones overrule all other zones, for exceptions see corridor floor and corridor ceiling heights.
+-- @param #INTEL self
+-- @param Core.Zone#ZONE CorridorZone Add a zone to the corrdidor zone set.
+-- @return #INTEL self
+function INTEL:AddCorridorZone(CorridorZone)
+  self.corridorzoneset:AddZone(CorridorZone)
+  return self
+end
+
+--- Remove a corrdidor zone from the corrdidor zone set.
+-- Note that corrdidor zones overrule all other zones, for exceptions see corridor floor and corridor ceiling heights.
+-- @param #INTEL self
+-- @param Core.Zone#ZONE CorridorZone Remove a zone from the corrdidor zone set.
+-- @return #INTEL self
+function INTEL:RemoveCorridorZone(CorridorZone)
+  self.corridorzoneset:Remove(CorridorZone:GetName(), true)
+  return self
+end
+
+--- [Air] Add corrdidor zone floor and height. Are considered as ASL (above sea level or barometric) values.
+-- Overrides corridor exception for objects flying outside this limitations.
+-- @param #INTEL self
+-- @param #number Floor Floor altitude in meters.
+-- @param #number Ceiling Ceiling altitude in meters.
+-- @return #INTEL self
+function INTEL:SetCorridorLimits(Floor,Ceiling)
+  self.corridorceiling = Ceiling or 10000
+  self.corridorfloor = Floor or 1
+  return self
+end
+
+--- [Air] Add corrdidor zone floor and height. Are considered as ASL (above sea level or barometric) values.
+-- Overrides corridor exception for objects flying outside this limitations.
+-- @param #INTEL self
+-- @param #number Floor Floor altitude in feet.
+-- @param #number Ceiling Ceiling altitude in feet.
+-- @return #INTEL self
+function INTEL:SetCorridorLimitsFeet(Floor,Ceiling)
+  local Ceiling = Ceiling or 25000
+  local Floor = Floor or 15000
+  self.corridorceiling = UTILS.FeetToMeters(Ceiling)
+  self.corridorfloor = UTILS.FeetToMeters(Floor)
+  return self
+end
+
+--- **OBSOLETE, not functional!**  Set forget contacts time interval.
 -- Previously known contacts that are not detected any more, are "lost" after this time.
 -- This avoids fast oscillations between a contact being detected and undetected.
 -- @param #INTEL self
@@ -205296,6 +205520,34 @@ function INTEL:UpdateIntel()
 
       -- Unit is inside a reject zone ==> remove!
       if inzone and (not inconflictzone) then
+        table.insert(remove, unitname)
+      end
+    end
+    
+    -- Check if unit is in any of the corridor zones.
+    if self.corridorzoneset:Count()>0 then
+      self:T("Corridorzone Check for unit "..unit:GetName())
+      local inzone = false
+      for _,_zone in pairs(self.corridorzoneset.Set) do
+        local zone=_zone --Core.Zone#ZONE
+        if unit:IsInZone(zone) then
+          local debugtext = "Corridorzone Check for unit "..unit:GetName().."\n"
+          debugtext = debugtext .. string.format("IsAir %s | Alt %dft | Floor %dft | Ceil %dft",tostring(unit:IsAir()),tonumber(UTILS.MetersToFeet(unit:GetAltitude())),
+          tonumber(UTILS.MetersToFeet(self.corridorfloor)),tonumber(UTILS.MetersToFeet(self.corridorceiling)))
+          MESSAGE:New(debugtext,15,"INTEL"):ToAllIf(self.verbose>1):ToLogIf(self.verbose>1)
+          if unit:IsAir() and (self.corridorfloor ~= nil or self.corridorceiling ~= nil) then
+            local alt = unit:GetAltitude()
+            if self.corridorfloor and alt > self.corridorfloor then inzone = true end
+            if self.corridorceiling and (inzone == true or self.corridorfloor == nil) and alt < self.corridorceiling then inzone = true else inzone = false end
+            if inzone == true then break end
+          else  
+            inzone=true
+            break
+          end
+        end
+      end
+      -- Unit is inside a corridor zone ==> remove!
+      if inzone then
         table.insert(remove, unitname)
       end
     end
@@ -206586,7 +206838,7 @@ function INTEL:GetClusterCoordinate(Cluster, Update)
   return Cluster.coordinate
 end
 
---- Check if the coorindate of the cluster changed.
+--- Check if the coordindate of the cluster changed.
 -- @param #INTEL self
 -- @param #INTEL.Cluster Cluster The cluster.
 -- @param #number Threshold in meters. Default 100 m.
@@ -232822,7 +233074,7 @@ end
 -- ===
 -- @module Ops.PlayerTask
 -- @image OPS_PlayerTask.jpg
--- @date Last Update Oct 2025
+-- @date Last Update Dec 2025
 
 
 do
@@ -232862,6 +233114,7 @@ do
 -- @field #number PreviousCount
 -- @field #boolean CanSmoke
 -- @field #boolean ShowThreatDetails
+-- @field #boolean PersistMe 
 -- @extends Core.Fsm#FSM
 
 
@@ -232899,11 +233152,12 @@ PLAYERTASK = {
   PreviousCount      =   0,
   CanSmoke           =   true,
   ShowThreatDetails  =   true,
+  PersistMe          =   false,
   }
 
 --- PLAYERTASK class version.
 -- @field #string version
-PLAYERTASK.version="0.1.29"
+PLAYERTASK.version="0.1.31"
 
 --- Generic task condition.
 -- @type PLAYERTASK.Condition
@@ -233202,8 +233456,17 @@ function PLAYERTASK:CanJoinTask(Group, Client)
     return true
 end
 
+--- [User] Set this task for persistance, if persistance is enabled on the PLAYERTASKCONTROLLER instance.
+-- @param #PLAYERTASK self
+-- @return #PLAYERTASK self 
+function PLAYERTASK:EnablePersistance()
+  self.PersistMe = true
+  return self
+end
+
 --- [Internal] Add a PLAYERTASKCONTROLLER for this task
 -- @param #PLAYERTASK self
+-- 
 -- @param Ops.PlayerTask#PLAYERTASKCONTROLLER Controller
 -- @return #PLAYERTASK self
 function PLAYERTASK:_SetController(Controller)
@@ -233889,7 +234152,6 @@ function PLAYERTASK:onafterStatus(From, Event, To)
   return self
 end
 
-
 --- [Internal] On after progress call
 -- @param #PLAYERTASK self
 -- @param #string From
@@ -234164,6 +234426,12 @@ do
 -- @field Core.ClientMenu#CLIENTMENU MenuNoTask
 -- @field #boolean InformationMenu Show Radio Info Menu
 -- @field #number TaskInfoDuration How long to show the briefing info on the screen
+-- @field #table TaskPersistance Table for persistance data
+-- @field #boolean TaskPersistanceSwitch Switch for persisting tasks
+-- @field #string TaskPersistancePath File path for persisting tasks
+-- @field #string TaskPersistanceFilename File name for persisting tasks
+-- @field #table TasksPersistable List of persistable tasks
+-- @field #number SceneryExplosivesAmount Kgs of TNT to explode scenery on task persistance loading
 -- @extends Core.Fsm#FSM
 
 ---
@@ -234470,8 +234738,28 @@ do
 --            
 -- Set a marker on the map and add the following text to create targets from it: "TARGET". This is effectively the same as adding a COORDINATE object as target.
 -- The marker can be deleted any time.
---         
--- ## 9 Discussion
+-- 
+-- ## 9 Single Task Persistence for mission designer added tasks
+-- 
+-- The class can persist the state of single tasks of type BOMBING, PRECISIONBOMBING, ARTY and SEAD, i.e. tasks which have a GROUND(!) GROUP, UNIT, STATIC or SCENERY as target.
+-- This requires the task to have a unique(!) menu name set, a TARGET which already exists on the map at mission start(!), and a flag that this task is actually to be persisted.
+-- Also, you need to desanitize the mission scripting environment, i.e. "lfs" and "io" must be available so we can write to disk.
+-- 
+--            -- First, we need to enable on the PLAYERTASKCONTROLLER itself
+--            taskmanager:EnableTaskPersistance([[C:\Users\myname\Saved Games\DCS\Missions\MyMisionFolder\]],"Mission Tasks.csv") -- Path and Filename
+--            
+--            -- Then, we can design a task marking mission progress that we want to persist
+--            local RussianRadios = SET_STATIC:New():FilterPrefixes("Comms Tower Russia"):FilterOnce()
+--            
+--            local RadioTask = PLAYERTASK:New(AUFTRAG.Type.BOMBING,RussianRadios,true,5,"Bombing")
+--            RadioTask:SetMenuName("Neutralize Comms Towers") -- UNIQUE menu name so we can find the task later!
+--            RadioTask:AddFreetext("Find and neutralize the two communication towers near NB70 East of Fulda on Streufelsberg!")
+--            RadioTask:AddFreetextTTS("Find and neutralize the two communication towers naer N;B;7;zero; East of Fulda on Streufelsberg!")
+--            RadioTask:EnablePersistance() -- Enable persistence for this task
+--            
+--            taskmanager:AddPlayerTaskToQueue(RadioTask,true,false)
+--                       
+-- ## 10 Discussion
 --
 -- If you have questions or suggestions, please visit the [MOOSE Discord](https://discord.gg/AeYAkHP) #ops-playertask channel.  
 -- 
@@ -234521,6 +234809,12 @@ PLAYERTASKCONTROLLER = {
   MenuNoTask         = nil,
   InformationMenu    = false,
   TaskInfoDuration   = 30,
+  TaskPersistance    = {},
+  TaskPersistanceSwitch = false,
+  TaskPersistancePath = nil,
+  TaskPersistanceFilename = nil,
+  TasksPersistable = {},
+  SceneryExplosivesAmount = 300,
   }
 
 ---
@@ -234541,6 +234835,7 @@ AUFTRAG.Type.PRECISIONBOMBING = "Precision Bombing"
 AUFTRAG.Type.CTLD = "Combat Transport"
 AUFTRAG.Type.CSAR = "Combat Rescue"
 AUFTRAG.Type.CONQUER = "Conquer"
+
 ---
 -- @type Scores
 PLAYERTASKCONTROLLER.Scores = {
@@ -234560,6 +234855,24 @@ PLAYERTASKCONTROLLER.Scores = {
   [AUFTRAG.Type.CAP] = 100,
   [AUFTRAG.Type.CAPTUREZONE] = 100,
 }
+
+---
+-- @type TasksPersistable
+PLAYERTASKCONTROLLER.TasksPersistable = {
+  [AUFTRAG.Type.PRECISIONBOMBING] = true,
+  [AUFTRAG.Type.BOMBING] = true,
+  [AUFTRAG.Type.ARTY] = true,
+  [AUFTRAG.Type.SEAD] = true,
+}
+
+---
+-- @type PersistenceData
+-- @field #number ID
+-- @field #string Name
+-- @field #string Type
+-- @field #number InitialTargets
+-- @field #number Targetsleft
+-- @field #boolean updated
  
 --- 
 -- @type SeadAttributes
@@ -234973,6 +235286,30 @@ function PLAYERTASKCONTROLLER:New(Name, Coalition, Type, ClientFilter)
   -- @param Wrapper.Client#CLIENT Client The player client object
   -- @param Ops.PlayerTask#PLAYERTASK Task
   
+end
+
+--- [User] Enable Task persistance (for specific gound target tasks)
+-- @param #PLAYERTASKCONTROLLER self
+-- @param #string Path Path where to save the task data
+-- @param #string Filename File name under which to save the task data
+-- @param #number KgsOfTNT (Optional) Explosives kgs used to remove scenery for persistence, defaults to 300
+-- @return #PLAYERTASKCONTROLLER self
+function PLAYERTASKCONTROLLER:EnableTaskPersistance(Path,Filename,KgsOfTNT)
+  self.TaskPersistanceSwitch = true
+  self.TaskPersistancePath = Path
+  self.TaskPersistanceFilename = Filename
+  self.SceneryExplosivesAmount = KgsOfTNT or 300
+  return self
+end
+
+--- [User] Disable Task persistance (for specific gound target tasks)
+-- @param #PLAYERTASKCONTROLLER self
+-- @return #PLAYERTASKCONTROLLER self
+function PLAYERTASKCONTROLLER:DisableTaskPersistance()
+  self.TaskPersistanceSwitch = false
+  self.TaskPersistancePath = nil
+  self.TaskPersistanceFilename = nil
+  return self
 end
 
 --- [User] Set or create a SCORING object for this taskcontroller
@@ -235661,15 +235998,6 @@ function PLAYERTASKCONTROLLER:_GetTasksPerType()
       table.insert(tasktypes[type],task)
     end
   end
-  
-  --[[
-  for _type,_data in pairs(tasktypes) do
-    self:I("Task Type: ".._type)
-    for _id,_task in pairs(_data) do
-      self:I("Task Name: ".._task.Target:GetName())
-    end
-  end
-  --]]
   
   return tasktypes
 end
@@ -236367,9 +236695,9 @@ function PLAYERTASKCONTROLLER:AddPlayerTaskToQueue(PlayerTask,Silent,TaskFilter)
     PlayerTask:_SetController(self)
     PlayerTask:SetCoalition(self.Coalition)
     self.TaskQueue:Push(PlayerTask)
-    if not Silent then
-      self:__TaskAdded(10,PlayerTask)
-    end
+    --if not Silent then
+      self:__TaskAdded(10,PlayerTask,Silent)
+    --end
   else
     self:E(self.lid.."***** NO valid PAYERTASK object sent!")
   end
@@ -237385,6 +237713,76 @@ function PLAYERTASKCONTROLLER:RemoveConflictZone(ConflictZone)
   return self
 end
 
+--- [User] Add an corridor zone to INTEL detection. You need to set up detection with @{#PLAYERTASKCONTROLLER.SetupIntel}() **before** using this.
+-- @param #PLAYERTASKCONTROLLER self
+-- @param Core.Zone#ZONE CorridorZone Add a zone to the corridor zone set.
+-- @return #PLAYERTASKCONTROLLER self
+function PLAYERTASKCONTROLLER:AddCorridorZone(CorridorZone)
+  self:T(self.lid.."AddCorridorZone")
+  if self.Intel then
+    self.Intel:AddCorridorZone(CorridorZone)
+  else
+    self:E(self.lid.."*****NO detection has been set up (yet)!")
+  end
+  return self
+end
+
+--- [User] Add an corridor SET_ZONE to INTEL detection. You need to set up detection with @{#PLAYERTASKCONTROLLER.SetupIntel}() **before** using this.
+-- @param #PLAYERTASKCONTROLLER self
+-- @param Core.Set#SET_ZONE CorridorZoneSet Add a SET_ZONE to the corridor zone set.
+-- @return #PLAYERTASKCONTROLLER self
+function PLAYERTASKCONTROLLER:AddCorridorZoneSet(CorridorZoneSet)
+  self:T(self.lid.."AddCorridorZoneSet")
+  if self.Intel then
+    self.Intel.corridorzoneset:AddSet(CorridorZoneSet)
+  else
+    self:E(self.lid.."*****NO detection has been set up (yet)!")
+  end
+  return self
+end
+
+--- [User] Remove an corridor zone from INTEL detection. You need to set up detection with @{#PLAYERTASKCONTROLLER.SetupIntel}() **before** using this.
+-- @param #PLAYERTASKCONTROLLER self
+-- @param Core.Zone#ZONE CorridorZone Remove this zone from the corridor zone set.
+-- @return #PLAYERTASKCONTROLLER self
+function PLAYERTASKCONTROLLER:RemoveCorridorZone(CorridorZone)
+  self:T(self.lid.."RemoveCorridorZone")
+  if self.Intel then
+    self.Intel:RemoveCorridorZone(CorridorZone)
+  else
+    self:E(self.lid.."*****NO detection has been set up (yet)!")
+  end
+  return self
+end
+
+--- Function to set corridor zone floor and ceiling in FEET.
+-- @param #PLAYERTASKCONTROLLER self
+-- @param #number Floor Floor altitude ASL in feet.
+-- @param #number Ceiling Ceiling altitude ASL in feet.
+-- @return #PLAYERTASKCONTROLLER self
+function PLAYERTASKCONTROLLER:SetCorridorZoneFloorAndCeiling(Floor,Ceiling)
+  if self.Intel then
+    self.Intel:SetCorridorLimitsFeet(Floor,Ceiling)
+  else
+    self:E(self.lid.."*****NO detection has been set up (yet)!")
+  end
+  return self
+end
+
+--- Function to set corridor zone floor and ceiling in METERS.
+-- @param #PLAYERTASKCONTROLLER self
+-- @param #number Floor Floor altitude ASL in meters.
+-- @param #number Ceiling Ceiling altitude ASL in meters.
+-- @return #PLAYERTASKCONTROLLER self
+function PLAYERTASKCONTROLLER:SetCorridorZoneFloorAndCeilingMeters(Floor,Ceiling)
+  if self.Intel then
+    self.Intel:SetCorridorLimits(Floor,Ceiling)
+  else
+    self:E(self.lid.."*****NO detection has been set up (yet)!")
+  end
+  return self
+end
+
 --- [User] Set the top menu name to a custom string.
 -- @param #PLAYERTASKCONTROLLER self
 -- @param #string Name The name to use as the top menu designation.
@@ -237566,6 +237964,128 @@ function PLAYERTASKCONTROLLER:SetSRSBroadcast(Frequency,Modulation)
   return self
 end
 
+
+---
+-- @param #PLAYERTASKCONTROLLER self
+-- @param Ops.PlayerTask#PLASERTASK Task
+-- @param #number TargetsLeft
+function PLAYERTASKCONTROLLER:_UpdateTargetsAlive(Task,TargetsLeft)
+  self:T(self.lid.."_UpdateTargetsAlive")
+  local delta = Task.Target:CountTargets() - TargetsLeft
+  if delta > 0 then
+    self:T("Delta targets to be removed: "..delta)
+    local count = 0
+    local targets = Task.Target:GetObjects()
+    for _,_object in pairs(targets or {}) do
+      if _object and _object.ClassName and (_object:IsInstanceOf("GROUP") or _object:IsInstanceOf("UNIT") or _object:IsInstanceOf("STATIC") or _object:IsInstanceOf("SCENERY")) then
+        if count < delta then
+          count = count + 1
+          if not _object:IsInstanceOf("SCENERY") then
+            _object:Destroy(true)
+          else
+            _object:Explode(self.SceneryExplosivesAmount)
+          end
+        end
+      end
+    end
+  end
+  return self
+end
+
+---
+-- @param #PLAYERTASKCONTROLLER self
+function PLAYERTASKCONTROLLER:_LoadTasksPersisted()
+  self:T(self.lid.."_LoadTasksPersisted")
+  
+  local function MatchTask(Type,Name)
+    local foundtask
+    self.TaskQueue:ForEach(
+      function(_task)
+        local task = _task -- #PLAYERTASK
+        if task.Type == Type and task.Target.name and task.Target.name  == Name then
+          foundtask = task
+        end
+      end
+    )
+    return foundtask
+  end
+  
+  if lfs and io then
+    local ok,data = UTILS.LoadFromFile(self.TaskPersistancePath,self.TaskPersistanceFilename)
+    if ok == true then
+      table.remove(data, 1)
+      for _,_entry in pairs(data) do
+        -- "--ID;;Name;;InitialTargets;;Targetsleft;;Type\n"
+        local dataset = UTILS.Split(_entry,";;")
+        local Taskdata = {} -- #PersistenceData
+        Taskdata.ID = tonumber(dataset[1])
+        Taskdata.Name = tostring(dataset[2])
+        Taskdata.InitialTargets = tonumber(dataset[3])
+        Taskdata.Targetsleft = tonumber(dataset[4])
+        Taskdata.Type = tostring(dataset[5])
+        Taskdata.Task = MatchTask(Taskdata.Type,Taskdata.Name)
+        if Taskdata.Task == nil then
+          self:E(self.lid.."No actual task found for "..Taskdata.Name)
+        else
+          self:T(self.lid.."Task loaded and match found for "..Taskdata.Name)
+        end
+        Taskdata.updated = Taskdata.InitialTargets == Taskdata.Targetsleft and true or false
+        if Taskdata.Task and Taskdata.updated == false then
+          self:_UpdateTargetsAlive(Taskdata.Task,Taskdata.Targetsleft)
+          Taskdata.updated = true
+        end
+        self.TaskPersistance[Taskdata.ID] = Taskdata
+      end
+    end
+  end
+  return self
+end
+
+--- [User] Clear persisted data on disk.
+-- @param #PLAYERTASKCONTROLLER self
+function PLAYERTASKCONTROLLER:ClearPersistedData()
+  if lfs and io then
+    local text = "-- Data Cleared\n"
+    UTILS.SaveToFile(self.TaskPersistancePath,self.TaskPersistanceFilename,text)
+  end
+  return self
+end
+
+---
+-- @param #PLAYERTASKCONTROLLER self
+function PLAYERTASKCONTROLLER:_SaveTasksPersisted()
+  if lfs and io then
+    local text = "--ID;;Name;;InitialTargets;;Targetsleft;;Type\n"
+    for _,_data in pairs(self.TaskPersistance) do
+      local data = _data -- #PersistenceData
+      data.Targetsleft = data.Task.Target:CountTargets() -- recount
+      if data.Task and data.Task:IsDone() then data.Targetsleft = 0 end
+      local tasktext = string.format("%d;;%s;;%d;;%d;;%s\n",data.ID,data.Name,data.InitialTargets,data.Targetsleft,data.Type)
+      text = text..tasktext
+    end
+    UTILS.SaveToFile(self.TaskPersistancePath,self.TaskPersistanceFilename,text)
+  end
+  return self
+end
+
+---
+-- @param #PLAYERTASKCONTROLLER self
+-- @param #PLAYERTASK Task
+function PLAYERTASKCONTROLLER:_AddPersistenceData(Task)
+  local Taskdata = {} -- #PersistenceData
+  if not self.TaskPersistance[Task.PlayerTaskNr] then
+    Taskdata.ID = Task.PlayerTaskNr
+    Taskdata.Name = Task.Target.name or "none"
+    Taskdata.InitialTargets = Task.Target:CountTargets()
+    Taskdata.Targetsleft = Taskdata.InitialTargets
+    Taskdata.Type = Task.Type
+    Taskdata.updated = true
+    Taskdata.Task = Task
+    self.TaskPersistance[Task.PlayerTaskNr] = Taskdata
+  end
+  return self
+end
+
 -------------------------------------------------------------------------------------------------------------------
 -- FSM Functions PLAYERTASKCONTROLLER
 -- TODO: FSM Functions PLAYERTASKCONTROLLER
@@ -237589,7 +238109,11 @@ function PLAYERTASKCONTROLLER:onafterStart(From, Event, To)
   self:HandleEvent(EVENTS.PilotDead, self._EventHandler)
   self:HandleEvent(EVENTS.PlayerEnterAircraft, self._EventHandler)
   self:HandleEvent(EVENTS.UnitLost, self._EventHandler)
-  self:SetEventPriority(5)          
+  self:SetEventPriority(5)   
+  -- Persistence
+  if self.TaskPersistanceSwitch == true then
+    self:_LoadTasksPersisted()
+  end       
   return self
 end
 
@@ -237628,6 +238152,11 @@ function PLAYERTASKCONTROLLER:onafterStatus(From, Event, To)
     local text = string.format("%s | New Targets: %02d | Active Tasks: %02d | Active Players: %02d | Assigned Tasks: %02d",self.MenuName, targetcount,taskcount,playercount,assignedtasks)
     self:I(text)
   end
+  
+    -- Persistence
+  if self.TaskPersistanceSwitch == true then
+    self:_SaveTasksPersisted()
+  end 
   
   if self:GetState() ~= "Stopped" then
     self:__Status(-30)
@@ -237784,19 +238313,26 @@ end
 -- @param #string Event
 -- @param #string To
 -- @param Ops.PlayerTask#PLAYERTASK Task
+-- @param #boolean Silent
 -- @return #PLAYERTASKCONTROLLER self
-function PLAYERTASKCONTROLLER:onafterTaskAdded(From, Event, To, Task)
+function PLAYERTASKCONTROLLER:onafterTaskAdded(From, Event, To, Task, Silent)
   self:T({From, Event, To})
   self:T(self.lid.."TaskAdded")
   local addtxt = self.gettext:GetEntry("TASKADDED",self.locale)
   local taskname = string.format(addtxt, self.MenuName or self.Name, tostring(Task.Type))
-  if not self.NoScreenOutput then
-    self:_SendMessageToClients(taskname,15)
-    --local m = MESSAGE:New(taskname,15,"Tasking"):ToCoalition(self.Coalition)
+  if not Silent then
+    if not self.NoScreenOutput then
+      self:_SendMessageToClients(taskname,15)
+      --local m = MESSAGE:New(taskname,15,"Tasking"):ToCoalition(self.Coalition)
+    end
+    if self.UseSRS then
+      taskname = string.format(addtxt, self.MenuName or self.Name, tostring(Task.TTSType))
+      self.SRSQueue:NewTransmission(taskname,nil,self.SRS,nil,2)
+    end
   end
-  if self.UseSRS then
-    taskname = string.format(addtxt, self.MenuName or self.Name, tostring(Task.TTSType))
-    self.SRSQueue:NewTransmission(taskname,nil,self.SRS,nil,2)
+  self:T(self.lid..string.format("Pers = %s | Type = %s | TypePers = %s | TaskFlag = %s",tostring(self.TaskPersistanceSwitch),tostring(Task.Type),tostring(self.TasksPersistable[Task.Type]),tostring(Task.PersistMe)))
+  if self.TaskPersistanceSwitch == true and self.TasksPersistable[Task.Type] == true and Task.PersistMe == true then
+    self:_AddPersistenceData(Task)
   end
   return self
 end
@@ -242618,6 +243154,15 @@ end
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+--- **Ops** - Create your A2A Defenses.
+--
+-- **Main Features:**
+--
+--    * Automatically create and manage A2A defenses using an AirWing and Squadrons for one coalition
+--    * Easy set-up
+--
+-- ===
+--
 -------------------------------------------------------------------------
 -- Easy CAP/GCI Class, based on OPS classes
 -------------------------------------------------------------------------
@@ -242729,7 +243274,7 @@ end
 -- ### Prerequisites
 -- 
 -- You have to put a **STATIC WAREHOUSE** object on the airbase with the UNIT name according to the name of the airbase. **Do not put any other static type or it creates a conflict with the airbase name!** 
--- E.g. for Kuitaisi this has to have the unit name Kutaisi. This object symbolizes the AirWing HQ.
+-- E.g. for Kutaisi this has to have the unit name Kutaisi. This object symbolizes the AirWing HQ.
 -- Next put a late activated template group for your CAP/GCI Squadron on the map. Last, put a zone on the map for the CAP operations, let's name it "Blue Zone 1". Size of the zone plays no role.
 -- Put an EW radar system on the map and name it aptly, like "Blue EWR".
 -- 
@@ -242825,7 +243370,7 @@ EASYGCICAP = {
   coalition = "blue",
   alias = nil,
   wings = {},
-  Intel = nil,
+  Intel = nil, -- Ops.Intel#INTEL
   resurrection = 900,
   capspeed = 300,
   capalt = 25000,
@@ -242895,10 +243440,11 @@ EASYGCICAP = {
 
 --- EASYGCICAP class version.
 -- @field #string version
-EASYGCICAP.version="0.1.30"
+EASYGCICAP.version="0.1.33"
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
--- TODO list
+-- 
+
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -- TODO: TBD
@@ -242970,6 +243516,34 @@ function EASYGCICAP:New(Alias, AirbaseName, Coalition, EWRName)
   
   self:__Start(math.random(6,12))
   
+  --- On Before "Start" event.
+  -- @function [parent=#EASYGCICAP] OnBeforeStart
+  -- @param #EASYGCICAP self
+  -- @param #string From From state.
+  -- @param #string Event Event.
+  -- @param #string To To state.
+  
+  --- On After "Start" event.
+  -- @function [parent=#EASYGCICAP] OnAfterStart
+  -- @param #EASYGCICAP self
+  -- @param #string From From state.
+  -- @param #string Event Event.
+  -- @param #string To To state.
+
+  --- On Before "Status" event.
+  -- @function [parent=#EASYGCICAP] OnBeforeStatus
+  -- @param #EASYGCICAP self
+  -- @param #string From From state.
+  -- @param #string Event Event.
+  -- @param #string To To state.
+  
+  --- On After "Status" event.
+  -- @function [parent=#EASYGCICAP] OnAfterStatus
+  -- @param #EASYGCICAP self
+  -- @param #string From From state.
+  -- @param #string Event Event.
+  -- @param #string To To state.
+  
   return self
 end
 
@@ -242987,6 +243561,28 @@ function EASYGCICAP:GetAirwing(AirbaseName)
     return self.wings[AirbaseName][1]
   end
   return nil
+end
+
+--- Add an agent to the underlying INTEL detection - caution, we need to be started first for this to work! 
+-- Normally this isn't necessary when the Group name is correctly filled (see EWRName in `New()`).
+-- @param #EASYGCICAP self
+-- @param Wrapper.Group#GROUP Group The group object to be added as Intel Agent.
+-- @return #EASYGCICAP self
+function EASYGCICAP:AddAgent(Group)
+  self:T(self.lid.."AddAgent")
+  if Group:IsInstanceOf("GROUP") and self.Intel ~= nil then
+    self.Intel:AddAgent(Group)
+    if self.TankerInvisible == true then
+      Group:SetCommandInvisible(true)
+      Group:OptionROEHoldFire()
+      if Group:IsAir() then
+        Group:OptionROTEvadeFire()
+      else
+        Group:OptionDisperseOnAttack(30)
+      end
+    end
+  end
+  return self
 end
 
 --- Get a table of all managed AirWings
@@ -243231,7 +243827,6 @@ function EASYGCICAP:SetCapStartTimeVariation(Start, End)
   return self
 end
 
-
 --- Set which target types CAP flights will prefer to engage, defaults to {"Air"}
 -- @param #EASYGCICAP self
 -- @param #table types Table of comma separated #string entries, defaults to {"Air"} (everything that flies and is not a weapon). Useful other options are e.g. {"Bombers"}, {"Fighters"}, 
@@ -243276,7 +243871,7 @@ function EASYGCICAP:_CreateAirwings()
   return self
 end
 
---- (internal) Create and add another AirWing to the manager
+--- (Internal) Create and add another AirWing to the manager
 -- @param #EASYGCICAP self
 -- @param #string Airbasename
 -- @param #string Alias
@@ -243383,8 +243978,13 @@ function EASYGCICAP:_AddAirwing(Airbasename, Alias)
     end
   end
   
-  if self.noalert5 > 0 then  
-    local alert = AUFTRAG:NewALERT5(AUFTRAG.Type.INTERCEPT) 
+  if self.noalert5 > 0 then
+    local alert
+    if self.ClassName == "EASYGCICAP" then  
+      alert = AUFTRAG:NewALERT5(AUFTRAG.Type.INTERCEPT) 
+    elseif self.ClassName == "EASYA2G" then
+      alert = AUFTRAG:NewALERT5(AUFTRAG.Type.BAI) 
+    end
     alert:SetRequiredAssets(self.noalert5)
     alert:SetRepeat(99) 
     CAP_Wing:AddMission(alert)
@@ -243920,6 +244520,54 @@ function EASYGCICAP:AddConflictZone(Zone)
   return self
 end
 
+--- Function to set corridor zones.
+-- @param #EASYGCICAP self
+-- @param Core.Set#SET_ZONE CorridorZones Can be handed in as SET\_ZONE or single ZONE object.
+-- @return #EASYGCICAP self
+function EASYGCICAP:SetCorridorZones(CorridorZones)
+  self:T(self.lid .. "SetCorridorZones")
+  if CorridorZones and CorridorZones:IsInstanceOf("SET_ZONE") then
+    self.corridorzones = CorridorZones
+    self.usecorridors = true
+  elseif CorridorZones and CorridorZones:IsInstanceOf("ZONE_BASE") then
+    if not self.corridorzones then self.corridorzones = SET_ZONE:New() end
+    self.corridorzones:AddZone(CorridorZones)
+    self.usecorridors = true
+  end
+  return self
+end
+
+--- Function to add one corridor zone.
+-- @param #EASYGCICAP self
+-- @param Core.Zone#ZONE CorridorZone The ZONE object to be added.
+-- @return #EASYGCICAP self
+function EASYGCICAP:AddCorridorZone(CorridorZone)
+  self:T(self.lid .. "AddCorridorZone")
+  self:SetCorridorZones(CorridorZone)
+  return self
+end
+
+--- Function to set corridor zone floor and ceiling in FEET.
+-- @param #EASYGCICAP self
+-- @param #number Floor Floor altitude ASL in feet.
+-- @param #number Ceiling Ceiling altitude ASL in feet.
+-- @return #EASYGCICAP self
+function EASYGCICAP:SetCorridorZoneFloorAndCeiling(Floor,Ceiling)
+  self.corridorfloor = UTILS.FeetToMeters(Floor)
+  self.corridorceiling = UTILS.FeetToMeters(Ceiling)
+  return self
+end
+
+--- Function to set corridor zone floor and ceiling in METERS.
+-- @param #EASYGCICAP self
+-- @param #number Floor Floor altitude ASL in meters.
+-- @param #number Ceiling Ceiling altitude ASL in meters.
+-- @return #EASYGCICAP self
+function EASYGCICAP:SetCorridorZoneFloorAndCeilingMeters(Floor,Ceiling)
+  self.corridorfloor = Floor    
+  self.corridorceiling = Ceiling
+  return self
+end
 
 --- (Internal) Try to assign the intercept to a FlightGroup already in air and ready.
 -- @param #EASYGCICAP self
@@ -244079,6 +244727,8 @@ function EASYGCICAP:_AssignIntercept(Cluster)
                   if coord and conflictset:Count() > 0 and conflictset:IsCoordinateInZone(coord) then
                     success = false
                   end
+                else
+                  success = true
                 end
                 return success
               end,
@@ -244087,6 +244737,14 @@ function EASYGCICAP:_AssignIntercept(Cluster)
               conflictzoneset
             )
           end
+          
+          InterceptAuftrag:AddConditionFailure(
+          function()
+            local failure = false
+            if InterceptAuftrag:CountOpsGroups()==0 and InterceptAuftrag:IsExecuting() then failure = true end
+            return failure
+          end          
+          )
           
         table.insert(self.ListOfAuftrag,InterceptAuftrag)
         local assigned, rest = self:_TryAssignIntercept(ReadyFlightGroups,InterceptAuftrag,contact.group,wingsize)
@@ -244120,6 +244778,14 @@ function EASYGCICAP:_StartIntel()
   BlueIntel:SetRejectZones(self.NoGoZoneSet)
   BlueIntel:SetConflictZones(self.ConflictZoneSet)
   BlueIntel:SetVerbosity(0)
+  
+  if self.usecorridors == true then
+    BlueIntel:SetCorridorZones(self.corridorzones)
+    if self.corridorfloor or self.corridorceiling then
+      BlueIntel:SetCorridorLimitsFeet(self.corridorfloor,self.corridorceiling)
+    end
+  end
+  
   BlueIntel:Start()
   
   if self.debug then 
@@ -244223,7 +244889,7 @@ function EASYGCICAP:onafterStatus(From,Event,To)
     tankermission = tankermission + _wing[1]:CountMissionsInQueue({AUFTRAG.Type.TANKER})
     assets = assets + count
     instock = instock + count2
-    local assetsonmission = _wing[1]:GetAssetsOnMission({AUFTRAG.Type.GCICAP,AUFTRAG.Type.PATROLRACETRACK})
+    local assetsonmission = _wing[1]:GetAssetsOnMission({AUFTRAG.Type.ALERT5, AUFTRAG.Type.GCICAP,AUFTRAG.Type.PATROLRACETRACK})
     -- update ready groups
     self.ReadyFlightGroups = nil
     self.ReadyFlightGroups = {}
@@ -244234,7 +244900,8 @@ function EASYGCICAP:onafterStatus(From,Event,To)
         local name = FG:GetName()
         local engage = FG:IsEngaging()
         local hasmissiles = FG:IsOutOfMissiles() == nil and true or false
-        local ready = hasmissiles and FG:IsFuelGood() and FG:IsAirborne()
+        local isalert5 = (FG:GetMissionCurrent() ~= nil and FG:GetMissionCurrent().type == AUFTRAG.Type.ALERT5) and true or false 
+        local ready = hasmissiles and FG:IsFuelGood() and (FG:IsAirborne() or isalert5)
         --self:T(string.format("Flightgroup %s Engaging = %s Ready = %s",tostring(name),tostring(engage),tostring(ready)))
         if ready then
           self.ReadyFlightGroups[name] = FG
@@ -244273,6 +244940,954 @@ function EASYGCICAP:onafterStop(From,Event,To)
   for _,_wing in pairs(self.wings or {}) do
     _wing:Stop()
   end
+  return self
+end
+--- **Ops** - Create your A2G Defenses.
+--
+-- **Main Features:**
+--
+--    * Automatically create and manage A2G defenses using an AirWing and Squadrons for one coalition
+--    * Easy set-up
+--
+-- ===
+--
+-------------------------------------------------------------------------
+-- Easy A2G Engagement Class, based on OPS classes
+-------------------------------------------------------------------------
+-- 
+-- ## Documentation:
+-- 
+-- https://flightcontrol-master.github.io/MOOSE_DOCS_DEVELOP/Documentation/Ops.EasyAG.html
+-- 
+-- ## Example Missions:
+--
+-- Demo missions can be found on [github](https://github.com/FlightControl-Master/MOOSE_MISSIONS/tree/develop/Ops/EasyAG).
+-- 
+-------------------------------------------------------------------------
+-- Date: Dec 2025
+-- Last Update: Dec 2025
+-------------------------------------------------------------------------
+--
+-- ===
+--
+-- **Main Features:**
+--
+--    * Automatically create and manage A2G defenses using an AirWing and Squadrons for one coalition
+--    * Easy set-up
+--    * Add additional AirWings on other airbases
+--    * Each wing can have more than one Squadron - tasking to Squadrons is done on a random basis per AirWing
+--    * Create borders and zones of engagement
+--    * Detection can be ground based and/or via AWACS
+--
+-- ===
+-- 
+-- ### AUTHOR: **applevangelist**
+--
+-- @module Ops.EasyAG
+-- @image AI_Air_To_Ground_Dispatching.JPG
+
+
+--- EASYA2G Class
+-- @type EASYA2G
+-- @field #string ClassName
+-- @field #number overhead
+-- @field #number engagerange
+-- @field #number capgrouping
+-- @field #string airbasename
+-- @field Wrapper.Airbase#AIRBASE airbase
+-- @field #number coalition
+-- @field #string alias
+-- @field #table wings
+-- @field Ops.Intel#INTEL Intel
+-- @field #number resurrection
+-- @field #number capspeed
+-- @field #number capalt
+-- @field #number capdir
+-- @field #number capleg
+-- @field #number maxinterceptsize
+-- @field #number missionrange
+-- @field #number noalert5
+-- @field #table ManagedAW
+-- @field #table ManagedSQ
+-- @field #table ManagedCP
+-- @field #table ManagedTK
+-- @field #table ManagedEWR
+-- @field #table ManagedREC
+-- @field #number MaxAliveMissions
+-- @field #boolean debug
+-- @field #number repeatsonfailure
+-- @field Core.Set#SET_ZONE GoZoneSet
+-- @field Core.Set#SET_ZONE NoGoZoneSet
+-- @field Core.Set#SET_ZONE ConflictZoneSet
+-- @field #boolean Monitor
+-- @field #boolean TankerInvisible
+-- @field #number CapFormation
+-- @field #table ReadyFlightGroups
+-- @field #boolean DespawnAfterLanding
+-- @field #boolean DespawnAfterHolding
+-- @field #list<Ops.Auftrag#AUFTRAG> ListOfAuftrag
+-- @field #string defaulttakeofftype Take off type
+-- @field #number FuelLowThreshold
+-- @field #number FuelCriticalThreshold
+-- @field #boolean showpatrolpointmarks
+-- @field #table EngageTargetTypes
+-- @extends Ops.EasyGCICAP#EASYGCICAP
+
+--- *“High-Threat Close-Air-Support is a Myth.”* -- Mike “Starbaby” Pietrucha.
+--
+-- ===
+--
+-- # The EasyAG Concept
+-- 
+-- The idea of this class is partially to make the OPS classes easier operational for an A2G defense network, and to replace the legacy AI_A2G_Dispatcher system - not to it's
+-- full extent, but make a basic system work very quickly.
+--
+-- # Setup
+-- 
+-- ## Basic understanding
+-- 
+-- The basics are, there is **one** and only **one** AirWing per airbase. Each AirWing has **at least** one Squadron, who will do A2G tasks. Squadrons will be randomly chosen for the task at hand.
+-- Each AirWing has **at least** one Conflict Zone that it manages. COnflict Zones will be covered by the AirWing automatically as long as airframes are available. Detected enemy ground forces will be assigned to **one**
+-- AirWing based on proximity (that is, if you have more than one). 
+-- 
+-- ## Assignment of tasks for enemies
+-- 
+-- An exisiting plane or a newly spawned plane will take care of the intruders. Standard overhead is 0.1, i.e. a group of 10 intrudes will
+-- be managed by one planes from the assigned AirWing. There is an maximum missions limitation per AirWing, so we do not spam the skies.
+-- 
+-- ## Basic set-up code
+-- 
+-- ### Prerequisites
+-- 
+-- You have to put a **STATIC WAREHOUSE** object on the airbase with the UNIT name according to the name of the airbase. **Do not put any other static type or it creates a conflict with the airbase name!** 
+-- E.g. for Kutaisi this has to have the unit name Kutaisi. This object symbolizes the AirWing HQ.
+-- Next put a late activated template group for your A2G Squadron on the map. Last, put a zone on the map for the Defense operations, let's name it "Blue Zone 1". Size of the zone plays no role.
+-- Put a scout system on the map and name it aptly, like "Blue SCOUT".
+-- 
+-- ### Zones
+-- 
+-- For our example, you create a RED and a BLUE border, as a closed polygonal zone representing the borderlines. You can also have conflict zone, where - for our example - BLUE will attack
+-- RED groups, despite being on or close to RED territory. Think of a no-fly zone or an limited area of engagement. Conflict zones take precedence over borders, i.e. they can overlap all borders.
+-- 
+-- ### Code it
+-- 
+--          -- Set up a basic system for the blue side, we'll reside on Kutaisi, and use GROUP objects with "Blue SCOUT" in the name as Detecting Systems.
+--          local mywing = EASYA2G:New("A2G",AIRBASE.Caucasus.Kutaisi,"blue","SCOUT")
+--          
+--          -- Add a holding/ingress point belonging to our airbase, we'll be at 5k ft doing 250 kn, initial direction 225 degrees (West), leg 5NM
+--          -- This will effectively be the ingress coordinate into the cnflict zone
+--          local Coordinate = ZONE:New("A2G Loitering"):GetCoordinate()
+--          mywing:AddHoldingPointA2G(AIRBASE.Caucasus.Kutaisi,Coordinate,5000,250,225,5)
+--          
+--          -- Add a recon point over the conflict zone, we'll use a reaper for recon
+--          local Coordinate2 = ZONE:New("A2G Recon"):GetCoordinate()
+--          mywing:AddPatrolPointRecon(AIRBASE.Caucasus.Kutaisi,Coordinate2,15000,225,225,5)
+--          
+--          -- Add three Squadrons with templates "Hero 1" and "Hero 2", 20 airframes, skill as set
+--          mywing:AddSquadron("A2G Flight", "Hero 1", AIRBASE.Caucasus.Kutaisi, 5, AI.Skill.GOOD, Modex, Livery)
+--          mywing:AddSquadron("A2G Helo", "Hero 2", AIRBASE.Caucasus.Kutaisi, 5, AI.Skill.HIGH, Modex, Livery)
+--          mywing:AddReconSquadron("Recon Drone", "SpyInTheSky SCOUT", AIRBASE.Caucasus.Kutaisi, 5, AI.Skill.EXCELLENT, Modex, Livery)
+--          
+--          -- Ensure our reaper doesn't get immediately killed
+--          mywing:SetTankerAndScoutsInvisible(true)
+--          
+--          -- Add a couple of zones
+--          -- We'll defend our own border
+--          mywing:AddAcceptZone(ZONE_POLYGON:New( "Blue Border", GROUP:FindByName( "Blue Border" ) ))
+--          -- We'll attack intruders also here - conflictzones can overlap borders(!) - limited zone of engagement
+--          mywing:AddConflictZone(ZONE_POLYGON:New("Red Defense Zone", GROUP:FindByName( "Red Defense Zone" )))
+--          -- We'll leave the reds alone on their turf
+--          mywing:AddRejectZone(ZONE_POLYGON:New( "Red Border", GROUP:FindByName( "Red Border" ) ))
+--          
+--          -- Optional - Draw the borders on the map so we see what's going on
+--          -- Set up borders on map
+--          local BlueBorder = ZONE_POLYGON:New( "Blue Border", GROUP:FindByName( "Blue Border" ) )
+--          BlueBorder:DrawZone(-1,{0,0,1},1,FillColor,FillAlpha,1,true)
+--          local ConflictZone = ZONE_POLYGON:New("Red Defense Zone", GROUP:FindByName( "Red Defense Zone" ))
+--          ConflictZone:DrawZone(-1,{1,1,0},1,FillColor,FillAlpha,2,true)
+--          local BlueNoGoZone = ZONE_POLYGON:New( "Red Border", GROUP:FindByName( "Red Border" ) )
+--          BlueNoGoZone:DrawZone(-1,{1,0,0},1,FillColor,FillAlpha,4,true)
+--          
+-- ### Add a second airwing with squads and own patrol point (optional)
+--          
+--          -- Set this up at Sukhumi
+--          mywing:AddAirwing(AIRBASE.Caucasus.Sukhumi_Babushara,"Blue A2G Sukhumi")
+--          -- A2G Point "Blue Zone 2"
+--          mywing:AddPatrolPointA2G(AIRBASE.Caucasus.Sukhumi_Babushara,ZONE:FindByName("Blue Zone 2"):GetCoordinate(),30000,400,90,20)
+--          
+--          -- This one has two squadrons to choose from
+--          mywing:AddSquadron("Blue Sq3 F16","A2G Sukhumi II",AIRBASE.Caucasus.Sukhumi_Babushara,20,AI.Skill.GOOD,402,"JASDF 6th TFS 43-8526 Skull Riders")
+--          mywing:AddSquadron("Blue Sq2 F15","A2G Sukhumi I",AIRBASE.Caucasus.Sukhumi_Babushara,20,AI.Skill.GOOD,202,"390th Fighter SQN")
+--          
+-- ### Add a tanker (optional)
+--        
+--        -- **Note** If you need different tanker types, i.e. Boom and Drogue, set them up at different AirWings!
+--        -- Add a tanker point
+--        mywing:AddPatrolPointTanker(AIRBASE.Caucasus.Kutaisi,ZONE:FindByName("Blue Zone Tanker"):GetCoordinate(),20000,280,270,50)
+--        -- Add a tanker squad - Radio 251 AM, TACAN 51Y
+--        mywing:AddTankerSquadron("Blue Tanker","Tanker Ops Kutaisi",AIRBASE.Caucasus.Kutaisi,20,AI.Skill.EXCELLENT,602,nil,251,radio.modulation.AM,51)
+--        
+-- ### Add an AWACS (optional)
+--        
+--        -- Add an AWACS point
+--        mywing:AddPatrolPointAwacs(AIRBASE.Caucasus.Kutaisi,ZONE:FindByName("Blue Zone AWACS"):GetCoordinate(),25000,300,270,50)
+--        -- Add an AWACS squad - Radio 251 AM, TACAN 51Y
+--        mywing:AddAWACSSquadron("Blue AWACS","AWACS Ops Kutaisi",AIRBASE.Caucasus.Kutaisi,20,AI.Skill.AVERAGE,702,nil,271,radio.modulation.AM)        
+--
+-- # Fine-Tuning
+--
+-- ## Change Defaults
+-- 
+-- * @{#EASYA2G.SetDefaultResurrection}: Set how many seconds the AirWing stays inoperable after the AirWing STATIC HQ ist destroyed, default 900 secs. 
+-- * @{#EASYA2G.SetDefaultA2GSpeed}: Set how many knots the A2G flights should do (will be altitude corrected), default 225 kn.
+-- * @{#EASYA2G.SetDefaultA2GAlt}: Set at which altitude (ASL) the A2G planes will fly, default 10,000 ft.
+-- * @{#EASYA2G.SetDefaultA2GDirection}: Set the initial direction from the A2G point the planes will fly in degrees, default is 90°.
+-- * @{#EASYA2G.SetDefaultA2GLeg}: Set the length of the A2G leg, default is 5 NM.
+-- * @{#EASYA2G.SetDefaultA2GGrouping}: Set how many planes will be spawned per mission (CVAP/GCI), defaults to 1.
+-- * @{#EASYA2G.SetDefaultMissionRange}: Set how many NM the planes can go from the home base, defaults to 100.
+-- * @{#EASYA2G.SetDefaultNumberAlert5Standby}: Set how many planes will be spawned on cold standby (Alert5), default 2.
+-- * @{#EASYA2G.SetDefaultEngageRange}: Set max engage range for A2G flights if they detect intruders, defaults to 50.
+-- * @{#EASYA2G.SetMaxAliveMissions}: Set max parallel missions can be done (A2G+GCI+Alert5+Tanker+AWACS), defaults to 8.
+-- * @{#EASYA2G.SetDefaultRepeatOnFailure}: Set max repeats on failure for intercepting/killing intruders, defaults to 3.
+-- * @{#EASYA2G.SetTankerAndScoutsInvisible}: Set Tanker and Scouts to be invisible to enemy AI eyes. Is set to `true` by default.
+-- 
+-- ## Debug and Monitor
+-- 
+--          mywing.debug = true -- log information
+--          mywing.Monitor = true -- show some statistics on screen
+--
+--
+-- @field #EASYA2G
+EASYA2G = {
+  ClassName = "EASYA2G",
+  overhead = 0.2,
+  capgrouping = 1,
+  airbasename = nil,
+  airbase = nil,
+  coalition = "blue",
+  alias = nil,
+  wings = {},
+  Intel = nil,
+  resurrection = 900,
+  capspeed = 300,
+  capalt = 25000,
+  capdir = 45,
+  capleg = 5,
+  maxinterceptsize = 2,
+  missionrange = 100,
+  noalert5 = 2,
+  ManagedAW = {},
+  ManagedSQ = {},
+  ManagedCP = {},
+  ManagedTK = {},
+  ManagedEWR = {},
+  ManagedREC = {},
+  MaxAliveMissions = 8,
+  debug = false,
+  engagerange = 50,
+  repeatsonfailure = 3,
+  GoZoneSet = nil,
+  NoGoZoneSet = nil,
+  ConflictZoneSet = nil,
+  Monitor = false,
+  TankerInvisible = true,
+  CapFormation = nil,
+  ReadyFlightGroups = {},
+  DespawnAfterLanding = false,
+  DespawnAfterHolding = true,
+  ListOfAuftrag = {},
+  defaulttakeofftype = "hot",
+  FuelLowThreshold = 25,
+  FuelCriticalThreshold = 10,
+  showpatrolpointmarks = false,
+  EngageTargetTypes = {"Ground"},
+}
+
+--- Internal Squadron data type
+-- @type EASYA2G.Squad
+-- @field #string TemplateName
+-- @field #string SquadName
+-- @field #string AirbaseName
+-- @field #number AirFrames
+-- @field #string Skill
+-- @field #string Modex
+-- @field #string Livery
+-- @field #boolean Tanker
+-- @field #boolean AWACS
+-- @field #boolean RECON
+-- @field #number Frequency
+-- @field #number Modulation
+-- @field #number TACAN
+
+--- Internal Wing data type
+-- @type EASYA2G.Wing
+-- @field #string AirbaseName
+-- @field #string Alias
+-- @field #string CapZoneName
+
+--- Internal CapPoint data type
+-- @type EASYA2G.CapPoint
+-- @field #string AirbaseName
+-- @field Core.Point#COORDINATE Coordinate
+-- @field #number Altitude
+-- @field #number Speed
+-- @field #number Heading
+-- @field #number LegLength
+-- @field Core.Zone#ZONE_BASE Zone
+
+--- EASYA2G class version.
+-- @field #string version
+EASYA2G.version="0.1.3"
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- TODO list
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+-- TODO: TBD
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Constructor
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+--- Create a new GCIA2G Manager
+-- @param #EASYA2G self
+-- @param #string Alias A Name for this A2G Setup
+-- @param #string AirbaseName Name of the Home Airbase
+-- @param #string Coalition Coalition, e.g. "blue" or "red"
+-- @param #string ScoutName (Partial) group name of the detection system of the coalition, e.g. "Red SCOUT", can be handed in as table of names, e.g.{"SCOUT","DRONE","SAM"}
+-- @return #EASYA2G self
+function EASYA2G:New(Alias, AirbaseName, Coalition, ScoutName)
+  -- Inherit everything from FSM class.
+  
+  local self=BASE:Inherit(self, EASYGCICAP:New(Alias, AirbaseName, Coalition, ScoutName)) -- #EASYA2G
+  
+  -- defaults
+  self.alias = Alias or AirbaseName.." A2G Wing"
+  self.coalitionname = string.lower(Coalition) or "blue"
+  self.coalition = self.coalitionname == "blue" and coalition.side.BLUE or coalition.side.RED
+  self.wings = {}
+  if type(ScoutName) == "string" then ScoutName = {ScoutName} end
+  self.EWRName = ScoutName --or self.coalitionname.." EWR"
+  --self.CapZoneName = CapZoneName
+  self.airbasename = AirbaseName
+  self.airbase = AIRBASE:FindByName(self.airbasename)
+  self.GoZoneSet = SET_ZONE:New()
+  self.NoGoZoneSet = SET_ZONE:New()
+  self.ConflictZoneSet = SET_ZONE:New()
+  self.resurrection = 900
+  self.capspeed = 225
+  self.capalt = 5000
+  self.capdir = 90
+  self.capleg = 5
+  self.capgrouping = 2
+  self.missionrange = 100
+  self.noalert5 = 2
+  self.MaxAliveMissions = 8
+  self.engagerange = 50
+  self.repeatsonfailure = 3
+  self.Monitor = false
+  self.TankerInvisible = true
+  self.CapFormation = ENUMS.Formation.FixedWing.FingerFour.Group
+  self.DespawnAfterLanding = false
+  self.DespawnAfterHolding = true
+  self.ListOfAuftrag = {}
+  self.defaulttakeofftype = "hot"
+  self.FuelLowThreshold = 25
+  self.FuelCriticalThreshold = 10
+  self.showpatrolpointmarks = false
+  self.EngageTargetTypes = {"Ground"}
+  
+  -- Set some string id for output to DCS.log file.
+  self.lid=string.format("EASYA2G %s | ", self.alias)
+
+  -- Add FSM transitions.
+  --               From State  -->   Event      -->      To State
+  self:SetStartState("Stopped")
+  self:AddTransition("Stopped", "Start",  "Running")
+  self:AddTransition("Running", "Stop",   "Stopped")
+  self:AddTransition("*",       "Status", "*")  
+  
+  --- On Before "Start" event.
+  -- @function [parent=#EASYA2G] OnBeforeStart
+  -- @param #EASYA2G self
+  -- @param #string From From state.
+  -- @param #string Event Event.
+  -- @param #string To To state.
+  
+  --- On After "Start" event.
+  -- @function [parent=#EASYA2G] OnAfterStart
+  -- @param #EASYA2G self
+  -- @param #string From From state.
+  -- @param #string Event Event.
+  -- @param #string To To state.
+
+  --- On Before "Status" event.
+  -- @function [parent=#EASYA2G] OnBeforeStatus
+  -- @param #EASYA2G self
+  -- @param #string From From state.
+  -- @param #string Event Event.
+  -- @param #string To To state.
+  
+  --- On After "Status" event.
+  -- @function [parent=#EASYA2G] OnAfterStatus
+  -- @param #EASYA2G self
+  -- @param #string From From state.
+  -- @param #string Event Event.
+  -- @param #string To To state.
+  
+  self:AddAirwing(self.airbasename,self.alias,self.CapZoneName)
+  
+  self:I(self.lid.."Created new instance (v"..self.version..")")
+  
+  self:__Start(math.random(6,12))
+  
+  return self
+end
+
+-------------------------------------------------------------------------
+-- Functions
+-------------------------------------------------------------------------
+
+--- Set Tanker and Scouts to be invisible to enemy AI eyes
+-- @param #EASYA2G self
+-- @param #boolean Switch Set to true or false, by default this is set to true already
+-- @return #EASYA2G self 
+function EASYA2G:SetTankerAndScoutsInvisible(Switch)
+  self:T(self.lid.."SetTankerAndScoutsInvisible")
+  self.TankerInvisible = Switch
+  return self
+end
+
+--- Set default A2G Speed in knots
+-- @param #EASYA2G self
+-- @param #number Speed Speed defaults to 300
+-- @return #EASYA2G self
+function EASYA2G:SetDefaultA2GSpeed(Speed)
+  self:T(self.lid.."SetDefaultSpeed")
+  self.capspeed = Speed or 300
+  return self
+end
+
+--- Set A2G Flight formation.
+-- @param #EASYA2G self
+-- @param #number Formation Formation to fly, defaults to ENUMS.Formation.FixedWing.FingerFour.Group
+-- @return #EASYA2G self
+function EASYA2G:SetA2GFormation(Formation)
+  self:T(self.lid.."SetA2GFormation")
+  self.CapFormation = Formation
+  return self
+end
+
+--- Set default A2G Altitude in feet
+-- @param #EASYA2G self
+-- @param #number Altitude Altitude defaults to 25000
+-- @return #EASYA2G self
+function EASYA2G:SetDefaultA2GAlt(Altitude)
+  self:T(self.lid.."SetDefaultAltitude")
+  self.capalt = Altitude or 25000
+  return self
+end
+
+--- Set default A2G lieg initial direction in degrees
+-- @param #EASYA2G self
+-- @param #number Direction Direction defaults to 90 (East)
+-- @return #EASYA2G self
+function EASYA2G:SetDefaultA2GDirection(Direction)
+  self:T(self.lid.."SetDefaultDirection")
+  self.capdir = Direction or 90
+  return self
+end
+
+--- Set default leg length in NM
+-- @param #EASYA2G self
+-- @param #number Leg Leg defaults to 5
+-- @return #EASYA2G self
+function EASYA2G:SetDefaultA2GLeg(Leg)
+  self:T(self.lid.."SetDefaultLeg")
+ self.capleg = Leg or 5
+ return self
+end
+
+--- Set default grouping, i.e. how many airplanes per A2G point
+-- @param #EASYA2G self
+-- @param #number Grouping Grouping defaults to 2
+-- @return #EASYA2G self
+function EASYA2G:SetDefaultA2GGrouping(Grouping)
+ self:T(self.lid.."SetDefaultA2GGrouping")
+ self.capgrouping = Grouping or 2
+ return self
+end
+
+--- Set A2G mission start to vary randomly between Start end End seconds.
+-- @param #EASYA2G self
+-- @param #number Start
+-- @param #number End 
+-- @return #EASYA2G self
+function EASYA2G:SetA2GStartTimeVariation(Start, End)
+  self.capOptionVaryStartTime = Start or 5
+  self.capOptionVaryEndTime = End or 60
+  return self
+end
+
+--- Set which target types A2G flights will prefer to engage, defaults to {"Ground"}
+-- @param #EASYA2G self
+-- @param #table types Table of comma separated #string entries, defaults to {"Ground"} (everything that is ground and is not a weapon). Useful other options are e.g. {"Armored vehicles"}, {"Tanks"}, 
+-- or {"APC"} or combinations like {"APC", "Tanks", "Artillery"}. See [Hoggit Wiki](https://wiki.hoggitworld.com/view/DCS_enum_attributes).
+-- @return #EASYA2G self
+function EASYA2G:SetA2GEngageTargetTypes(types)
+  self.EngageTargetTypes = types or {"Ground"}
+  return self
+end
+
+--- Add a A2G patrol/holding point to a Wing
+-- @param #EASYA2G self
+-- @param #string AirbaseName Name of the Wing's airbase
+-- @param Core.Point#COORDINATE Coordinate. Can be handed as a Core.Zone#ZONE object (e.g. in case you want  the point to align with a moving zone).
+-- @param #number Altitude Defaults to 25000 feet ASL.
+-- @param #number Speed  Defaults to 300 knots TAS.
+-- @param #number Heading Defaults to 90 degrees (East).
+-- @param #number LegLength Defaults to 15 NM.
+-- @return #EASYA2G self
+function EASYA2G:AddHoldingPointA2G(AirbaseName,Coordinate,Altitude,Speed,Heading,LegLength)
+  self:T(self.lid.."AddHoldingPointA2G")--..Coordinate:ToStringLLDDM())
+  local coordinate = Coordinate
+  local EntryCAP = {} -- #EASYGCICAP.CapPoint  
+  if Coordinate:IsInstanceOf("ZONE_BASE") then
+    -- adjust coordinate and get the coordinate from the zone
+    coordinate = Coordinate:GetCoordinate()
+    EntryCAP.Zone = Coordinate
+  end
+  EntryCAP.AirbaseName = AirbaseName
+  EntryCAP.Coordinate = coordinate
+  EntryCAP.Altitude = Altitude or 25000
+  EntryCAP.Speed = Speed or 300
+  EntryCAP.Heading = Heading or 90
+  EntryCAP.LegLength = LegLength or 5
+  self.ManagedCP[#self.ManagedCP+1] = EntryCAP
+  if self.debug then
+    local mark = MARKER:New(coordinate,self.lid.."Holding Point"):ToAll()
+  end
+  return self
+end
+
+
+--- (Internal) Add a Squadron to an Airwing of the manager
+-- @param #EASYA2G self
+-- @param #string TemplateName Name of the group template.
+-- @param #string SquadName Squadron name - must be unique!
+-- @param #string AirbaseName Name of the airbase the airwing resides on, e.g. AIRBASE.Caucasus.Kutaisi
+-- @param #number AirFrames Number of available airframes, e.g. 20.
+-- @param #string Skill(optional) Skill level, e.g. AI.Skill.AVERAGE
+-- @param #string Modex (optional) Modex to be used,e.g. 402.
+-- @param #string Livery (optional) Livery name to be used.
+-- @param #number Frequency (optional) Radio Frequency to be used. 
+-- @param #number Modulation (optional) Radio Modulation to be used, e.g. radio.modulation.AM or radio.modulation.FM
+-- @return #EASYA2G self 
+function EASYA2G:_AddSquadron(TemplateName, SquadName, AirbaseName, AirFrames, Skill, Modex, Livery, Frequency, Modulation)
+  self:T(self.lid.."_AddSquadron "..SquadName)
+  -- Add Squadrons
+  local Squadron_One = SQUADRON:New(TemplateName,AirFrames,SquadName)
+  Squadron_One:AddMissionCapability({AUFTRAG.Type.CAS, AUFTRAG.Type.CASENHANCED, AUFTRAG.Type.BAI, AUFTRAG.Type.ALERT5, AUFTRAG.Type.BOMBING, AUFTRAG.Type.STRIKE})
+  --Squadron_One:SetFuelLowRefuel(true)
+  Squadron_One:SetFuelLowThreshold(0.3)
+  Squadron_One:SetTurnoverTime(10,20)
+  Squadron_One:SetModex(Modex)
+  Squadron_One:SetLivery(Livery)
+  Squadron_One:SetSkill(Skill or AI.Skill.AVERAGE)
+  Squadron_One:SetMissionRange(self.missionrange)
+  
+  local wing = self.wings[AirbaseName][1] -- Ops.Airwing#AIRWING
+  
+  wing:AddSquadron(Squadron_One)
+  wing:NewPayload(TemplateName,-1,{AUFTRAG.Type.CAS, AUFTRAG.Type.CASENHANCED, AUFTRAG.Type.BAI, AUFTRAG.Type.ALERT5, AUFTRAG.Type.BOMBING, AUFTRAG.Type.STRIKE},75)
+  
+  return self
+end
+
+--- (Internal) Try to assign the intercept to a FlightGroup already in air and ready.
+-- @param #EASYA2G self
+-- @param #table ReadyFlightGroups ReadyFlightGroups
+-- @param Ops.Auftrag#AUFTRAG Auftrag The Auftrag
+-- @param Wrapper.Group#GROUP Group The Target
+-- @param #number WingSize Calculated number of Flights
+-- @return #boolean assigned
+-- @return #number leftover
+function EASYA2G:_TryAssignMission(ReadyFlightGroups,Auftrag,Group,WingSize)
+  self:T("_TryAssignMission for size "..WingSize or 1)
+  local assigned = false
+  local wingsize = WingSize or 1
+  local mindist = 0
+  local disttable = {}
+  if Group and Group:IsAlive() then
+    local gcoord = Group:GetCoordinate() or COORDINATE:New(0,0,0)
+    self:T(self.lid..string.format("Assignment for %s",Group:GetName()))
+    for _name,_FG in pairs(ReadyFlightGroups or {}) do
+      local FG = _FG -- Ops.FlightGroup#FLIGHTGROUP
+      local fcoord = FG:GetCoordinate()
+      local dist = math.floor(UTILS.Round(fcoord:Get2DDistance(gcoord)/1000,1))
+      self:T(self.lid..string.format("FG %s Distance %dkm",_name,dist))
+      disttable[#disttable+1] = { FG=FG, dist=dist}
+      if dist>mindist then mindist=dist end
+    end
+    
+    local function sortDistance(a, b)
+      return a.dist < b.dist
+    end
+    
+    table.sort(disttable, sortDistance)
+    
+    for _,_entry in ipairs(disttable) do
+      local FG = _entry.FG -- Ops.FlightGroup#FLIGHTGROUP
+      FG:AddMission(Auftrag)
+      local cm = FG:GetMissionCurrent()
+      if cm then cm:Cancel() end
+      wingsize = wingsize - 1
+      self:T(self.lid..string.format("Assigned to FG %s Distance %dkm",FG:GetName(),_entry.dist))
+      if wingsize == 0 then 
+        assigned = true
+        break 
+      end
+    end
+  end
+  
+  return assigned, wingsize
+end
+
+--- Find a holding point closest to the group to be attacked (if any set)
+-- @param #EASYA2G self
+-- @param Wrapper.Group#GROUP Group
+-- @return Core.Point#COORDINATE Point (can be nil!)
+function EASYA2G:_GetClosestHoldingPoint(Group)
+  local point = nil
+  local mindist = 0
+  if Group and Group:IsAlive() then
+    local gcoord = Group:GetCoordinate() or COORDINATE:New(0,0,0)
+    for _,_data in pairs(self.ManagedCP or {}) do
+      local data = _data -- #EASYGCICAP.CapPoint 
+      --data.Coordinate
+      local dist = math.floor(UTILS.Round(data.Coordinate:Get2DDistance(gcoord)/1000,1))
+      self:T(self.lid..string.format("Holding Point Distance %dkm",dist))
+      if dist>mindist then 
+        mindist=dist
+        point=data.Coordinate
+      end
+    end
+  end
+  return point
+end
+
+--- Here, we'll decide if we need to launch an attacking flight, and from where
+-- @param #EASYA2G self
+-- @param Ops.Intel#INTEL.Cluster Cluster
+-- @return #EASYA2G self 
+function EASYA2G:_AssignMission(Cluster)
+  self:I(self.lid.."_AssignMission")
+   -- Here, we'll decide if we need to launch an attacking flight, and from where
+  local overhead = self.overhead
+  local capspeed = self.capspeed + 100
+  local capalt = self.capalt or 5000
+  local maxsize = self.maxinterceptsize
+  local repeatsonfailure = self.repeatsonfailure
+  
+  local wings = self.wings
+  local ctlpts = self.ManagedCP
+  local MaxAliveMissions = self.MaxAliveMissions --* self.capgrouping
+  local nogozoneset = self.NoGoZoneSet
+  local conflictzoneset = self.ConflictZoneSet
+  local ReadyFlightGroups = self.ReadyFlightGroups
+  
+  -- Aircraft?
+  if Cluster.ctype == INTEL.Ctype.AIRCRAFT then return end
+  -- Threatlevel 0..10
+  local contact = self.Intel:GetHighestThreatContact(Cluster)
+  local name = contact.groupname --#string
+  local threat = contact.threatlevel --#number
+  local position = self.Intel:CalcClusterFuturePosition(Cluster,300)
+  -- calculate closest zone
+  local bestdistance = 2000*1000 -- 2000km
+  local targetairwing = nil -- Ops.Airwing#AIRWING
+  local targetawname = "" -- #string
+  local clustersize = self.Intel:ClusterCountUnits(Cluster) or 1
+  local wingsize = math.abs(overhead * (clustersize+1))
+  if wingsize > maxsize then wingsize = maxsize end
+  -- existing mission, and if so - done?
+  local retrymission = true
+  if Cluster.mission and (not Cluster.mission:IsOver()) then 
+    retrymission = false
+  end
+  if (retrymission) and (wingsize >= 1) then
+   MESSAGE:New(string.format("**** %s Attackers need wingsize %d", UTILS.GetCoalitionName(self.coalition), wingsize),15,"A2G"):ToAllIf(self.debug):ToLog()
+    for _,_data in pairs (wings) do
+      local airwing = _data[1] -- Ops.Airwing#AIRWING
+      local zone = _data[2] -- Core.Zone#ZONE
+      local zonecoord = zone:GetCoordinate()
+      local name = _data[3] -- #string
+      local coa = AIRBASE:FindByName(name):GetCoalition()
+      local distance = position:DistanceFromPointVec2(zonecoord)
+      local airframes = airwing:CountAssets(true)
+      local samecoalitionab = coa == self.coalition and true or false
+      if distance < bestdistance and airframes >= wingsize and samecoalitionab == true then
+        bestdistance = distance
+        targetairwing = airwing
+        targetawname = name
+      end
+    end
+    for _,_data in pairs (ctlpts) do
+      --local airwing = _data[1] -- Ops.Airwing#AIRWING
+      --local zone = _data[2] -- Core.Zone#ZONE
+      --local zonecoord = zone:GetCoordinate()
+      --local name = _data[3] -- #string
+      
+      local data = _data -- #EASYGCICAP.CapPoint
+      local name = data.AirbaseName
+      local zonecoord = data.Coordinate
+      if data.Zone then
+            -- refresh coordinate in case we have a (moving) zone
+            zonecoord = data.Zone:GetCoordinate()
+      end
+      local airwing = wings[name][1]
+      local coa = AIRBASE:FindByName(name):GetCoalition()
+      local samecoalitionab = coa == self.coalition and true or false
+      local distance = position:DistanceFromPointVec2(zonecoord)
+      local airframes = airwing:CountAssets(true)
+      if distance < bestdistance and airframes >= wingsize and samecoalitionab == true then
+        bestdistance = distance
+        targetairwing = airwing -- Ops.Airwing#AIRWING
+        targetawname = name
+      end
+    end
+    local text = string.format("Closest Airwing is %s", targetawname)
+    local m = MESSAGE:New(text,10,"EasyA2G"):ToAllIf(self.debug):ToLog()
+    -- Do we have a matching airwing?
+    if targetairwing then
+      local AssetCount = targetairwing:CountAssetsOnMission(MissionTypes,Cohort)
+      local missioncount = self:_CountAliveAuftrags()
+      -- Enough airframes on mission already?
+      self:T(self.lid.." Assets on Mission "..AssetCount)
+      if missioncount < MaxAliveMissions then
+        local repeats = repeatsonfailure
+        local Vec1 = contact.group:GetVec2()
+        local Vec2 = targetairwing:GetVec2()
+        --local HoldingVec2 = UTILS.FindNearestPointOnCircle(Vec1,UTILS.NMToMeters(10),Vec2)
+        local IngressCoordinate = self:_GetClosestHoldingPoint(contact.group)
+        if IngressCoordinate == nil then
+          local IngressVec2 = UTILS.FindNearestPointOnCircle(Vec1,UTILS.NMToMeters(10),Vec2)
+          IngressCoordinate = COORDINATE:NewFromVec2(IngressVec2)
+        end
+        local InterceptAuftrag = AUFTRAG:NewBAI(contact.group,capalt)
+          :SetMissionRange(150)
+          :SetPriority(1,true,1)
+          :SetRepeatDelay(300)
+          --:SetRequiredAssets(wingsize)
+          :SetRepeatOnFailure(repeats)
+          :SetMissionSpeed(UTILS.KnotsToAltKIAS(capspeed,capalt))
+          :SetMissionAltitude(capalt)
+          -- TODO: Refine this
+          --:SetMissionHoldingCoord(COORDINATE:NewFromVec2(HoldingVec2),capalt,capspeed,120)
+          :SetMissionIngressCoord(IngressCoordinate,capalt,capspeed)
+          --:SetMissionEgressCoord(COORDINATE:NewFromVec2(HoldingVec2),capalt,capspeed)
+          
+          if nogozoneset:Count() > 0 then
+            InterceptAuftrag:AddConditionSuccess(
+              function(group,zoneset,conflictset)
+                local success = false
+                if group and group:IsAlive() then
+                  local coord = group:GetCoordinate()
+                  if coord and zoneset:Count() > 0 and zoneset:IsCoordinateInZone(coord) then
+                    success = true
+                  end
+                  if coord and conflictset:Count() > 0 and conflictset:IsCoordinateInZone(coord) then
+                    success = false
+                  end
+                else
+                  success = true -- target dead
+                end
+                return success
+              end,
+              contact.group,
+              nogozoneset,
+              conflictzoneset
+            )
+          end
+          
+          InterceptAuftrag:AddConditionFailure(
+          function()
+            local failure = false
+            if InterceptAuftrag:CountOpsGroups()==0 and InterceptAuftrag:IsExecuting() then failure = true end
+            return failure
+          end          
+          )
+                    
+        table.insert(self.ListOfAuftrag,InterceptAuftrag)
+        local assigned, rest = self:_TryAssignMission(ReadyFlightGroups,InterceptAuftrag,contact.group,wingsize)
+        if not assigned  then
+          InterceptAuftrag:SetRequiredAssets(rest)
+          targetairwing:AddMission(InterceptAuftrag)
+        end
+        Cluster.mission = InterceptAuftrag
+      end
+    else
+      MESSAGE:New("**** Not enough airframes available or max mission limit reached!",15,"EasyA2G"):ToAllIf(self.debug):ToLog()
+    end
+   end
+end
+
+--- (Internal) Start detection.
+-- @param #EASYA2G self
+-- @return #EASYA2G self
+function EASYA2G:_StartIntel()
+  self:T(self.lid.."_StartIntel")
+  -- Border GCI Detection
+  local BlueAir_DetectionSetGroup = SET_GROUP:New()
+  BlueAir_DetectionSetGroup:FilterPrefixes( self.EWRName )
+  BlueAir_DetectionSetGroup:FilterStart()
+  
+  -- Intel type detection
+  local BlueIntel = INTEL:New(BlueAir_DetectionSetGroup,self.coalitionname, self.alias)
+  BlueIntel:SetClusterAnalysis(true,false,false)
+  BlueIntel:SetForgetTime(300)
+  BlueIntel:SetAcceptZones(self.GoZoneSet)
+  BlueIntel:SetRejectZones(self.NoGoZoneSet)
+  BlueIntel:SetConflictZones(self.ConflictZoneSet)
+  BlueIntel:SetVerbosity(0)
+  
+  if self.usecorridors == true then
+    BlueIntel:SetCorridorZones(self.corridorzones)
+    if self.corridorfloor or self.corridorceiling then
+      BlueIntel:SetCorridorLimitsFeet(self.corridorfloor,self.corridorceiling)
+    end
+  end
+  
+  BlueIntel:Start()
+  
+  if self.debug then 
+    BlueIntel.debug = true
+  end
+  
+  local function AssignCluster(Cluster)
+    self:_AssignMission(Cluster)
+  end
+  
+  function BlueIntel:onbeforeNewCluster(From,Event,To,Cluster)
+    AssignCluster(Cluster)
+  end
+  
+  self.Intel = BlueIntel  
+  return self
+end
+
+-------------------------------------------------------------------------
+-- TODO FSM Functions
+-------------------------------------------------------------------------
+
+--- (Internal) FSM Function onafterStart
+-- @param #EASYA2G self
+-- @param #string From
+-- @param #string Event
+-- @param #string To
+-- @return #EASYA2G self
+function EASYA2G:onafterStart(From,Event,To)
+  self:T({From,Event,To})
+  self:_StartIntel()
+  self:_CreateAirwings()
+  self:_CreateSquads()
+  --self:_SetCAPPatrolPoints()
+  self:_SetTankerPatrolPoints()
+  self:_SetAwacsPatrolPoints()
+  self:_SetReconPatrolPoints()
+  self:__Status(-10)
+  return self
+end
+
+--- (Internal) FSM Function onafterStatus
+-- @param #EASYA2G self
+-- @param #string From
+-- @param #string Event
+-- @param #string To
+-- @return #EASYA2G self
+function EASYA2G:onafterStatus(From,Event,To)
+  self:T({From,Event,To})
+  -- cleanup
+  local cleaned = false
+  local cleanlist = {}
+  for _,_auftrag in pairs(self.ListOfAuftrag) do
+    local auftrag = _auftrag -- Ops.Auftrag#AUFTRAG
+    if auftrag and (not (auftrag:IsCancelled() or auftrag:IsDone() or auftrag:IsOver())) then
+      table.insert(cleanlist,auftrag)
+      cleaned = true
+    end
+  end
+  if cleaned == true then
+    self.ListOfAuftrag = nil
+    self.ListOfAuftrag = cleanlist
+  end
+  -- Gather Some Stats
+  local function counttable(tbl)
+    local count = 0
+    for _,_data in pairs(tbl) do
+      count = count + 1
+    end
+    return count
+  end
+  local wings = counttable(self.ManagedAW)
+  local squads = counttable(self.ManagedSQ)
+  local caps = counttable(self.ManagedCP)
+  local assets = 0
+  local instock = 0
+  local capmission = 0
+  local interceptmission = 0
+  local reconmission = 0
+  local awacsmission = 0
+  local tankermission = 0
+  local alert5mission = 0
+  for _,_wing in pairs(self.wings) do
+    local count = _wing[1]:CountAssetsOnMission(MissionTypes,Cohort)
+    local count2 = _wing[1]:CountAssets(true,MissionTypes,Attributes)
+    --capmission = capmission + _wing[1]:CountMissionsInQueue({AUFTRAG.Type.PATROLRACETRACK})
+    interceptmission = interceptmission + _wing[1]:CountMissionsInQueue({AUFTRAG.Type.BAI})
+    reconmission = reconmission + _wing[1]:CountMissionsInQueue({AUFTRAG.Type.RECON})
+    awacsmission = awacsmission + _wing[1]:CountMissionsInQueue({AUFTRAG.Type.AWACS})
+    tankermission = tankermission + _wing[1]:CountMissionsInQueue({AUFTRAG.Type.TANKER})
+    alert5mission = alert5mission + _wing[1]:CountMissionsInQueue({AUFTRAG.Type.ALERT5})
+    assets = assets + count
+    instock = instock + count2
+    local assetsonmission = _wing[1]:GetAssetsOnMission({AUFTRAG.Type.BAI,AUFTRAG.Type.ALERT5})
+    -- update ready groups
+    self.ReadyFlightGroups = nil
+    self.ReadyFlightGroups = {}
+    for _,_asset in pairs(assetsonmission or {}) do
+      local asset = _asset -- Functional.Warehouse#WAREHOUSE.Assetitem
+      local FG = asset.flightgroup -- Ops.FlightGroup#FLIGHTGROUP
+      if FG then
+        local name = FG:GetName()
+        local engage = FG:IsEngaging()
+        local hasmissiles = FG:CanAirToGround()
+        self:T("Is Alert5? "..tostring(FG:GetMissionCurrent().type))
+        local isalert5 = (FG:GetMissionCurrent() ~= nil and FG:GetMissionCurrent().type == AUFTRAG.Type.ALERT5) and true or false 
+        local ready = hasmissiles and FG:IsFuelGood() and (FG:IsAirborne() or isalert5)
+        self:T(string.format("Flightgroup %s Engaging = %s Ready = %s (HasAmmo = %s HasFuel = %s Alert5 = %s)",tostring(name),tostring(engage),tostring(ready),tostring(hasmissiles),tostring(FG:IsFuelGood()), tostring(isalert5)))
+        if ready then
+          self.ReadyFlightGroups[name] = FG
+        end
+      end
+    end
+  end
+  if self.Monitor then
+    local threatcount = #self.Intel.Clusters or 0
+    local text =  self.alias
+    text = text.."\nWings: "..wings.."\nSquads: "..squads.."\nHoldPoints: "..caps.."\nAssets on Mission: "..assets.."\nAssets in Stock: "..instock
+    text = text.."\nThreats: "..threatcount
+    text = text.."\nAirWing alive Missions: "..capmission+awacsmission+tankermission+reconmission+interceptmission+alert5mission
+    --text = text.."\n - A2G Holding: "..capmission
+    text = text.."\n - A2G Attack: "..interceptmission
+    text = text.."\n - AWACS: "..awacsmission
+    text = text.."\n - TANKER: "..tankermission
+    text = text.."\n - Recon: "..reconmission
+    text = text.."\n - Alert5 "..alert5mission
+    text = text.."\nMission Limit: "..self.MaxAliveMissions   
+    MESSAGE:New(text,15,"A2G"):ToAll():ToLogIf(self.debug)
+  end
+  self:__Status(30)
   return self
 end
 --- **AI** - Balance player slots with AI to create an engaging simulation environment, independent of the amount of players. 
