@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2025-12-22T14:09:37+01:00-a72d3afd1c43565a3d7eb2b5c0565a72ff7dc577 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2025-12-24T08:20:03+01:00-9473cc2b2725f4e0ce5c3aea9e9e882b1953b945 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -75286,7 +75286,7 @@ CTLD.FixedWingTypes={
 ["Mosquito"]="Mosquito",
 ["C-130J-30"]="C-130J-30",
 }
-CTLD.version="1.3.41"
+CTLD.version="1.3.42"
 function CTLD:New(Coalition,Prefixes,Alias)
 local self=BASE:Inherit(self,FSM:New())
 BASE:T({Coalition,Prefixes,Alias})
@@ -76354,6 +76354,9 @@ end
 self:_SendMessage(string.format("%s have been deployed near you!",cfg.Name or"selection"),10,false,Group)
 return self
 end
+function CTLD:CanGetCrates(Group,Unit,Cargo,number,drop,pack,quiet,suppressGetEvent)
+return true
+end
 function CTLD:_GetCrates(Group,Unit,Cargo,number,drop,pack,quiet,suppressGetEvent)
 self:T(self.lid.." _GetCrates")
 local perSet=Cargo:GetCratesNeeded()or 1
@@ -76406,7 +76409,7 @@ local unitcoord=Unit:GetCoordinate()or Group:GetCoordinate()
 if unitcoord then
 if not location:IsCoordinateInZone(unitcoord)then
 self:_SendMessage("The requested cargo is not available in this zone!",10,false,Group)
-if not self.debug then return self end
+if not self.debug then return false end
 end
 end
 end
@@ -76416,6 +76419,9 @@ local loaddist=self.CrateDistance or 35
 local nearcrates,numbernearby=self:_FindCratesNearby(Group,Unit,loaddist,true,true)
 if numbernearby>=canloadcratesno and not drop then
 self:_SendMessage("There are enough crates nearby already! Take care of those first!",10,false,Group)
+return false
+end
+if not self:CanGetCrates(Group,Unit,Cargo,requestNumber,drop,pack,quiet,suppressGetEvent)then
 return false
 end
 local IsHerc=self:IsFixedWing(Unit)
@@ -77427,6 +77433,9 @@ end
 end
 return self
 end
+function CTLD:CanBuildCrates(Group,Unit,crates,number,Engineering,MultiDrop)
+return true
+end
 function CTLD:_BuildCrates(Group,Unit,Engineering,MultiDrop)
 self:T(self.lid.." _BuildCrates")
 if self:IsFixedWing(Unit)and self.enableFixedWing and not Engineering then
@@ -77453,6 +77462,9 @@ local crates,number=self:_FindCratesNearby(Group,Unit,finddist,true,true)
 local buildables={}
 local foundbuilds=false
 local canbuild=false
+if not self:CanBuildCrates(Group,Unit,crates,number,Engineering,MultiDrop)then
+return self
+end
 if number>0 then
 for _,_crate in pairs(crates)do
 local Crate=_crate
@@ -77851,6 +77863,18 @@ count=1
 elseif count>capacitySets then
 count=capacitySets
 end
+end
+local inzone=self:IsUnitInZone(Unit,CTLD.CargoZoneType.LOAD)
+if not inzone then
+local ship=nil
+local width=20
+local distance=nil
+local zone=nil
+inzone,ship,zone,distance,width=self:IsUnitInZone(Unit,CTLD.CargoZoneType.SHIP)
+end
+if not inzone then
+self:_SendMessage("You are not close enough to a logistics zone!",10,false,Group)
+return self
 end
 local total=needed*count
 local ok=self:_GetCrates(Group,Unit,cargoObj,total,false,false,true,true)
@@ -80791,13 +80815,37 @@ return self
 end
 function CTLD:onbeforeCratesDropped(From,Event,To,Group,Unit,Cargotable)
 self:T({From,Event,To})
+if Unit and Unit:IsPlayer()and self.PlayerTaskQueue then
+local playername=Unit:GetPlayerName()
+for _,_cargo in pairs(Cargotable)do
+local Vehicle=_cargo.Positionable
+if Vehicle then
+local dropcoord=Vehicle:GetCoordinate()or COORDINATE:New(0,0,0)
+local dropvec2=dropcoord:GetVec2()
+self.PlayerTaskQueue:ForEach(
+function(Task)
+local task=Task
+local subtype=task:GetSubType()
+if Event==subtype and not task:IsDone()then
+local targetzone=task.Target:GetObject()
+if targetzone and targetzone.ClassName and string.match(targetzone.ClassName,"ZONE")and targetzone:IsVec2InZone(dropvec2)then
+if task.Clients:HasUniqueID(playername)then
+task:__Success(-1)
+end
+end
+end
+end
+)
+end
+end
+end
 return self
 end
-function CTLD:onaftergetcrates(From,Event,To,Group,Unit,Cargotable)
+function CTLD:OnAfterGetCrates(From,Event,To,Group,Unit,Cargotable)
 self:T({From,Event,To})
 return self
 end
-function CTLD:onafterremovecratesnearby(From,Event,To,Group,Unit,Cargotable)
+function CTLD:OnAfterRemoveCratesNearby(From,Event,To,Group,Unit,Cargotable)
 self:T({From,Event,To})
 return self
 end

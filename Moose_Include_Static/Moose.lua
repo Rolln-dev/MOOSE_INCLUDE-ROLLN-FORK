@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-12-22T14:09:37+01:00-a72d3afd1c43565a3d7eb2b5c0565a72ff7dc577 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-12-24T08:20:03+01:00-9473cc2b2725f4e0ce5c3aea9e9e882b1953b945 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -154360,7 +154360,7 @@ end
 -- @module Ops.CTLD
 -- @image OPS_CTLD.jpg
 
--- Last Update Oct 2025
+-- Last Update Dec 2025
 
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -155848,7 +155848,7 @@ CTLD.FixedWingTypes = {
 
 --- CTLD class version.
 -- @field #string version
-CTLD.version="1.3.41"
+CTLD.version="1.3.42"
 
 --- Instantiate a new CTLD.
 -- @param #CTLD self
@@ -156265,7 +156265,7 @@ function CTLD:New(Coalition, Prefixes, Alias)
   -- @param #string To State.
   -- @param Wrapper.Group#GROUP Group Group Object.
   -- @param Wrapper.Unit#UNIT Unit Unit Object.
-  -- @param #CTLD_CARGO Cargo Cargo crate. Can be a Wrapper.DynamicCargo#DYNAMICCARGO object, if ground crew loaded!
+  -- @param #table Cargotable Table of #CTLD_CARGO cargo crates. Can be a Wrapper.DynamicCargo#DYNAMICCARGO objects, if ground crew loaded!
   -- @return #CTLD self
   
    --- FSM Function OnAfterTroopsDeployed.
@@ -157591,6 +157591,23 @@ function CTLD:_C130GetUnits(Group, Unit, Name)
   return self
 end
 
+--- (User) Hook to allow mission-specific crate restrictions.
+-- Override this in your mission to perform custom checks (e.g. warehouse stock) before crates spawn.
+-- Return `true` to allow the request, or `false` to block it. When blocked, `_GetCrates` exits silently.
+-- @param #CTLD self
+-- @param Wrapper.Group#GROUP Group Requesting player group.
+-- @param Wrapper.Unit#UNIT Unit Requesting unit.
+-- @param #CTLD_CARGO Cargo Cargo type being requested.
+-- @param #number number Number of crates requested (raw quantity, not sets).
+-- @param #boolean drop Drop-mode request flag.
+-- @param #boolean pack Pack-mode request flag.
+-- @param #boolean quiet Quiet flag from menu call.
+-- @param #boolean suppressGetEvent If true, `_GetCrates` will not emit the `GetCrates` event.
+-- @return #boolean Allow crate spawning.
+function CTLD:CanGetCrates(Group, Unit, Cargo, number, drop, pack, quiet, suppressGetEvent)
+  return true
+end
+
 --- (Internal) Function to spawn crates in front of the heli.
 -- @param #CTLD self
 -- @param Wrapper.Group#GROUP Group
@@ -157661,7 +157678,7 @@ function CTLD:_GetCrates(Group, Unit, Cargo, number, drop, pack, quiet, suppress
       if not location:IsCoordinateInZone(unitcoord) then
         -- no we're not at the right spot
         self:_SendMessage("The requested cargo is not available in this zone!", 10, false, Group)
-        if not self.debug then return self end
+        if not self.debug then return false end
       end
     end
   end
@@ -157676,6 +157693,9 @@ function CTLD:_GetCrates(Group, Unit, Cargo, number, drop, pack, quiet, suppress
     return false
   end
 
+  if not self:CanGetCrates(Group, Unit, Cargo, requestNumber, drop, pack, quiet, suppressGetEvent) then
+    return false
+  end
   -- spawn crates in front of helicopter
   local IsHerc = self:IsFixedWing(Unit) -- Herc, Bronco and Hook load from behind
   local IsHook = self:IsHook(Unit) -- Herc, Bronco and Hook load from behind
@@ -158453,16 +158473,16 @@ function CTLD:_ListCargo(Group, Unit)
       report:Add("        N O N E")
     end
     if hercInnerCount > 0 then
-	  local hercMass = 0
+    local hercMass = 0
       for _,_cargo in pairs(hercInnerCrates or {}) do
         local cargo = _cargo
         local type = cargo:GetType()
         if type ~= CTLD_CARGO.Enum.TROOPS and type ~= CTLD_CARGO.Enum.ENGINEERS then
           report:Add(string.format("Crate: %s size 1",cargo:GetName()))
-		  hercMass = hercMass + cargo:GetMass()
+      hercMass = hercMass + cargo:GetMass()
         end
       end
-	  loadedmass = loadedmass + hercMass
+    loadedmass = loadedmass + hercMass
     end
     --[[
     if loadedno > 0 then
@@ -158886,6 +158906,21 @@ function CTLD:_UnloadCrates(Group, Unit)
     return self
   end
 
+--- (User) Hook to allow mission-specific build restrictions.
+-- Override this in your mission to perform custom checks (e.g. warehouse/credits rules) before crates are built.
+-- Return `true` to allow the build, or `false` to block it. When blocked, `_BuildCrates` exits silently.
+-- @param #CTLD self
+-- @param Wrapper.Group#GROUP Group Requesting player group.
+-- @param Wrapper.Unit#UNIT Unit Requesting unit.
+-- @param #table crates Table of nearby crate cargo objects returned by `_FindCratesNearby`.
+-- @param #number number Number of nearby crates.
+-- @param #boolean Engineering If true build is by an engineering team.
+-- @param #boolean MultiDrop If true and not engineering or FOB, vary position a bit.
+-- @return #boolean Allow building.
+function CTLD:CanBuildCrates(Group, Unit, crates, number, Engineering, MultiDrop)
+  return true
+end
+
 --- (Internal) Function to build nearby crates.
 -- @param #CTLD self
 -- @param Wrapper.Group#GROUP Group
@@ -158922,6 +158957,11 @@ function CTLD:_BuildCrates(Group, Unit,Engineering,MultiDrop)
   local buildables = {}
   local foundbuilds = false
   local canbuild = false
+
+  if not self:CanBuildCrates(Group, Unit, crates, number, Engineering, MultiDrop) then
+    return self
+  end
+
   if number > 0 then
     -- get dropped crates
     for _,_crate in pairs(crates) do
@@ -159422,6 +159462,18 @@ function CTLD:_GetAndLoad(Group, Unit, cargoObj, quantity, LoadAnyWay)
       count = capacitySets
     end
   end
+  local inzone = self:IsUnitInZone(Unit,CTLD.CargoZoneType.LOAD)
+  if not inzone then
+    local ship = nil
+    local width = 20
+    local distance = nil
+    local zone = nil
+    inzone, ship, zone, distance, width  = self:IsUnitInZone(Unit,CTLD.CargoZoneType.SHIP)
+  end
+  if not inzone then
+    self:_SendMessage("You are not close enough to a logistics zone!", 10, false, Group)
+    return self
+  end
   local total = needed * count
   local ok = self:_GetCrates(Group, Unit, cargoObj, total, false, false, true, true)
   if ok then
@@ -159912,8 +159964,8 @@ function CTLD:_RefreshF10Menus()
 
                 if self.usesubcats then
                   local subcatmenus = {}
-	  
-	  
+    
+    
    
                   for _,cargoObj in pairs(self.Cargo_Crates) do
                     addCrateMenuEntry(cargoObj,cratesmenu,subcatmenus)
@@ -163259,10 +163311,36 @@ end
   -- @return #CTLD self
   function CTLD:onbeforeCratesDropped(From, Event, To, Group, Unit, Cargotable)
     self:T({From, Event, To})
+    if Unit and Unit:IsPlayer() and self.PlayerTaskQueue then
+      local playername = Unit:GetPlayerName()
+      for _,_cargo in pairs(Cargotable) do
+        local Vehicle = _cargo.Positionable
+        if Vehicle then
+          local dropcoord = Vehicle:GetCoordinate() or COORDINATE:New(0,0,0)
+          local dropvec2 = dropcoord:GetVec2()
+          self.PlayerTaskQueue:ForEach(
+            function (Task)
+              local task = Task -- Ops.PlayerTask#PLAYERTASK
+              local subtype = task:GetSubType()
+              -- right subtype?
+              if Event == subtype and not task:IsDone() then
+                local targetzone = task.Target:GetObject() -- Core.Zone#ZONE should be a zone in this case ....
+                if targetzone and targetzone.ClassName and string.match(targetzone.ClassName,"ZONE") and targetzone:IsVec2InZone(dropvec2) then
+                  if task.Clients:HasUniqueID(playername) then
+                    -- success
+                    task:__Success(-1)
+                  end
+                end
+              end
+            end
+          )
+        end
+      end
+    end
     return self
   end
   
-  --- (Internal) FSM Function onafterGetCrates.
+  --- (Internal) FSM Function OnAfterGetCrates.
   -- @param #CTLD self
   -- @param #string From State.
   -- @param #string Event Trigger.
@@ -163271,12 +163349,12 @@ end
   -- @param Wrapper.Unit#UNIT Unit Unit Object.
   -- @param #table Cargotable Table of #CTLD_CARGO objects spawned via "Get".
   -- @return #CTLD self
-  function CTLD:onaftergetcrates(From, Event, To, Group, Unit, Cargotable)
+  function CTLD:OnAfterGetCrates(From, Event, To, Group, Unit, Cargotable)
     self:T({From, Event, To})
     return self
   end
 
-  --- (Internal) FSM Function onafterGetCrates.
+  --- (Internal) FSM Function OnAfterRemoveCratesNearby.
   -- @param #CTLD self
   -- @param #string From State.
   -- @param #string Event Trigger.
@@ -163285,7 +163363,7 @@ end
   -- @param Wrapper.Unit#UNIT Unit Unit Object.
   -- @param #table Cargotable Table of #CTLD_CARGO objects spawned via "Get".
   -- @return #CTLD self
-  function CTLD:onafterremovecratesnearby(From, Event, To, Group, Unit, Cargotable)
+  function CTLD:OnAfterRemoveCratesNearby(From, Event, To, Group, Unit, Cargotable)
     self:T({From, Event, To})
     return self
   end
