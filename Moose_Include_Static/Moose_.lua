@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2025-12-24T08:20:03+01:00-9473cc2b2725f4e0ce5c3aea9e9e882b1953b945 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2025-12-28T14:05:24+01:00-945b9bdf31c65f9ca11c189f5ce53508032cd0e1 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -22183,6 +22183,18 @@ function SPAWNSTATIC:InitCargo(IsCargo)
 self.InitStaticCargo=IsCargo
 return self
 end
+function SPAWNSTATIC:InitHiddenOnMap(OnOff)
+self.SpawnHiddenOnMap=OnOff==false and false or true
+return self
+end
+function SPAWNSTATIC:InitHiddenOnMFD()
+self.SpawnHiddenOnMFD=true
+return self
+end
+function SPAWNSTATIC:InitHiddenOnPlanner()
+self.SpawnHiddenOnPlanner=true
+return self
+end
 function SPAWNSTATIC:InitDead(IsDead)
 self.InitStaticDead=IsDead
 return self
@@ -22275,6 +22287,15 @@ Template.canCargo=self.InitStaticCargo
 end
 if self.InitStaticCargoMass~=nil then
 Template.mass=self.InitStaticCargoMass
+end
+if self.SpawnHiddenOnPlanner then
+Template.hiddenOnPlanner=true
+end
+if self.SpawnHiddenOnMFD then
+Template.hiddenOnMFD=true
+end
+if self.SpawnHiddenOnMap then
+Template.hidden=self.SpawnHiddenOnMap
 end
 if self.InitLinkUnit then
 Template.linkUnit=self.InitLinkUnit:GetID()
@@ -36707,8 +36728,10 @@ ClassName="SCORING",
 ClassID=0,
 Players={},
 AutoSave=true,
-version="1.18.4",
+version="1.18.5",
 ScoringScenery=nil,
+SceneryHitsInZone=false,
+LoadSave=false,
 }
 local _SCORINGCoalition={
 [1]="Red",
@@ -36721,12 +36744,12 @@ local _SCORINGCategory={
 [Unit.Category.SHIP]="Ship",
 [Unit.Category.STRUCTURE]="Structure",
 }
-function SCORING:New(GameName,SavePath,AutoSave)
+function SCORING:New(GameName,SavePath,AutoSave,LoadSave)
 local self=BASE:Inherit(self,BASE:New())
 if GameName then
 self.GameName=GameName
 else
-error("A game name must be given to register the scoring results")
+error("A game name must be given to register the scoring results!")
 end
 self.ScoringObjects={}
 self.ScoringZones={}
@@ -36743,6 +36766,10 @@ self.penaltyonfratricide=true
 self:SetCoalitionChangePenalty(self.ScaleDestroyPenalty)
 self.penaltyoncoalitionchange=true
 self:SetDisplayMessagePrefix()
+self.SceneryHitsInZone=false
+if LoadSave then
+self.LoadSave=LoadSave
+end
 self:HandleEvent(EVENTS.Dead,self._EventOnDeadOrCrash)
 self:HandleEvent(EVENTS.Crash,self._EventOnDeadOrCrash)
 self:HandleEvent(EVENTS.Hit,self._EventOnHit)
@@ -36760,6 +36787,48 @@ if self.AutoSavePath and self.AutoSave==true then
 self:OpenCSV(GameName)
 end
 self:I("SCORING "..tostring(GameName).." started! v"..self.version)
+if LoadSave==true then
+self:_LoadPlayerSummaryScore()
+end
+return self
+end
+function SCORING:_LoadPlayerSummaryScore()
+if lfs and io and self.LoadSave==true then
+local path=self.AutoSavePath or lfs.writedir()..[[Logs\]]
+local filename=self.GameName or"PlayerScoresSummary"
+filename=filename..".csv"
+if UTILS.CheckFileExists(path,filename)then
+local ok,data=UTILS.LoadFromFile(path,filename)
+table.remove(data,1)
+for _,_data in pairs(data)do
+local line=UTILS.Split(_data,";;")
+local playername=tostring(line[1])
+local score=tonumber(line[2])
+local penalty=tonumber(line[3])
+self:I(string.format("Player %s Score %d Penalty %d",playername,score,penalty))
+local PlayerData=self.Players[playername]
+if not PlayerData then
+PlayerData={}
+PlayerData.Hit={}
+PlayerData.Destroy={}
+PlayerData.Goals={}
+PlayerData.Goals[self.GameName]={Score=score,Penalty=penalty}
+PlayerData.Mission={}
+PlayerData.HitPlayers={}
+PlayerData.Score=score
+PlayerData.Penalty=penalty
+PlayerData.PenaltyCoalition=0
+PlayerData.PenaltyWarning=0
+self.Players[playername]=PlayerData
+else
+PlayerData.Score=score
+PlayerData.Penalty=penalty
+self.Players[playername]=PlayerData
+PlayerData.Goals[self.GameName]={Score=score,Penalty=penalty}
+end
+end
+end
+end
 return self
 end
 function SCORING:SetDisplayMessagePrefix(DisplayMessagePrefix)
@@ -36871,6 +36940,14 @@ local ZoneName=ScoreZone:GetName()
 self.ScoringZones[ZoneName]={}
 self.ScoringZones[ZoneName].ScoreZone=ScoreZone
 self.ScoringZones[ZoneName].Score=Score
+return self
+end
+function SCORING:EnableSceneryHitsinZones()
+self.SceneryHitsInZone=true
+return self
+end
+function SCORING:DisableSceneryHitsinZones()
+self.SceneryHitsInZone=false
 return self
 end
 function SCORING:AddZoneScoreSet(ScoreZoneSet,Score)
@@ -37018,6 +37095,20 @@ function SCORING:AddGoalScorePlayer(PlayerName,GoalTag,Text,Score)
 self:F({PlayerName,PlayerName,GoalTag,Text,Score})
 if PlayerName then
 local PlayerData=self.Players[PlayerName]
+if not PlayerData then
+PlayerData={}
+PlayerData.Goals={}
+PlayerData.Hit={}
+PlayerData.Destroy={}
+PlayerData.Goals={}
+PlayerData.Mission={}
+PlayerData.HitPlayers={}
+PlayerData.Score=0
+PlayerData.Penalty=0
+PlayerData.PenaltyCoalition=0
+PlayerData.PenaltyWarning=0
+self.Players[PlayerName]=PlayerData
+end
 PlayerData.Goals[GoalTag]=PlayerData.Goals[GoalTag]or{Score=0}
 PlayerData.Goals[GoalTag].Score=PlayerData.Goals[GoalTag].Score+Score
 PlayerData.Score=PlayerData.Score+Score
@@ -37493,6 +37584,7 @@ end
 end
 end
 else
+if self.SceneryHitsInZone==true then
 for ZoneName,ScoreZoneData in pairs(self.ScoringZones)do
 self:F({ScoringZone=ScoreZoneData})
 local ScoreZone=ScoreZoneData.ScoreZone
@@ -37507,6 +37599,7 @@ MESSAGE.Type.Information)
 :ToCoalitionIf(InitCoalition,self:IfMessagesZone()and self:IfMessagesToCoalition())
 self:ScoreCSV(PlayerName,"","DESTROY_SCORE",1,Score,InitUnitName,InitUnitCoalition,InitUnitCategory,InitUnitType,TargetUnitName,"","Scenery",TargetUnitType)
 Destroyed=true
+end
 end
 end
 end
@@ -37748,8 +37841,9 @@ MESSAGE:NewType(PlayerMessage,MESSAGE.Type.Detailed):ToGroup(PlayerGroup)
 end
 end
 end
-function SCORING:ReportScoreAllSummary(PlayerGroup)
+function SCORING:ReportScoreAllSummary(PlayerGroup,JustScore)
 local PlayerMessage=""
+local ReportTable={}
 self:T({"Summary Score Report of All Players",Players=self.Players})
 for PlayerName,PlayerData in pairs(self.Players)do
 self:T({PlayerName=PlayerName,PlayerGroup=PlayerGroup})
@@ -37771,6 +37865,7 @@ ReportMissions=ReportMissions~=""and"\n- "..ReportMissions or ReportMissions
 self:F({ReportMissions,ScoreMissions,PenaltyMissions})
 local PlayerScore=ScoreHits+ScoreDestroys+ScoreCoalitionChanges+ScoreGoals+ScoreMissions
 local PlayerPenalty=PenaltyHits+PenaltyDestroys+PenaltyCoalitionChanges+PenaltyGoals+PenaltyMissions
+if JustScore~=true then
 PlayerMessage=
 string.format("Player '%s' Score = %d ( %d Score, -%d Penalties )",
 PlayerName,
@@ -37779,8 +37874,12 @@ PlayerScore,
 PlayerPenalty
 )
 MESSAGE:NewType(PlayerMessage,MESSAGE.Type.Overview):ToGroup(PlayerGroup)
+else
+ReportTable[PlayerName]={["Score"]=PlayerScore,["Penalty"]=PlayerPenalty}
 end
 end
+end
+return ReportTable
 end
 function SCORING:SecondsToClock(sSeconds)
 local nSeconds=sSeconds
@@ -37867,6 +37966,17 @@ self.CSVFile:write(
 ''..ScoreAmount
 )
 self.CSVFile:write("\n")
+end
+if lfs and io and self.LoadSave==true then
+local path=self.AutoSavePath or lfs.writedir()..[[Logs\]]
+local filename=self.GameName or"PlayerScoresSummary"
+filename=filename..".csv"
+local data=self:ReportScoreAllSummary("",true)
+local text="-- Playername;;Score;;Penalty\n"
+for _playername,_data in pairs(data or{})do
+text=text..string.format("%s;;%d;;%d\n")
+end
+UTILS.SaveToFile(path,filename,text)
 end
 end
 function SCORING:CloseCSV()
@@ -100819,7 +100929,7 @@ NAVAL="Naval",
 AIRCRAFT="Aircraft",
 STRUCTURE="Structure"
 }
-INTEL.version="0.3.9"
+INTEL.version="0.3.10"
 function INTEL:New(DetectionSet,Coalition,Alias)
 local self=BASE:Inherit(self,FSM:New())
 self.detectionset=DetectionSet or SET_GROUP:New()
@@ -101170,14 +101280,16 @@ local inzone=false
 for _,_zone in pairs(self.corridorzoneset.Set)do
 local zone=_zone
 if unit:IsInZone(zone)then
+local corridorfloor=zone:GetProperty("CorridorFloor")or self.corridorfloor
+local corridorceiling=zone:GetProperty("CorridorCeiling")or self.corridorceiling
 local debugtext="Corridorzone Check for unit "..unit:GetName().."\n"
 debugtext=debugtext..string.format("IsAir %s | Alt %dft | Floor %dft | Ceil %dft",tostring(unit:IsAir()),tonumber(UTILS.MetersToFeet(unit:GetAltitude())),
-tonumber(UTILS.MetersToFeet(self.corridorfloor)),tonumber(UTILS.MetersToFeet(self.corridorceiling)))
+tonumber(UTILS.MetersToFeet(corridorfloor)),tonumber(UTILS.MetersToFeet(corridorceiling)))
 MESSAGE:New(debugtext,15,"INTEL"):ToAllIf(self.verbose>1):ToLogIf(self.verbose>1)
-if unit:IsAir()and(self.corridorfloor~=nil or self.corridorceiling~=nil)then
+if unit:IsAir()and(corridorfloor~=nil or corridorceiling~=nil)then
 local alt=unit:GetAltitude()
-if self.corridorfloor and alt>self.corridorfloor then inzone=true end
-if self.corridorceiling and(inzone==true or self.corridorfloor==nil)and alt<self.corridorceiling then inzone=true else inzone=false end
+if corridorfloor and alt>corridorfloor then inzone=true end
+if corridorceiling and(inzone==true or corridorfloor==nil)and alt<corridorceiling then inzone=true else inzone=false end
 if inzone==true then break end
 else
 inzone=true
@@ -114756,7 +114868,7 @@ self:AddTransition("*","PlayerJoinedTask","*")
 self:AddTransition("*","PlayerAbortedTask","*")
 self:AddTransition("*","Stop","Stopped")
 self:__Start(2)
-local starttime=math.random(5,10)
+local starttime=math.random(10,15)
 self:__Status(starttime)
 self:I(self.lid..self.version.." Started.")
 return self
@@ -115778,7 +115890,7 @@ if self.TasksPerPlayer:HasUniqueID(_playername)then
 local task=self.TasksPerPlayer:ReadByID(_playername)
 local Coordinate=task.Target:GetCoordinate()
 local CoordText=""
-if self.Type~=PLAYERTASKCONTROLLER.Type.A2A then
+if self.Type~=PLAYERTASKCONTROLLER.Type.A2A and task.Type~=AUFTRAG.Type.INTERCEPT then
 CoordText=Coordinate:ToStringA2G(_client,nil,self.ShowMagnetic)
 else
 CoordText=Coordinate:ToStringA2A(_client,nil,self.ShowMagnetic)
@@ -115823,7 +115935,7 @@ local CoordText=""
 local CoordTextLLDM=nil
 local ShowThreatInfo=task.ShowThreatDetails
 local LasingDrone=self:_FindLasingDroneForTaskID(task.PlayerTaskNr)
-if self.Type~=PLAYERTASKCONTROLLER.Type.A2A then
+if self.Type~=PLAYERTASKCONTROLLER.Type.A2A and task.Type~=AUFTRAG.Type.INTERCEPT then
 CoordText=Coordinate:ToStringA2G(Client,nil,self.ShowMagnetic)
 else
 CoordText=Coordinate:ToStringA2A(Client,nil,self.ShowMagnetic)
@@ -116719,7 +116831,7 @@ self:HandleEvent(EVENTS.PlayerEnterAircraft,self._EventHandler)
 self:HandleEvent(EVENTS.UnitLost,self._EventHandler)
 self:SetEventPriority(5)
 if self.TaskPersistanceSwitch==true then
-self:_LoadTasksPersisted()
+self:ScheduleOnce(5,self._LoadTasksPersisted,self)
 end
 return self
 end
