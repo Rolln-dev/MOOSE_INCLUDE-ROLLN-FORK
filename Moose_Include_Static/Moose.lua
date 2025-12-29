@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-12-28T14:05:24+01:00-945b9bdf31c65f9ca11c189f5ce53508032cd0e1 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-12-29T14:01:10+01:00-b94f36dfdfd27ed1672fd08def66218dc323c390 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -2169,7 +2169,23 @@ CALLSIGN={
     Stetson = 22,
     Wrath = 23,
   },
-  
+  Intruder = {
+    Raygun = 4,
+    Heartless = 5,
+    Viceroy = 6,
+    Cupcake = 7,
+    ["Flying Tiger"] = 8,
+    ["Flying Ace"]  = 9,
+    Buckeye = 10,
+    Goldplate = 11,
+    Phoenix = 12,
+    Electron = 13,
+    Rustler = 14,
+    Vixen = 15,
+    Jackal = 16,
+    Milestone = 17,
+    Devil = 18,
+  },
 } --#CALLSIGN
 
 --- Utilities static class.
@@ -3929,6 +3945,12 @@ function UTILS.GetCallsignName(Callsign)
   end
   
   for name, value in pairs(CALLSIGN.Kiowa) do
+    if value==Callsign then
+      return name
+    end
+  end
+  
+  for name, value in pairs(CALLSIGN.Intruder) do
     if value==Callsign then
       return name
     end
@@ -7209,6 +7231,150 @@ function UTILS.CreateAirbaseEnum()
   
   _savefile(string.format("%s-enums.txt", env.mission.theatre), text)
   --env.info(text)
+end
+
+--- Calculate then center and radius of a circle enclosing a list if DCS#Vec2 points.
+-- @param #table points Table of DCS#Vec2 entries
+-- @return DCS#Vec2 center DCS#Vec2
+-- @return #number radius
+function UTILS.GetCenterAndRadius(points)
+    if #points == 0 then
+        return nil, nil
+    end
+    
+    -- Calculate centroid (average of all points)
+    local sumX, sumY = 0, 0
+    for _, p in ipairs(points) do
+        sumX = sumX + p.x
+        sumY = sumY + p.y
+    end
+    
+    local center = {
+        x = sumX / #points,
+        y = sumY / #points
+    }
+    
+    -- Find maximum distance from center to any point
+    local maxDist = 0
+    for _, p in ipairs(points) do
+        local dx = p.x - center.x
+        local dy = p.y - center.y
+        local dist = math.sqrt(dx*dx + dy*dy)
+        if dist > maxDist then
+            maxDist = dist
+        end
+    end
+    
+    return center, maxDist
+end
+
+--- More accurate: Minimum bounding circle (Welzl's algorithm), calculate then center and radius of a circle enclosing a list if DCS#Vec2 points.
+-- @param #table points Table of DCS#Vec2 entries
+-- @return DCS#Vec2 center DCS#Vec2
+-- @return #number radius
+function UTILS.GetMinimumBoundingCircle(points)
+    if #points == 0 then
+        return nil, nil
+    end
+    
+    -- Calculate distance between two points
+    local function distance(p1, p2)
+        local dx = p2.x - p1.x
+        local dy = p2.y - p1.y
+        return math.sqrt(dx*dx + dy*dy)
+    end
+    
+    -- Circle from 2 points (diameter)
+    local function circleFrom2Points(p1, p2)
+        local center = {
+            x = (p1.x + p2.x) / 2,
+            y = (p1.y + p2.y) / 2
+        }
+        local radius = distance(p1, p2) / 2
+        return center, radius
+    end
+    
+    -- Circle from 3 points (circumcircle)
+    local function circleFrom3Points(p1, p2, p3)
+        local ax, ay = p1.x, p1.y
+        local bx, by = p2.x, p2.y
+        local cx, cy = p3.x, p3.y
+        
+        local d = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by))
+        
+        if math.abs(d) < 0.0001 then
+            -- Points are collinear, use 2-point circle
+            return circleFrom2Points(p1, p3)
+        end
+        
+        local aSq = ax*ax + ay*ay
+        local bSq = bx*bx + by*by
+        local cSq = cx*cx + cy*cy
+        
+        local ux = (aSq * (by - cy) + bSq * (cy - ay) + cSq * (ay - by)) / d
+        local uy = (aSq * (cx - bx) + bSq * (ax - cx) + cSq * (bx - ax)) / d
+        
+        local center = {x = ux, y = uy}
+        local radius = distance(center, p1)
+        
+        return center, radius
+    end
+    
+    -- Check if point is inside circle
+    local function isInside(center, radius, point, tolerance)
+        tolerance = tolerance or 0.0001
+        return distance(center, point) <= radius + tolerance
+    end
+    
+    -- Welzl's algorithm (recursive)
+    local function welzlHelper(pts, n, boundary)
+        -- Base cases
+        if n == 0 or #boundary == 3 then
+            if #boundary == 0 then
+                return {x = 0, y = 0}, 0
+            elseif #boundary == 1 then
+                return {x = boundary[1].x, y = boundary[1].y}, 0
+            elseif #boundary == 2 then
+                return circleFrom2Points(boundary[1], boundary[2])
+            else
+                return circleFrom3Points(boundary[1], boundary[2], boundary[3])
+            end
+        end
+        
+        -- Pick a random point
+        local p = pts[n]
+        
+        -- Get circle without this point
+        local center, radius = welzlHelper(pts, n - 1, boundary)
+        
+        -- If point is inside, we're done
+        if isInside(center, radius, p) then
+            return center, radius
+        end
+        
+        -- Otherwise, point must be on the boundary
+        local newBoundary = {}
+        for i = 1, #boundary do
+            newBoundary[i] = boundary[i]
+        end
+        table.insert(newBoundary, p)
+        
+        return welzlHelper(pts, n - 1, newBoundary)
+    end
+    
+    -- Shuffle points for better average performance
+    local pts = {}
+    for i, p in ipairs(points) do
+        pts[i] = {x = p.x, y = p.y}
+    end
+    
+    -- Simple shuffle
+    for i = #pts, 2, -1 do
+        local j = math.random(1, i)
+        pts[i], pts[j] = pts[j], pts[i]
+    end
+    
+    return welzlHelper(pts, #pts, {})
 end
 --- **Utils** - Lua Profiler.
 --
@@ -42677,6 +42843,11 @@ function SPAWN:_Prepare( SpawnTemplatePrefix, SpawnIndex ) -- R2.2
         max = 18 
         ctable = CALLSIGN.F15E
       end
+      if SpawnTemplate.units[1].type == "A6E" then
+        min = 4
+        max = 18 
+        ctable = CALLSIGN.Intruder
+      end
       local callsignnr = math.random(min,max)
       local callsignname = "Enfield"
       for name, value in pairs(ctable) do
@@ -62990,6 +63161,7 @@ end
 -- @field #table parkingByID Parking spot data table with ID as key.
 -- @field #table parkingWhitelist List of parking spot terminal IDs considered for spawning.
 -- @field #table parkingBlacklist List of parking spot terminal IDs **not** considered for spawning.
+-- @field Core.Zone#ZONE_RADIUS parkingCircle Minimum bounding circle enclosing all parking spots.
 -- @field #table runways Runways of airdromes.
 -- @field #AIRBASE.Runway runwayLanding Runway used for landing.
 -- @field #AIRBASE.Runway runwayTakeoff Runway used for takeoff.
@@ -64515,7 +64687,7 @@ AIRBASE.SpotStatus = {
 --- Runway data.
 -- @type AIRBASE.Runway
 -- @field #string name Runway name.
--- @field #string idx Runway ID: heading 070° ==> idx="07".
+-- @field #string idx Runway ID: heading 070° ==> idx="07". Mostly same as magheading.
 -- @field #number heading True heading of the runway in degrees.
 -- @field #number magheading Magnetic heading of the runway in degrees. This is what is marked on the runway.
 -- @field #number length Length of runway in meters.
@@ -64625,6 +64797,8 @@ end
   else
     self:E(string.format("ERROR: Cound not get position Vec2 of airbase %s", AirbaseName))
   end
+  
+  self:GetMinimumBoundingCircleFromParkingSpots( )
 
   -- Debug info.
   self:T2(string.format("Registered airbase %s", tostring(self.AirbaseName)))
@@ -65152,6 +65326,54 @@ function AIRBASE:GetParkingSpotsCoordinates(termtype)
   end
 
   return spots
+end
+
+--- Get the DCS#Vec2s of all parking spots at an airbase. Optionally only those of a specific terminal type. Spots on runways are excluded if not explicitly requested by terminal type.
+-- @param #AIRBASE self
+-- @param #AIRBASE.TerminalType termtype (Optional) Terminal type. Default all.
+-- @return #table Table of DCS#Vec2 of parking spots.
+function AIRBASE:GetParkingSpotsVec2s(termtype)
+
+  -- Get all parking spots data.
+  local parkingdata=self:GetParkingData(false)
+
+  -- Put coordinates of free spots into table.
+  local spots={}
+  for _,parkingspot in ipairs(parkingdata) do
+
+    -- Coordinates on runway are not returned unless explicitly requested.
+    if AIRBASE._CheckTerminalType(parkingspot.Term_Type, termtype) then
+
+      -- Get coordinate from Vec3 terminal position.
+      local vec2 = { x = parkingspot.vTerminalPos.x, y = parkingspot.vTerminalPos.z }
+
+      -- Add to table.
+      table.insert(spots, vec2)
+    end
+
+  end
+
+  return spots
+end
+
+--- Get the the bounding circular zone around all parking spots of an airbase.
+-- @param #AIRBASE self
+-- @param #boolean mark (Optional) Draw zone on map on first call of this function.
+-- @return Core.Zone#ZONE_RADIUS BoundingZone
+function AIRBASE:GetMinimumBoundingCircleFromParkingSpots(mark)
+  if self.isAirdrome then
+    if not self.parkingCircle then
+      local spots = self:GetParkingSpotsVec2s()
+      local center, radius = UTILS.GetMinimumBoundingCircle(spots)
+      self.parkingCircle = ZONE_RADIUS:New(self.AirbaseName.." ParkingCircle",center,radius+50)
+      if mark == true then
+         self.parkingCircle:DrawZone(-1,{1,0,0},1,{0,1,0},0.2,3)
+      end
+    end
+    return self.parkingCircle
+  else
+    return self.AirbaseZone
+  end
 end
 
 --- Get a table containing the coordinates, terminal index and terminal type of free parking spots at an airbase.
@@ -110309,7 +110531,7 @@ function WAREHOUSE:_RegisterAsset(group, ngroups, forceattribute, forcecargobay,
   local unit = group:GetUnit(1)
   local Descriptors= (unit and unit:IsAlive()) and unit:GetDesc() or {}
   local Category=group:GetCategory()
-  local TypeName=group:GetTypeName()
+  local TypeName=group:GetTypeName() or "none"
   local SpeedMax=group:GetSpeedMax()
   local RangeMin=group:GetRange()
   local smax,sx,sy,sz=_GetObjectSize(Descriptors)
@@ -164962,7 +165184,7 @@ CSAR.AircraftType["CH-47Fbl1"] = 31
 
 --- CSAR class version.
 -- @field #string version
-CSAR.version="1.0.34"
+CSAR.version="1.0.35"
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- ToDo list
@@ -165321,7 +165543,7 @@ function CSAR:_CreateDownedPilotTrack(Group,Groupname,Side,OriginalUnit,Descript
   DownedPilot.alive = true
   DownedPilot.wetfeet = Wetfeet or false
   DownedPilot.BeaconName = BeaconName
-
+  
   -- Add Pilot
   local PilotTable = self.downedPilots
   local counter = self.downedpilotcounter
@@ -165498,6 +165720,10 @@ function CSAR:_AddCsar(_coalition , _country, _point, _typeName, _unitName, _pla
     BeaconName = _unitName..math.random(1,10000)
   else
     BeaconName = "Ghost-1-1"..math.random(1,10000)
+  end
+  
+  if _playerName == nil or _playerName == "" then
+    _playerName = "AI MIA"
   end
 
   if (_freq and _freq ~= 0) then --shagrat only add beacon if _freq is NOT 0
@@ -165915,7 +166141,7 @@ function CSAR:_EventHandler(EventData)
     self:T("Country = ".._country.." Coalition = ".._coalition)
     if _coalition == self.coalition then
       local _freq = self:_GenerateADFFrequency()
-      self:I({coalition=_coalition,country= _country, coord=_LandingPos, name=_unitname, player=_event.IniPlayerName, freq=_freq})
+      self:T({coalition=_coalition,country= _country, coord=_LandingPos, name=_unitname, player=_event.IniPlayerName, freq=_freq})
       self:_AddCsar(_coalition, _country, _LandingPos, nil, _unitname, _event.IniPlayerName, _freq, self.suppressmessages, "none")--shagrat add CSAR at Parachute location.
     
       Unit.destroy(_event.initiator) -- shagrat remove static Pilot model
@@ -166837,7 +167063,8 @@ end
 function CSAR:_GetClosestMASH(_heli)
   self:T(self.lid .. " _GetClosestMASH")
   local _mashset = self.mash -- Core.Set#SET_GROUP
-  local MashSets = {}
+  local MashSets = {} 
+  
   --local _mashes = _mashset.Set-- #table
   table.insert(MashSets,_mashset.Set)
   table.insert(MashSets,self.zonemashes.Set)
@@ -166846,20 +167073,18 @@ function CSAR:_GetClosestMASH(_heli)
   local _distance = 0
   local _helicoord = _heli:GetCoordinate()
   local MashName = nil
-  local Coordinate =  nil -- Core.Point#COORDINATE
+  local Coordinate =  nil -- Core.Point#COORDINATE 
 
   if self.allowFARPRescue then
-    local position = _heli:GetCoordinate()
-    local afb,distance = position:GetClosestAirbase(nil,self.coalition)
+    local afb,distance = _helicoord:GetClosestAirbase(nil,self.coalition)
     _shortestDistance = distance
     MashName = (afb ~= nil) and afb:GetName() or "Unknown"
     Coordinate = (afb ~= nil) and afb:GetCoordinate()
     if afb then
-      local afbzone = afb:GetZone()
+      local afbzone = afb:GetMinimumBoundingCircleFromParkingSpots()
       if afbzone then
-        --afbzone:DrawZone(-1,{0,1,0},1,{0,1,0},0.2,6)
-        if afbzone:IsCoordinateInZone(Coordinate) and distance > self.FARPRescueDistance then
-          distance = 100
+        if afbzone:IsCoordinateInZone(_helicoord) and distance > self.FARPRescueDistance*1.1 then
+          _shortestDistance = 100
         end
       end
     end
@@ -166975,6 +167200,7 @@ function CSAR:_GetDistance(_point1, _point2)
   if _point1 and _point2 then
     local distance1 = _point1:Get2DDistance(_point2)
     local distance2 = _point1:DistanceFromPointVec2(_point2)
+    MESSAGE:New(string.format("_GetDistance: d1 = %dm | d2 = %dm",distance1,distance2)):ToAllIf(self.verbose>1):ToLogIf(self.verbose>1)
     if distance1 and type(distance1) == "number" then
       return distance1
     elseif distance2 and type(distance2) == "number" then
@@ -167074,7 +167300,7 @@ function CSAR:_AddBeaconToGroup(_group, _freq, BeaconName)
       --local name = _radioUnit:GetName()
       local Sound =  "l10n/DEFAULT/"..self.radioSound
       local vec3 = _radioUnit:GetVec3() or _radioUnit:GetPositionVec3() or {x=0,y=0,z=0}
-      self:I(self.lid..string.format("Added Radio Beacon %d Hertz | Name %s | Position {%d,%d,%d}",Frequency,BeaconName,vec3.x,vec3.y,vec3.z))
+      self:T(self.lid..string.format("Added Radio Beacon %d Hertz | Name %s | Position {%d,%d,%d}",Frequency,BeaconName,vec3.x,vec3.y,vec3.z))
       trigger.action.radioTransmission(Sound, vec3, 0, true, Frequency, self.ADFRadioPwr or 500,BeaconName) -- Beacon in MP only runs for exactly 30secs straight
     end
   end
@@ -167201,22 +167427,6 @@ function CSAR:onafterStart(From, Event, To)
 
   self.staticmashes = SET_STATIC:New():FilterCoalitions(self.coalitiontxt):FilterPrefixes(self.mashprefix):FilterStart()
   self.zonemashes = SET_ZONE:New():FilterPrefixes(self.mashprefix):FilterStart()
-
-  --[[
-  if staticmashes:Count() > 0  then
-    for _,_mash in pairs(staticmashes.Set) do
-      self.mash:AddObject(_mash)
-    end
-  end
-  
-  if zonemashes:Count() > 0  then
-    self:T("Adding zones to self.mash SET")
-    for _,_mash in pairs(zonemashes.Set) do
-      self.mash:AddObject(_mash)
-    end
-    self:T("Objects in SET: "..self.mash:Count())
-  end
-  --]]
 
   if not self.coordinate then
     local csarhq = self.mash:GetRandom()
@@ -167560,6 +167770,7 @@ function CSAR:onafterSave(From, Event, To, path, filename)
     if DownedPilot and DownedPilot.alive then
       -- get downed pilot data for saving
       local playerName = DownedPilot.player
+      if playerName == nil or playerName == "" then playerName = "AI MIA" end 
       local group = DownedPilot.group
       local coalition = group:GetCoalition()
       local country = group:GetCountry()
@@ -167570,7 +167781,7 @@ function CSAR:onafterSave(From, Event, To, path, filename)
       local unitName = DownedPilot.originalUnit
       local txt = string.format("%s,%d,%d,%d,%s,%s,%s,%s,%s,%d\n",playerName,location.x,location.y,location.z,coalition,country,description,typeName,unitName,freq)
 
-      self:I(self.lid.."Saving to CSAR File: " .. txt)
+      self:T(self.lid.."Saving to CSAR File: " .. txt)
 
       data = data .. txt
     end
@@ -167686,7 +167897,7 @@ function CSAR:onafterLoad(From, Event, To, path, filename)
   -- Info message.
   local text=string.format("Loading CSAR state from file %s", filename)
   MESSAGE:New(text,10):ToAllIf(self.verbose>0)
-  self:I(self.lid..text)
+  self:T(self.lid..text)
 
   local file=assert(io.open(filename, "rb"))
 
@@ -168053,6 +168264,27 @@ function AIRWING:AddSquadron(Squadron)
   -- Start squadron.
   if Squadron:IsStopped() then
     Squadron:Start()
+  end
+  
+  -- if storage is limited, add the amount of aircraft needed
+  local airbasename = self:GetAirbaseName()
+  
+  if airbasename then
+    local group = GROUP:FindByName(Squadron.templategroup)
+    local Nunits = 1
+    local units
+    if group then units = group:GetUnits() end
+    if units then Nunits = #units end
+    local typename = Squadron.aircrafttype or "none"
+    local NAssets = Squadron.Ngroups * Nunits
+    local storage = STORAGE:New(airbasename)
+    --self:T(self.lid.."Adding "..typename.." #"..NAssets)
+    if storage and storage:IsLimitedAircraft() and typename ~= "none" then
+      local NInStore = storage:GetItemAmount(typename) or 0
+      if NAssets > NInStore then
+        storage:AddItem(typename,NAssets)
+      end
+    end
   end
 
   return self
@@ -246102,7 +246334,7 @@ function EASYA2G:onafterStatus(From,Event,To)
         local name = FG:GetName()
         local engage = FG:IsEngaging()
         local hasmissiles = FG:CanAirToGround()
-        self:T("Is Alert5? "..tostring(FG:GetMissionCurrent().type))
+        --self:T("Is Alert5? "..tostring(FG:GetMissionCurrent().type))
         local isalert5 = (FG:GetMissionCurrent() ~= nil and FG:GetMissionCurrent().type == AUFTRAG.Type.ALERT5) and true or false 
         local ready = hasmissiles and FG:IsFuelGood() and (FG:IsAirborne() or isalert5)
         self:T(string.format("Flightgroup %s Engaging = %s Ready = %s (HasAmmo = %s HasFuel = %s Alert5 = %s)",tostring(name),tostring(engage),tostring(ready),tostring(hasmissiles),tostring(FG:IsFuelGood()), tostring(isalert5)))
