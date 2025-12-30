@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-12-29T14:01:10+01:00-b94f36dfdfd27ed1672fd08def66218dc323c390 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-12-30T10:40:27+01:00-f7556fac0e9a692f9ab86ccc831be40c13367476 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -581,6 +581,7 @@ ENUMS.ReportingName =
     Orion = "P-3C",
     Viking = "S-3B",
     Osprey = "V-22",
+    Intruder = "A6E",
     -- Bomber Rus
     Badger = "H6-J",
     Bear_J = "Tu-142", -- also Tu-95
@@ -62125,6 +62126,29 @@ end
 function UNIT:SetValidateAndRepositionGroundUnits(Enabled)
     self.ValidateAndRepositionGroundUnits = Enabled
 end
+
+--- Get the max kgs of fuel this unit can hold in its *internal* tank(s) and overall (with ext. tanks) in kgs.
+-- @param #UNIT self
+-- @return #number InternalFuel Max internal fuel in kgs. Zero if it cannot be determined.
+-- @return #number Overall Fuel Overall max in case there are external tanks in kgs. Zero if it cannot be determined.
+function UNIT:GetFuelMassMax()
+  local Desc = self:GetDesc() or {}
+  local massFuelMax=Desc.fuelMassMax or 0
+  local relFuel=math.min(self:GetFuel() or 1.0, 1.0)  -- We take 1.0 as max in case of external fuel tanks.
+  local massFuel=massFuelMax*relFuel
+  return massFuel, massFuelMax
+end
+
+--- Get the current kgs of fuel this unit holds in all of its tanks.
+-- @param #UNIT self
+-- @param #number Filling Fuel in kgs.
+function UNIT:GetCurrentFuelKgs()
+  local fuel, maxfuel = self:GetFuelMassMax()
+  local relfuel = self:GetFuel()
+  local maxfilling = math.max(fuel,maxfuel)
+  local mass = maxfilling*relfuel
+  return mass
+end
 --- **Wrapper** - CLIENT wraps DCS Unit objects acting as a __Client__ or __Player__ within a mission.
 -- 
 -- ===
@@ -64798,7 +64822,9 @@ end
     self:E(string.format("ERROR: Cound not get position Vec2 of airbase %s", AirbaseName))
   end
   
-  self:GetMinimumBoundingCircleFromParkingSpots( )
+  if Nrunways>0 then
+    self:GetMinimumBoundingCircleFromParkingSpots()
+  end
 
   -- Debug info.
   self:T2(string.format("Registered airbase %s", tostring(self.AirbaseName)))
@@ -65364,6 +65390,7 @@ function AIRBASE:GetMinimumBoundingCircleFromParkingSpots(mark)
   if self.isAirdrome then
     if not self.parkingCircle then
       local spots = self:GetParkingSpotsVec2s()
+      if #spots == 0 then return self.AirbaseZone  end
       local center, radius = UTILS.GetMinimumBoundingCircle(spots)
       self.parkingCircle = ZONE_RADIUS:New(self.AirbaseName.." ParkingCircle",center,radius+50)
       if mark == true then
@@ -168279,7 +168306,7 @@ function AIRWING:AddSquadron(Squadron)
     local NAssets = Squadron.Ngroups * Nunits
     local storage = STORAGE:New(airbasename)
     --self:T(self.lid.."Adding "..typename.." #"..NAssets)
-    if storage and storage:IsLimitedAircraft() and typename ~= "none" then
+    if storage and storage.warehouse and storage:IsLimitedAircraft() and typename ~= "none" then
       local NInStore = storage:GetItemAmount(typename) or 0
       if NAssets > NInStore then
         storage:AddItem(typename,NAssets)
