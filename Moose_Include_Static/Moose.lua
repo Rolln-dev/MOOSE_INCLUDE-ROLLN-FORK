@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-12-30T10:40:27+01:00-f7556fac0e9a692f9ab86ccc831be40c13367476 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2025-12-31T13:17:13+01:00-11a87923983ee5a515acca335ed8527e4dfd54de ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -115040,8 +115040,8 @@ function WAREHOUSE:_DeleteStockItem(stockitem)
     local item=self.stock[i] --#WAREHOUSE.Assetitem
     if item.uid==stockitem.uid then
       table.remove(self.stock,i)
-      -- remove also from warehouse DB
-      _WAREHOUSEDB.Assets[stockitem.uid]=nil
+      -- remove also from warehouse DB (not good! causes an error if the asset needs to be added to a requesting wherehouse)
+      --_WAREHOUSEDB.Assets[stockitem.uid]=nil
       break
     end
   end

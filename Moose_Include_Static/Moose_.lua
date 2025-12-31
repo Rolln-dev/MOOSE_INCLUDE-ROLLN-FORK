@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2025-12-30T10:40:27+01:00-f7556fac0e9a692f9ab86ccc831be40c13367476 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2025-12-31T13:17:13+01:00-11a87923983ee5a515acca335ed8527e4dfd54de ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -55620,7 +55620,6 @@ for i=1,#self.stock do
 local item=self.stock[i]
 if item.uid==stockitem.uid then
 table.remove(self.stock,i)
-_WAREHOUSEDB.Assets[stockitem.uid]=nil
 break
 end
 end
