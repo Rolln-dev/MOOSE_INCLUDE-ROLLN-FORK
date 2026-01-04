@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2025-12-31T13:17:13+01:00-11a87923983ee5a515acca335ed8527e4dfd54de ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-01-03T17:26:17+01:00-2d930ff2dd602b05ee28efd1711e10bebfd46934 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -38142,7 +38142,10 @@ filename=filename..".csv"
 local data=self:ReportScoreAllSummary("",true)
 local text="-- Playername;;Score;;Penalty\n"
 for _playername,_data in pairs(data or{})do
-text=text..string.format("%s;;%d;;%d\n")
+local Playername=_playername or"Ghost"
+local Score=_data.Score or 0
+local Penalty=_data.Penalty or 0
+text=text..string.format("%s;;%d;;%d\n",Playername,Score,Penalty)
 end
 UTILS.SaveToFile(path,filename,text)
 end
