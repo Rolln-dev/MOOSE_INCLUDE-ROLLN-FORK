@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-01-03T17:26:17+01:00-2d930ff2dd602b05ee28efd1711e10bebfd46934 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-01-05T06:58:07+01:00-3aedf8e5d05902f54904151e63c6b63ff7b4627e ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -3428,6 +3428,14 @@ function UTILS.VecSubstract(a, b)
   return {x=a.x-b.x, y=a.y-b.y, z=a.z-b.z}
 end
 
+--- Scale a 3D vectors by multiplication with s.
+-- @param DCS#Vec3 v A Vector in 3D with x, y, z components.
+-- @param #number s Scale
+-- @return DCS#Vec3 Vec3
+function UTILS.VecScale(v, s)
+    return {x = v.x * s, y = v.y * s, z = v.z * s}
+end
+
 --- Substract is not a word, don't want to rename the original function because it's been around since forever
 function UTILS.VecSubtract(a, b)
   return UTILS.VecSubstract(a, b)
@@ -3439,6 +3447,14 @@ end
 -- @return DCS#Vec2 Vector c=a-b with c(i)=a(i)-b(i), i=x,y.
 function UTILS.Vec2Substract(a, b)
   return {x=a.x-b.x, y=a.y-b.y}
+end
+
+--- Calculate the difference between two 3D vectors by substracting the x,y,z components from each other.
+-- @param DCS#Vec3 a Vector in 3D with x, y, z components.
+-- @param DCS#Vec3 b Vector in 3D with x, y, z components.
+-- @return DCS#Vec3 Vector in 3D.
+function UTILS.Vec3Substract(a, b)
+  return {x = a.x - b.x, y = a.y - b.y, z = a.z - b.z}
 end
 
 --- Substract is not a word, don't want to rename the original function because it's been around since forever
@@ -3568,6 +3584,13 @@ function UTILS.Vec2Translate(a, distance, angle)
   local TY=distance*math.sin(Radians)+SY
 
   return {x=TX, y=TY}
+end
+
+--- Calculate the lenght of a 3D vector
+-- @param DCS#Vec3 v A Vector in 3D with x, y, z components.
+-- @return #number length
+function UTILS.Vec3Length(v)
+    return math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
 end
 
 --- Rotate 3D vector in the 2D (x,z) plane. y-component (usually altitude) unchanged.
@@ -7376,6 +7399,100 @@ function UTILS.GetMinimumBoundingCircle(points)
     end
     
     return welzlHelper(pts, #pts, {})
+end
+
+--- Calculated optimal intercepting course (Bearing)
+-- @param DCS#Vec3 A1 Position of flight one
+-- @param DCS#Vec3 V1 VelocityVector of flight one
+-- @param DCS#Vec3 A2 Position of flight two
+-- @param #number V2_speed Speed of A2 in m/s
+-- @return #number Bearing Bearing course for A2 to take for an intercept of A1 or nil if aspect is hot/cold.
+function UTILS.CalculateInterceptBearing(A1, V1, A2, V2_speed)
+    
+    local function berechne_bearing(richtung)
+      local bearing = math.deg(math.atan2(richtung.x, richtung.y))
+      if bearing < 0 then
+          bearing = bearing + 360
+      end
+      return bearing
+    end
+    
+    local function vec_normalize(v)
+      local len = UTILS.Vec3Length(v)
+      if len == 0 then return {x = 0, y = 0, z = 0} end
+      return {x = v.x / len, y = v.y / len, z = v.z / len}
+    end
+
+
+    -- Relative Position von F1 zu F2
+    local rel_pos = UTILS.Vec3Substract(A1, A2)
+    local distance = UTILS.Vec3Length(rel_pos)
+    
+    if distance == 0 then
+        return nil  -- Bereits am gleichen Ort
+    end
+    
+    -- Richtungsvektor von F2 zu F1 (normalisiert)
+    local richtung_zu_f1 = vec_normalize(rel_pos)
+    
+    -- Prüfe HOT: F1 fliegt direkt auf F2 zu
+    -- Das ist der Fall wenn V1 in die entgegengesetzte Richtung von rel_pos zeigt
+    local v1_normalisiert = vec_normalize(V1)
+    local annaeherung = UTILS.VecDot(v1_normalisiert, richtung_zu_f1)
+    
+    if annaeherung < -0.95 then  -- F1 fliegt fast direkt auf F2 zu (Winkel > ~162°)
+        return nil  -- Hot
+    end
+    
+    -- Prüfe COLD: F1 fliegt parallel weg von F2
+    -- Berechne die Geschwindigkeitsdifferenz
+    local rel_velocity = UTILS.VecSubstract(V1, {x=0, y=0, z=0})  -- V1 relativ zu F2 (falls F2 stillsteht)
+    local flucht_komponente = UTILS.VecDot(vec_normalize(rel_velocity), richtung_zu_f1)
+    
+    if flucht_komponente > 0.95 then  -- F1 fliegt fast parallel weg (Winkel < ~18°)
+        return nil  -- Cold
+    end
+    
+    -- Geschwindigkeiten
+    local v1 = UTILS.Vec3Length(V1)
+    local v2 = V2_speed
+    
+    -- Löse quadratische Gleichung für Abfangzeit t
+    local a = UTILS.VecDot(V1, V1) - v2 * v2
+    local b = 2 * UTILS.VecDot(rel_pos, V1)
+    local c = UTILS.VecDot(rel_pos, rel_pos)
+    
+    local discriminant = b * b - 4 * a * c
+    
+    if discriminant < 0 then
+        return nil  -- Keine Lösung möglich
+    end
+    
+    -- Wähle die positive, kleinste Lösung
+    local t1 = (-b + math.sqrt(discriminant)) / (2 * a)
+    local t2 = (-b - math.sqrt(discriminant)) / (2 * a)
+    
+    local t = nil
+    if t1 > 0 and t2 > 0 then
+        t = math.min(t1, t2)
+    elseif t1 > 0 then
+        t = t1
+    elseif t2 > 0 then
+        t = t2
+    else
+        return nil  -- Keine positive Lösung
+    end
+    
+    -- Berechne Treffpunkt
+    local treffpunkt = UTILS.VecAdd(A1, UTILS.VecScale(V1, t))
+    
+    -- Berechne Richtung zum Treffpunkt
+    local richtung = UTILS.VecSubstract(treffpunkt, A2)
+    
+    -- Berechne Bearing
+    local bearing = berechne_bearing(richtung)
+    
+    return UTILS.Round(bearing,0)
 end
 --- **Utils** - Lua Profiler.
 --
@@ -62127,7 +62244,7 @@ function UNIT:SetValidateAndRepositionGroundUnits(Enabled)
     self.ValidateAndRepositionGroundUnits = Enabled
 end
 
---- Get the max kgs of fuel this unit can hold in its *internal* tank(s) and overall (with ext. tanks) in kgs.
+--- Get the max kgs of fuel this unit can hold in its *internal* tank(s) and overall (with external tanks) in kgs.
 -- @param #UNIT self
 -- @return #number InternalFuel Max internal fuel in kgs. Zero if it cannot be determined.
 -- @return #number Overall Fuel Overall max in case there are external tanks in kgs. Zero if it cannot be determined.
@@ -154934,6 +155051,7 @@ CTLD_CARGO = {
   -- @param Wrapper.Unit#UNIT Unit
   -- @return #boolean Outcome
   function CTLD_CARGO:UnitCanCarry(Unit)
+    if not Unit then return false end
     if self.TypeNames == nil then return true end
     local typename = Unit:GetTypeName() or "none"
     if self.TypeNames[typename] then
@@ -157651,6 +157769,28 @@ end
 -- @return #CTLD self
 function CTLD:_LoadTroopsQuantity(Group, Unit, Cargo, quantity)
   local n = math.max(1, tonumber(quantity) or 1)
+
+  -- landed or hovering over load zone?
+  local grounded = not self:IsUnitInAir(Unit)
+  local hoverload = self:CanHoverLoad(Unit)
+
+  -- check if we are in LOAD zone
+  local inzone, zonename, zone, distance = self:IsUnitInZone(Unit,CTLD.CargoZoneType.LOAD)
+  if not inzone then
+    inzone, zonename, zone, distance = self:IsUnitInZone(Unit,CTLD.CargoZoneType.SHIP)
+  end
+
+  if not inzone then
+    self:_SendMessage("You are not close enough to a logistics zone!", 10, false, Group)
+    if not self.debug then return self end
+  elseif not grounded and not hoverload then
+    self:_SendMessage("You need to land or hover in position to load!", 10, false, Group)
+    if not self.debug then return self end
+  elseif self.pilotmustopendoors and not UTILS.IsLoadingDoorOpen(Unit:GetName()) then
+    self:_SendMessage("You need to open the door(s) to load troops!", 10, false, Group)
+    if not self.debug then return self end  
+  end
+
   local prevSuppress = self.suppressmessages
   self.suppressmessages = true
   for i = 1, n do
@@ -157695,11 +157835,10 @@ function CTLD:_AddTroopQuantityMenus(Group, Unit, parentMenu, cargoObj)
     if capacitySets < maxQuantity then maxQuantity = capacitySets end
   end
   for quantity = 1, maxQuantity do
-    local m = MENU_GROUP:New(Group, tostring(quantity), parentMenu)
     if quantity == 1 then
-      MENU_GROUP_COMMAND:New(Group, "Load", m, self._LoadTroops, self, Group, Unit, cargoObj)
+      MENU_GROUP_COMMAND:New(Group, tostring(quantity), parentMenu, self._LoadTroops, self, Group, Unit, cargoObj)
     else
-      MENU_GROUP_COMMAND:New(Group, "Load", m, self._LoadTroopsQuantity, self, Group, Unit, cargoObj, quantity)
+      MENU_GROUP_COMMAND:New(Group, tostring(quantity), parentMenu, self._LoadTroopsQuantity, self, Group, Unit, cargoObj, quantity)
     end
   end
   return self
@@ -157878,6 +158017,17 @@ function CTLD:_AddCrateQuantityMenus(Group, Unit, parentMenu, cargoObj, stockSum
   return self
 end
 
+--- User overrideable function to determine if a unit can get crates.
+  -- @param #CTLD self
+  -- @param Wrapper.Group#GROUP Group
+  -- @param Wrapper.Unit#UNIT Unit
+  -- @param #table Config Configuration entry for the unit.
+  -- @param #number quantity Number of crate sets requested.
+  -- @param #boolean quiet If true, do not send messages to the user.
+  function CTLD:CanGetUnits(Group, Unit, Config, quantity, quiet)
+    return true
+  end
+
 --- (Internal) Spawn a “Get units” entry for a C-130J-30 at load zone.
 -- @param #CTLD self
 -- @param Wrapper.Group#GROUP Group
@@ -157906,6 +158056,9 @@ function CTLD:_C130GetUnits(Group, Unit, Name)
   local inzone = self:IsUnitInZone(Unit,CTLD.CargoZoneType.LOAD)
   if not inzone then
     self:_SendMessage("You are not close enough to a logistics zone!",10,false,Group)
+    return self
+  end
+  if not self:CanGetUnits(Group, Unit, cfg, 1, false) then
     return self
   end
 
@@ -158255,9 +158408,9 @@ function CTLD:_GetCrates(Group, Unit, Cargo, number, drop, pack, quiet, suppress
     Cargo:RemoveStock(requestedSets)
     self:_RefreshCrateQuantityMenus(Group, Unit, Cargo)
   end
-  local text = string.format("Crates for %s have been positioned near you!",cratename)
+  local text = string.format("%d crates for %s have been positioned near you!",number,cratename)
   if drop then
-    text = string.format("Crates for %s have been dropped!",cratename)
+    text = string.format("%d crates for %s have been dropped!",number,cratename)
     self:__CratesDropped(1, Group, Unit, droppedcargo)
   else
     if not quiet then
@@ -158353,7 +158506,7 @@ end
 function CTLD:_ListCratesNearby( _group, _unit)
   self:T(self.lid .. " _ListCratesNearby")
   local finddist = self.CrateDistance or 35
-  local crates,number,loadedbygc,indexgc = self:_FindCratesNearby(_group,_unit, finddist,true,true) -- #table
+  local crates,number,loadedbygc,indexgc = self:_FindCratesNearby(_group,_unit, finddist,true,true,true) -- #table
   if number > 0 or indexgc > 0 then
     local text = REPORT:New("Crates Found Nearby:")
     text:Add("------------------------------------------------------------")
@@ -158452,7 +158605,7 @@ end
 function CTLD:_RemoveCratesNearby(_group, _unit)
   self:T(self.lid.." _RemoveCratesNearby")
   local finddist=self.CrateDistance or 35
-  local crates,number=self:_FindCratesNearby(_group,_unit,finddist,true,true)
+  local crates,number=self:_FindCratesNearby(_group,_unit,finddist,true,true,true)
   if number>0 then
     local removedIDs={}
     local text=REPORT:New("Removing Crates Found Nearby:")
@@ -158565,7 +158718,7 @@ function CTLD:_FindCratesNearby( _group, _unit, _dist, _ignoreweight, ignoretype
       self:T(self.lid .. " Loading restricted: " .. tostring(restricted))
       local staticpos = static:GetCoordinate() --or dcsunitpos
       local cando = cargo:UnitCanCarry(_unit)
-      if ignoretype == true then cando = true end
+      if ignoretype == true then cando = true restricted = false end
       self:T(self.lid .. " Unit can carry: " .. tostring(cando))
       --- Testing
       local distance=self:_GetDistance(location,staticpos)
@@ -159359,7 +159512,7 @@ function CTLD:_BuildCrates(Group, Unit,Engineering,MultiDrop)
       finddist=self.EngineerSearch
   finddist=self.EngineerSearch
   end
-  local crates,number = self:_FindCratesNearby(Group,Unit, finddist,true,true) -- #table
+  local crates,number = self:_FindCratesNearby(Group,Unit,finddist,true,true,not Engineering) -- #table
   local buildables = {}
   local foundbuilds = false
   local canbuild = false
@@ -161152,8 +161305,10 @@ function CTLD:_RefreshDropCratesMenu(Group, Unit)
 -- @param Wrapper.Unit#UNIT Unit The calling unit.
 -- @param #number chunkID the Cargo ID
 -- @return #CTLD self
-function CTLD:_UnloadSingleTroopByID(Group, Unit, chunkID)
+function CTLD:_UnloadSingleTroopByID(Group, Unit, chunkID, qty)
   self:T(self.lid .. " _UnloadSingleTroopByID chunkID=" .. tostring(chunkID))
+
+  qty = qty or 1
 
   local droppingatbase = false
   local inzone, zonename, zone, distance = self:IsUnitInZone(Unit, CTLD.CargoZoneType.LOAD)
@@ -161193,80 +161348,92 @@ function CTLD:_UnloadSingleTroopByID(Group, Unit, chunkID)
         return self
       end
 
+      local deployedTroopsByName = {}
+      local deployedEngineersByName = {}
+
       -- Drop the FIRST cargo in that chunk
-      local foundCargo = chunk[1]
-      if not foundCargo then
-        self:_SendMessage(string.format("No troop cargo at chunk %d!", chunkID), 10, false, Group)
-        if not self.debug then return self end
-        return self
-      end
+      for n = 1, qty do
+        local foundCargo = chunk[1]
+        if not foundCargo then break end
 
-      local cType = foundCargo:GetType()
-      local name  = foundCargo:GetName() or "none"
-      local tmpl  = foundCargo:GetTemplates() or {}
-      local zoneradius = self.troopdropzoneradius or 100
-      local factor = 1
-      if isHerc then
-        factor = foundCargo:GetCratesNeeded() or 1
-        zoneradius = Unit:GetVelocityMPS() or 100
-      end
-      local zone = ZONE_GROUP:New(string.format("Unload zone-%s", unitName), Group, zoneradius * factor)
-      local randomcoord = zone:GetRandomCoordinate(10, 30 * factor)
-      local heading = Group:GetHeading() or 0
-
-      if grounded or hoverunload then
-        randomcoord = Group:GetCoordinate()
-        local Angle = (heading + 270) % 360
-        if isHerc or isHook then
-          Angle = (heading + 180) % 360
-        end
-        local offset = hoverunload and self.TroopUnloadDistHover or self.TroopUnloadDistGround
+        local cType = foundCargo:GetType()
+        local name  = foundCargo:GetName() or "none"
+        local tmpl  = foundCargo:GetTemplates() or {}
+        local zoneradius = self.troopdropzoneradius or 100
+        local factor = 1
         if isHerc then
-          offset = self.TroopUnloadDistGroundHerc or 25
+          factor = foundCargo:GetCratesNeeded() or 1
+          zoneradius = Unit:GetVelocityMPS() or 100
         end
-        if isHook then
-          offset = self.TroopUnloadDistGroundHook or 15
-          if hoverunload and self.TroopUnloadDistHoverHook then
-            offset = self.TroopUnloadDistHoverHook or 5
+        local zone = ZONE_GROUP:New(string.format("Unload zone-%s", unitName), Group, zoneradius * factor)
+        local randomcoord = zone:GetRandomCoordinate(10, 30 * factor)
+        local heading = Group:GetHeading() or 0
+
+        if grounded or hoverunload then
+          randomcoord = Group:GetCoordinate()
+          local Angle = (heading + 270) % 360
+          if isHerc or isHook then
+            Angle = (heading + 180) % 360
           end
+          local offset = hoverunload and self.TroopUnloadDistHover or self.TroopUnloadDistGround
+          if isHerc then
+            offset = self.TroopUnloadDistGroundHerc or 25
+          end
+          if isHook then
+            offset = self.TroopUnloadDistGroundHook or 15
+            if hoverunload and self.TroopUnloadDistHoverHook then
+              offset = self.TroopUnloadDistHoverHook or 5
+            end
+          end
+          randomcoord:Translate(offset, Angle, nil, true)
         end
-        randomcoord:Translate(offset, Angle, nil, true)
+
+        local tempcount = 0
+        if isHook then
+          tempcount = self.ChinookTroopCircleRadius or 5
+        end
+        for _, _template in pairs(tmpl) do
+          self.TroopCounter = self.TroopCounter + 1
+          tempcount = tempcount + 1
+          local alias = string.format("%s-%d", _template, math.random(1,100000))
+          local rad   = 2.5 + (tempcount * 2)
+          local Positions = self:_GetUnitPositions(randomcoord, rad, heading, _template)
+          self.DroppedTroops[self.TroopCounter] = SPAWN:NewWithAlias(_template, alias)
+            :InitDelayOff()
+            :InitSetUnitAbsolutePositions(Positions)
+            :InitValidateAndRepositionGroundUnits(self.validateAndRepositionUnits)
+            :OnSpawnGroup(function(grp) grp.spawntime = timer.getTime() end)
+            :SpawnFromVec2(randomcoord:GetVec2())
+          self:__TroopsDeployed(1, Group, Unit, self.DroppedTroops[self.TroopCounter], cType)
+        end
+        
+        foundCargo:SetWasDropped(true)
+        if cType == CTLD_CARGO.Enum.ENGINEERS then
+          self.Engineers = self.Engineers + 1
+            local grpname = self.DroppedTroops[self.TroopCounter]:GetName()
+          self.EngineersInField[self.Engineers] = CTLD_ENGINEERING:New(name, grpname)
+          deployedEngineersByName[name] = (deployedEngineersByName[name] or 0) + 1
+        else
+          deployedTroopsByName[name] = (deployedTroopsByName[name] or 0) + 1
+        end
+
+        table.remove(chunk, 1)
+        if #chunk == 0 then
+          self.TroopsIDToChunk[chunkID] = nil
+          break
+        end
       end
 
-      local tempcount = 0
-      if isHook then
-        tempcount = self.ChinookTroopCircleRadius or 5
+      local parts = {}
+      for nName,nCount in pairs(deployedTroopsByName) do
+        parts[#parts + 1] = tostring(nCount).."x Troops "..nName
       end
-      for _, _template in pairs(tmpl) do
-        self.TroopCounter = self.TroopCounter + 1
-        tempcount = tempcount + 1
-        local alias = string.format("%s-%d", _template, math.random(1,100000))
-        local rad   = 2.5 + (tempcount * 2)
-        local Positions = self:_GetUnitPositions(randomcoord, rad, heading, _template)
-        self.DroppedTroops[self.TroopCounter] = SPAWN:NewWithAlias(_template, alias)
-          :InitDelayOff()
-          :InitSetUnitAbsolutePositions(Positions)
-          :InitValidateAndRepositionGroundUnits(self.validateAndRepositionUnits)
-          :OnSpawnGroup(function(grp) grp.spawntime = timer.getTime() end)
-          :SpawnFromVec2(randomcoord:GetVec2())
-        self:__TroopsDeployed(1, Group, Unit, self.DroppedTroops[self.TroopCounter], cType)
+      for nName,nCount in pairs(deployedEngineersByName) do
+        parts[#parts + 1] = tostring(nCount).."x Engineers "..nName
       end
-      
-      foundCargo:SetWasDropped(true)
-      if cType == CTLD_CARGO.Enum.ENGINEERS then
-        self.Engineers = self.Engineers + 1
-          local grpname = self.DroppedTroops[self.TroopCounter]:GetName()
-        self.EngineersInField[self.Engineers] = CTLD_ENGINEERING:New(name, grpname)
-        self:_SendMessage(string.format("Dropped Engineers %s into action!", name), 10, false, Group)
-      else
-        self:_SendMessage(string.format("Dropped Troops %s into action!", name), 10, false, Group)
+      if #parts > 0 then
+        self:_SendMessage("Dropped "..table.concat(parts, ", ").." into action!", 10, false, Group)
       end
-
-      table.remove(chunk, 1)
-      if #chunk == 0 then
-        self.TroopsIDToChunk[chunkID] = nil
-      end
-
     else
       -- Return to base logic, remove ONLY the first cargo
       self:_SendMessage("Troops have returned to base!", 10, false, Group)
@@ -161274,7 +161441,8 @@ function CTLD:_UnloadSingleTroopByID(Group, Unit, chunkID)
 
       if self.TroopsIDToChunk and self.TroopsIDToChunk[chunkID] then
         local chunk = self.TroopsIDToChunk[chunkID]
-        if #chunk > 0 then
+        for n = 1, qty do
+          if #chunk == 0 then break end
           local firstObj = chunk[1]
           local cName = firstObj:GetName()
           local gentroops = self.Cargo_Troops
@@ -161289,9 +161457,9 @@ function CTLD:_UnloadSingleTroopByID(Group, Unit, chunkID)
           end
           firstObj:SetWasDropped(true)
           table.remove(chunk, 1)
-          if #chunk == 0 then
-            self.TroopsIDToChunk[chunkID] = nil
-          end
+        end
+        if #chunk == 0 then
+          self.TroopsIDToChunk[chunkID] = nil
         end
       end
     end
@@ -161366,15 +161534,22 @@ function CTLD:_RefreshDropTroopsMenu(Group, Unit)
   for tName, objList in pairs(troopsByName) do
     table.sort(objList, function(a,b) return a:GetID() < b:GetID() end)
     local count = #objList
+    if count > 0 then
+      local chunkID = objList[1]:GetID()
+      self.TroopsIDToChunk[chunkID] = objList
 
-    local chunkID = objList[1]:GetID()
-    self.TroopsIDToChunk[chunkID] = objList
-
-    local label = string.format("Drop %s (%d)", tName, count)
-    MENU_GROUP_COMMAND:New(theGroup, label, dropTroopsMenu, self._UnloadSingleTroopByID, self, theGroup, theUnit, chunkID)
+      local label = string.format("Drop %s (%d)", tName, count)
+      if count == 1 then
+        MENU_GROUP_COMMAND:New(theGroup, label, dropTroopsMenu, self._UnloadSingleTroopByID, self, theGroup, theUnit, chunkID, 1)
+      else
+        local parentMenu = MENU_GROUP:New(theGroup, label, dropTroopsMenu)
+        for q = 1, count do
+          MENU_GROUP_COMMAND:New(theGroup, string.format("Drop (%d) %s", q, tName), parentMenu, self._UnloadSingleTroopByID, self, theGroup, theUnit, chunkID, q)
+        end
+      end
+    end
   end
 end
-
 --- [Internal] Function to check if a template exists in the mission.
 -- @param #CTLD self
 -- @param #table temptable Table of string names
@@ -168301,19 +168476,34 @@ function AIRWING:AddSquadron(Squadron)
   local airbasename = self:GetAirbaseName()
   
   if airbasename then
-    local group = GROUP:FindByName(Squadron.templategroup)
-    local Nunits = 1
-    local units
-    if group then units = group:GetUnits() end
-    if units then Nunits = #units end
-    local typename = Squadron.aircrafttype or "none"
-    local NAssets = Squadron.Ngroups * Nunits
-    local storage = STORAGE:New(airbasename)
-    --self:T(self.lid.."Adding "..typename.." #"..NAssets)
-    if storage and storage.warehouse and storage:IsLimitedAircraft() and typename ~= "none" then
-      local NInStore = storage:GetItemAmount(typename) or 0
-      if NAssets > NInStore then
-        storage:AddItem(typename,NAssets)
+    local group = Squadron.templategroup
+      if group then
+      local Nunits = 1
+      local units
+      if group then units = group:GetUnits() end
+      if units then Nunits = #units end
+      local typename = Squadron.aircrafttype or "none"
+      local NAssets = Squadron.Ngroups * Nunits
+      local storage = STORAGE:New(airbasename)
+      
+      self:T(self.lid.."Adding "..typename.." #"..NAssets)
+      if storage and storage.warehouse and storage:IsLimitedAircraft() and typename ~= "none" then
+        local NInStore = storage:GetItemAmount(typename) or 0
+        if NAssets > NInStore then
+          storage:AddItem(typename,NAssets)
+        end
+      end
+      
+      local unit = group:GetUnit(1)
+      -- if storage is limited, add the amount of liquids needed
+      if unit and storage and storage.warehouse and storage:IsLimitedLiquids() and typename ~= "none" then
+        local fuel = unit:GetFuelMassMax()
+        local neededfuel = (fuel*NAssets) -- kgs of fuel
+        local NInStore = storage:GetLiquidAmount(STORAGE.Liquid.JETFUEL) or 0
+        self:T(string.format(self.lid.."Fuel Needed: %dt | Fuel in store: %dt",neededfuel/1000,NInStore/1000))
+        if neededfuel > NInStore then
+          storage:AddLiquid(STORAGE.Liquid.JETFUEL,neededfuel)
+        end
       end
     end
   end
