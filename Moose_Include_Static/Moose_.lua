@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-01-05T06:58:07+01:00-3aedf8e5d05902f54904151e63c6b63ff7b4627e ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-01-08T13:10:37+01:00-38863514907ca72333c2fdc89dd4447d0d3e2136 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -19217,6 +19217,11 @@ local DirectionVec3=FromCoordinate:GetDirectionVec3(self)
 local AngleRadians=self:GetAngleRadians(DirectionVec3)
 local Distance=self:Get2DDistance(FromCoordinate)
 return"BR, "..self:GetBRText(AngleRadians,Distance,Settings,nil,MagVar,Precision)
+end
+function COORDINATE:ToStringBearing(FromCoordinate,Settings,MagVar,Precision)
+local DirectionVec3=FromCoordinate:GetDirectionVec3(self)
+local AngleRadians=self:GetAngleRadians(DirectionVec3)
+return self:GetBearingText(AngleRadians,Precision,Settings,MagVar)
 end
 function COORDINATE:ToStringBRA(FromCoordinate,Settings,MagVar)
 local DirectionVec3=FromCoordinate:GetDirectionVec3(self)
@@ -115020,6 +115025,7 @@ CRUISER="Cruiser",
 DESTROYER="Destroyer",
 CARRIER="Aircraft Carrier",
 RADIOS="Radios",
+INTERCEPTCOURSE="Intercept course",
 },
 DE={
 TASKABORT="Auftrag abgebrochen!",
@@ -115107,9 +115113,10 @@ CRUISER="Kreuzer",
 DESTROYER="Zerstörer",
 CARRIER="Flugzeugträger",
 RADIOS="Frequenzen",
+INTERCEPTCOURSE="Abfangkurs",
 },
 }
-PLAYERTASKCONTROLLER.version="0.1.71"
+PLAYERTASKCONTROLLER.version="0.1.73"
 function PLAYERTASKCONTROLLER:New(Name,Coalition,Type,ClientFilter)
 local self=BASE:Inherit(self,FSM:New())
 self.Name=Name or"CentCom"
@@ -116194,6 +116201,22 @@ self.SRSQueue:NewTransmission(text,nil,self.SRS,nil,2,{Group},text,30,self.BCFre
 end
 return self
 end
+function PLAYERTASKCONTROLLER:_CalcGroupFuturePosition(group,seconds)
+local p=group:GetCoordinate()
+local v=group:GetVelocityVec3()
+local t=seconds or self.prediction
+local Vec3={x=p.x+v.x*t,y=p.y+v.y*t,z=p.z+v.z*t}
+local futureposition=COORDINATE:NewFromVec3(Vec3)
+if self.verbose==true then
+local markerID=group:GetProperty("PLAYERTASK_ARROW")
+if markerID then
+COORDINATE:RemoveMark(markerID)
+end
+markerID=p:ArrowToAll(futureposition,self.coalition,{1,0,0},1,{1,1,0},0.5,2,true,"Position Calc")
+group:SetProperty("PLAYERTASK_ARROW",markerID)
+end
+return futureposition
+end
 function PLAYERTASKCONTROLLER:_FlashInfo()
 self:T(self.lid.."_FlashInfo")
 for _playername,_client in pairs(self.FlashPlayer)do
@@ -116204,12 +116227,29 @@ local Coordinate=task.Target:GetCoordinate()
 local CoordText=""
 if self.Type~=PLAYERTASKCONTROLLER.Type.A2A and task.Type~=AUFTRAG.Type.INTERCEPT then
 CoordText=Coordinate:ToStringA2G(_client,nil,self.ShowMagnetic)
+local targettxt=self.gettext:GetEntry("TARGET",self.locale)
+local text=targettxt..": "..CoordText
+local m=MESSAGE:New(text,10,"Tasking"):ToClient(_client)
 else
 CoordText=Coordinate:ToStringA2A(_client,nil,self.ShowMagnetic)
-end
 local targettxt=self.gettext:GetEntry("TARGET",self.locale)
-local text="Target: "..CoordText
+local text=targettxt..": "..CoordText
+local name=task.Target:GetName()
+local group=GROUP:FindByName(name)
+local clientcoord=_client:GetCoordinate()
+if group and clientcoord and group:IsAlive()and task.Type==AUFTRAG.Type.INTERCEPT then
+local speed=math.max(UTILS.KnotsToMps(350)or _client:GetVelocityMPS())
+local dist=Coordinate:Get3DDistance(clientcoord)
+local iTime=math.floor(dist/speed)+5
+if iTime<10 then iTime=10
+elseif iTime>600 then iTime=600 end
+local npos=self:_CalcGroupFuturePosition(group,iTime)
+local BR=npos:ToStringBearing(clientcoord,nil,self.ShowMagnetic,0)
+local Intercepttext=self.gettext:GetEntry("INTERCEPTCOURSE",self.locale)
+text=text.."\n"..Intercepttext.." "..BR
+end
 local m=MESSAGE:New(text,10,"Tasking"):ToClient(_client)
+end
 end
 end
 end
@@ -116276,8 +116316,10 @@ elevationmeasure=self.gettext:GetEntry("METER",self.locale)
 else
 Elevation=math.floor(UTILS.MetersToFeet(Elevation))
 end
+if task.Type~=AUFTRAG.Type.INTERCEPT then
 local elev=self.gettext:GetEntry("ELEVATION",self.locale)
 text=text..string.format(elev,tostring(math.floor(Elevation)),elevationmeasure)
+end
 if task.Type==AUFTRAG.Type.PRECISIONBOMBING and self.precisionbombing then
 if LasingDrone and LasingDrone.playertask then
 local yes=self.gettext:GetEntry("YES",self.locale)
