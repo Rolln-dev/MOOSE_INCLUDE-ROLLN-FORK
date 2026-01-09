@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-01-08T13:10:37+01:00-38863514907ca72333c2fdc89dd4447d0d3e2136 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-01-08T18:51:13+01:00-2fdbdb40581b69f90afef0a7cc44292a70b0d708 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -148759,7 +148759,7 @@ _RECOVERYTANKERID=0
 
 --- Class version.
 -- @field #string version
-RECOVERYTANKER.version="1.0.10"
+RECOVERYTANKER.version="1.0.11"
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- TODO list
@@ -149372,6 +149372,22 @@ function RECOVERYTANKER:onafterStart(From, Event, To)
   Spawn:InitRadioCommsOnOff(true)
   Spawn:InitRadioFrequency(self.RadioFreq)
   Spawn:InitRadioModulation(self.RadioModu)
+  
+  if self.callsignname and self.callsignnumber then
+    local grp = GROUP:FindByName(self.tankergroupname)
+    if grp then
+      local typename = grp:GetTypeName() or ""
+      --self:I(self.lid.."Typename: "..typename)
+      local Name
+      local enumerator = CALLSIGN.Tanker
+      if typename == "A6E" then
+        enumerator = CALLSIGN.Intruder
+      end
+      Name = self:_GetCallsignName(self.callsignname,enumerator)
+      --self:I(self.lid.."CallsignName: "..Name)
+      Spawn:InitCallSign(self.callsignname,Name,self.callsignnumber,self.callsignnumber)
+    end
+  end
   Spawn:InitModex(self.modex)
   
   -- Spawn on carrier.
@@ -149639,9 +149655,9 @@ function RECOVERYTANKER:onafterPatternUpdate(From, Event, To)
   -- Task combo.
   
   -- Be a tanker or be an AWACS.
-  local taskroll = self.tanker:EnRouteTaskTanker()
+  local taskrole = self.tanker:EnRouteTaskTanker()
   if self.awacs then
-    taskroll=self.tanker:EnRouteTaskAWACS()
+    taskrole=self.tanker:EnRouteTaskAWACS()
   end
   
   --local taskeplrs=self.tanker:TaskEPLRS(true, 2)
@@ -149650,7 +149666,7 @@ function RECOVERYTANKER:onafterPatternUpdate(From, Event, To)
   local taskroute  = self.tanker:TaskRoute(wp)
   
   -- Note that the order is important here! tasktanker has to come first. Otherwise it does not work.
-  local taskcombo  = self.tanker:TaskCombo({taskroll, taskroute})
+  local taskcombo  = self.tanker:TaskCombo({taskrole, taskroute})
 
   -- Set task.
   self.tanker:SetTask(taskcombo, 1)
@@ -149897,6 +149913,20 @@ function RECOVERYTANKER:_RefuelingStop(EventData)
     self:RefuelStop(receiver)
   end
 
+end
+
+--- Get clear name callsign for spawn from enumerator
+-- @param #RECOVERYTANKER self
+-- @param #number Callsign
+-- @param #table Enumerator The table of callsigns, e.g. `CALLSIGN.Tanker`
+-- @return #string Name Name or "" if not found
+function RECOVERYTANKER:_GetCallsignName(Callsign, Enumerator)
+  for name, value in pairs(Enumerator or {}) do
+    if value==Callsign then
+      return name
+    end
+  end
+  return ""
 end
 
 --- A unit crashed or died.

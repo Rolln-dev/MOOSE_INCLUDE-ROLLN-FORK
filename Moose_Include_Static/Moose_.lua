@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-01-08T13:10:37+01:00-38863514907ca72333c2fdc89dd4447d0d3e2136 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-01-08T18:51:13+01:00-2fdbdb40581b69f90afef0a7cc44292a70b0d708 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -72260,7 +72260,7 @@ terminaltype=nil,
 unlimitedfuel=false,
 }
 _RECOVERYTANKERID=0
-RECOVERYTANKER.version="1.0.10"
+RECOVERYTANKER.version="1.0.11"
 function RECOVERYTANKER:New(carrierunit,tankergroupname)
 local self=BASE:Inherit(self,FSM:New())
 if type(carrierunit)=="string"then
@@ -72492,6 +72492,19 @@ end
 Spawn:InitRadioCommsOnOff(true)
 Spawn:InitRadioFrequency(self.RadioFreq)
 Spawn:InitRadioModulation(self.RadioModu)
+if self.callsignname and self.callsignnumber then
+local grp=GROUP:FindByName(self.tankergroupname)
+if grp then
+local typename=grp:GetTypeName()or""
+local Name
+local enumerator=CALLSIGN.Tanker
+if typename=="A6E"then
+enumerator=CALLSIGN.Intruder
+end
+Name=self:_GetCallsignName(self.callsignname,enumerator)
+Spawn:InitCallSign(self.callsignname,Name,self.callsignnumber,self.callsignnumber)
+end
+end
 Spawn:InitModex(self.modex)
 if self.takeoff==SPAWN.Takeoff.Air then
 local hdg=self.carrier:GetHeading()
@@ -72611,12 +72624,12 @@ local wp={}
 wp[1]=self.tanker:GetCoordinate():WaypointAirTurningPoint(nil,UTILS.MpsToKmph(self.speed),{},"Current Position")
 wp[2]=p0:WaypointAirTurningPoint(nil,UTILS.MpsToKmph(self.speed),{taskorbit},"Tanker Orbit")
 self.tanker:WayPointInitialize(wp)
-local taskroll=self.tanker:EnRouteTaskTanker()
+local taskrole=self.tanker:EnRouteTaskTanker()
 if self.awacs then
-taskroll=self.tanker:EnRouteTaskAWACS()
+taskrole=self.tanker:EnRouteTaskAWACS()
 end
 local taskroute=self.tanker:TaskRoute(wp)
-local taskcombo=self.tanker:TaskCombo({taskroll,taskroute})
+local taskcombo=self.tanker:TaskCombo({taskrole,taskroute})
 self.tanker:SetTask(taskcombo,1)
 self.Tupdate=timer.getTime()
 end
@@ -72728,6 +72741,14 @@ MESSAGE:New(text,10,"DEBUG"):ToAllIf(self.Debug)
 self:T(self.lid..text)
 self:RefuelStop(receiver)
 end
+end
+function RECOVERYTANKER:_GetCallsignName(Callsign,Enumerator)
+for name,value in pairs(Enumerator or{})do
+if value==Callsign then
+return name
+end
+end
+return""
 end
 function RECOVERYTANKER:_OnEventCrashOrDead(EventData)
 self:F2({eventdata=EventData})
