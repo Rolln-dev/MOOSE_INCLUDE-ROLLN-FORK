@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-01-08T18:51:13+01:00-2fdbdb40581b69f90afef0a7cc44292a70b0d708 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-01-09T15:38:05+01:00-99b7b4b057c397d54ba1658518ec470b88f954ad ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -120901,7 +120901,7 @@ BlueIntel:SetVerbosity(0)
 if self.usecorridors==true then
 BlueIntel:SetCorridorZones(self.corridorzones)
 if self.corridorfloor or self.corridorceiling then
-BlueIntel:SetCorridorLimitsFeet(self.corridorfloor,self.corridorceiling)
+BlueIntel:SetCorridorLimits(self.corridorfloor,self.corridorceiling)
 end
 end
 BlueIntel:Start()
