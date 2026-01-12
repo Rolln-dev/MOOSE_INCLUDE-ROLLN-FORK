@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-01-09T15:38:05+01:00-99b7b4b057c397d54ba1658518ec470b88f954ad ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-01-12T13:13:48+01:00-9536d368b031e60e8e4356a5a2faafa67888683b ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -32326,6 +32326,64 @@ AIRBASE.Sinai={
 ["Wadi_Abu_Rish"]="Wadi Abu Rish",
 ["Wadi_al_Jandali"]="Wadi al Jandali",
 }
+AIRBASE.SinaiMap={
+["Abu_Rudeis"]="Abu Rudeis",
+["Abu_Suwayr"]="Abu Suwayr",
+["Al_Bahr_al_Ahmar"]="Al Bahr al Ahmar",
+["Al_Ismailiyah"]="Al Ismailiyah",
+["Al_Khatatbah"]="Al Khatatbah",
+["Al_Mansurah"]="Al Mansurah",
+["Al_Rahmaniyah_Air_Base"]="Al Rahmaniyah Air Base",
+["As_Salihiyah"]="As Salihiyah",
+["AzZaqaziq"]="AzZaqaziq",
+["Baluza"]="Baluza",
+["Ben_Gurion"]="Ben-Gurion",
+["Beni_Suef"]="Beni Suef",
+["Bilbeis_Air_Base"]="Bilbeis Air Base",
+["Bir_Hasanah"]="Bir Hasanah",
+["Birma_Air_Base"]="Birma Air Base",
+["Borg_El_Arab_International_Airport"]="Borg El Arab International Airport",
+["Cairo_International_Airport"]="Cairo International Airport",
+["Cairo_West"]="Cairo West",
+["Damascus_Intl"]="Damascus Intl",
+["Difarsuwar_Airfield"]="Difarsuwar Airfield",
+["Ein_Shamer"]="Ein Shamer",
+["El_Arish"]="El Arish",
+["El_Gora"]="El Gora",
+["El_Minya"]="El Minya",
+["Fayed"]="Fayed",
+["Gebel_El_Basur_Air_Base"]="Gebel El Basur Air Base",
+["Hatzerim"]="Hatzerim",
+["Hatzor"]="Hatzor",
+["Hurghada_International_Airport"]="Hurghada International Airport",
+["Inshas_Airbase"]="Inshas Airbase",
+["Jiyanklis_Air_Base"]="Jiyanklis Air Base",
+["Kedem"]="Kedem",
+["Khalkhalah_Air_Base"]="Khalkhalah Air Base",
+["Kibrit_Air_Base"]="Kibrit Air Base",
+["King_Feisal_Air_Base"]="King Feisal Air Base",
+["Kom_Awshim"]="Kom Awshim",
+["Megiddo"]="Megiddo",
+["Melez"]="Melez",
+["Mezzeh_Air_Base"]="Mezzeh Air Base",
+["Nevatim"]="Nevatim",
+["Ovda"]="Ovda",
+["Palmachim"]="Palmachim",
+["Quwaysina"]="Quwaysina",
+["Rafic_Hariri_Intl"]="Rafic Hariri Intl",
+["Ramat_David"]="Ramat David",
+["Ramon_Airbase"]="Ramon Airbase",
+["Ramon_International_Airport"]="Ramon International Airport",
+["Sde_Dov"]="Sde Dov",
+["Sharm_El_Sheikh_International_Airport"]="Sharm El Sheikh International Airport",
+["St_Catherine"]="St Catherine",
+["Taba_International_Airport"]="Taba International Airport",
+["Tabuk"]="Tabuk",
+["TabukHeliBase"]="TabukHeliBase",
+["Tel_Nof"]="Tel Nof",
+["Wadi_Abu_Rish"]="Wadi Abu Rish",
+["Wadi_al_Jandali"]="Wadi al Jandali",
+}
 AIRBASE.Kola={
 ["Afrikanda"]="Afrikanda",
 ["Alakurtti"]="Alakurtti",
@@ -32924,7 +32982,7 @@ self:T2({parkingdata=parkingdata})
 return parkingdata
 end
 function AIRBASE:GetParkingSpotsNumber(termtype)
-local parkingdata=self:GetParkingData(false)
+local parkingdata=self:GetParkingData(false)or{}
 local nspots=0
 for _,parkingspot in pairs(parkingdata)do
 if AIRBASE._CheckTerminalType(parkingspot.Term_Type,termtype)then
@@ -32934,7 +32992,7 @@ end
 return nspots
 end
 function AIRBASE:GetFreeParkingSpotsNumber(termtype,allowTOAC)
-local parkingdata=self:GetParkingData(true)
+local parkingdata=self:GetParkingData(true)or{}
 local nfree=0
 for _,parkingspot in pairs(parkingdata)do
 if AIRBASE._CheckTerminalType(parkingspot.Term_Type,termtype)then
@@ -32946,7 +33004,7 @@ end
 return nfree
 end
 function AIRBASE:GetFreeParkingSpotsCoordinates(termtype,allowTOAC)
-local parkingdata=self:GetParkingData(true)
+local parkingdata=self:GetParkingData(true)or{}
 local spots={}
 for _,parkingspot in pairs(parkingdata)do
 if AIRBASE._CheckTerminalType(parkingspot.Term_Type,termtype)then
@@ -32996,7 +33054,7 @@ return self.AirbaseZone
 end
 end
 function AIRBASE:_InitParkingSpots()
-local parkingdata=self:GetParkingData(false)
+local parkingdata=self:GetParkingData(false)or{}
 self.parking={}
 self.parkingByID={}
 self.NparkingTotal=0
@@ -33045,8 +33103,8 @@ function AIRBASE:_GetParkingSpotByID(TerminalID)
 return self.parkingByID[TerminalID]
 end
 function AIRBASE:GetParkingSpotsTable(termtype)
-local parkingdata=self:GetParkingData(false)
-local parkingfree=self:GetParkingData(true)
+local parkingdata=self:GetParkingData(false)or{}
+local parkingfree=self:GetParkingData(true)or{}
 local function _isfree(_tocheck)
 for _,_spot in pairs(parkingfree)do
 if _spot.Term_Index==_tocheck.Term_Index then
@@ -33072,7 +33130,7 @@ end
 return spots
 end
 function AIRBASE:GetFreeParkingSpotsTable(termtype,allowTOAC)
-local parkingfree=self:GetParkingData(true)
+local parkingfree=self:GetParkingData(true)or{}
 local freespots={}
 for _,_spot in pairs(parkingfree)do
 if AIRBASE._CheckTerminalType(_spot.Term_Type,termtype)then
@@ -33088,7 +33146,7 @@ end
 return freespots
 end
 function AIRBASE:GetParkingSpotData(TerminalID)
-local parkingdata=self:GetParkingSpotsTable()
+local parkingdata=self:GetParkingSpotsTable()or{}
 for _,_spot in pairs(parkingdata)do
 local spot=_spot
 self:T({TerminalID=spot.TerminalID,TerminalType=spot.TerminalType})
@@ -33103,7 +33161,7 @@ function AIRBASE:MarkParkingSpots(termtype,mark)
 if mark==nil then
 mark=true
 end
-local parkingdata=self:GetParkingSpotsTable(termtype)
+local parkingdata=self:GetParkingSpotsTable(termtype)or{}
 local airbasename=self:GetName()
 self:E(string.format("Parking spots at %s for terminal type %s:",airbasename,tostring(termtype)))
 for _,_spot in pairs(parkingdata)do
@@ -33167,7 +33225,7 @@ if _test then
 return validspots
 end
 local markobstacles=false
-for _,parkingspot in pairs(parkingdata)do
+for _,parkingspot in pairs(parkingdata or{})do
 local _spot=parkingspot.Coordinate
 local _termid=parkingspot.TerminalID
 if AIRBASE._CheckTerminalType(parkingspot.TerminalType,terminaltype)and self:_CheckParkingLists(_termid)then
