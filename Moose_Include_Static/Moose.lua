@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-01-12T13:13:48+01:00-9536d368b031e60e8e4356a5a2faafa67888683b ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-01-20T11:38:34+01:00-9c0394f035119493ce658a753cee97094424ca80 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -6517,6 +6517,18 @@ function UTILS.Vec2toVec3(vec,y)
   else
     return {x = vec.x, y = vec.y, z = vec.z}  -- it was already Vec3, actually.
   end
+end
+
+-- Converts a Vec3 to a Vec2
+-- @param vec3 the Vec3 to convert
+-- @return Vec2 The Vec2 output
+function UTILS.Vec3toVec2(Vec3)
+    if Vec3 and type(Vec3)=="table" then
+        local Vec2 = {}
+        Vec2.x = Vec3.x or 0
+        Vec2.y = Vec3.z or 0
+        return Vec2
+    end
 end
 
 --- Get the correction needed for true north in radians

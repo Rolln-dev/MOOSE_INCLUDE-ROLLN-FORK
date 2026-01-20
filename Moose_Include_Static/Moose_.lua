@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-01-12T13:13:48+01:00-9536d368b031e60e8e4356a5a2faafa67888683b ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-01-20T11:38:34+01:00-9c0394f035119493ce658a753cee97094424ca80 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -4674,6 +4674,14 @@ end
 return{x=vec.x,y=y,z=vec.y}
 else
 return{x=vec.x,y=vec.y,z=vec.z}
+end
+end
+function UTILS.Vec3toVec2(Vec3)
+if Vec3 and type(Vec3)=="table"then
+local Vec2={}
+Vec2.x=Vec3.x or 0
+Vec2.y=Vec3.z or 0
+return Vec2
 end
 end
 function UTILS.GetNorthCorrection(gPoint)
