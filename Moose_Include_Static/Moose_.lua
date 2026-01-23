@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-01-22T12:35:16+01:00-7a3ea2918dfbe73705a510f3fb1ae9047057b6ff ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-01-22T17:18:59+01:00-3ab3278db41dd4699341f1f640b6a75fbd4b3984 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -38779,6 +38779,7 @@ Ropt=Ropt*0.87
 elseif height<=12500 then
 Ropt=Ropt*0.98
 end
+local WeaponWrapper=WEAPON:New(SEADWeapon)
 for n=1,3 do
 local dist=Ropt-((n-1)*20000)
 local predpos=pos0:Translate(dist,wph)
@@ -38798,7 +38799,7 @@ _targetgroup=tgtgrp
 _targetgroupname=tgtgrp:GetName()
 _targetskill=tgtgrp:GetUnit(1):GetSkill()
 self:T("*** Found Target = ".._targetgroupname)
-self:ManageEvasion(_targetskill,_targetgroup,pos0,"AGM_88",SEADGroup,20)
+self:ManageEvasion(_targetskill,_targetgroup,pos0,"AGM_88",SEADGroup,20,WeaponWrapper)
 end
 end
 end
@@ -57216,7 +57217,7 @@ self.maxclassic=6
 self.autoshorad=true
 self.ShoradGroupSet=SET_GROUP:New()
 self.FilterZones=Zones
-self.ARMWeaponSeen={}
+self.LastThreatEval={}
 self.InboundARMs={}
 self.SkateZones=nil
 self.SkateNumber=3
@@ -58170,46 +58171,47 @@ end
 return self
 end
 function MANTIS:SeadAllowSuppression(targetGroup,targetName,attackerGroup,weaponName,weaponWrapper,tti,delay)
-self.ARMWeaponSeen=self.ARMWeaponSeen or{}
-self.ARMWeaponSeen[targetName]=self.ARMWeaponSeen[targetName]or{}
-local wid=nil
-if weaponWrapper and weaponWrapper.GetDCSObject then
-local wpn=weaponWrapper:GetDCSObject()
-if wpn then
-wid=wpn:getID()
-end
-end
-if wid and self.ARMWeaponSeen[targetName][wid]then
-self:T(string.format(
-"MANTIS: Duplicate ARM ignored for %s (weapon %d)",
-targetName,wid
-))
-return false
-end
-if wid then
-self.ARMWeaponSeen[targetName][wid]=true
-end
-self.InboundARMs[targetName]=(self.InboundARMs[targetName]or 0)+1
-local samdata
+self:T(self.lid.."SeadAllowSuppression")
+self:T(string.format("MANTIS:SeadAllowSuppression REQUEST | target=%s | weapon=%s | tti=%s | delay=%s",tostring(targetName),
+tostring(weaponName),tostring(tti),tostring(delay)))
+local armcap=nil
 for _,sam in pairs(self.SAM_Table or{})do
 if sam[1]==targetName then
-samdata=sam
+armcap=sam[7]
 break
 end
 end
-local armcap=samdata and samdata[7]
-if not armcap or armcap==0 then
-return true
+self:T(string.format("MANTIS:SeadAllowSuppression SAM DATA | target=%s | ARMCapacity=%s",tostring(targetName),armcap and tostring(armcap)or"nil"))
+local THREAT_WINDOW=0.1
+self.LastThreatEval=self.LastThreatEval or{}
+self.InboundARMs=self.InboundARMs or{}
+local now=timer.getTime()
+local last=self.LastThreatEval[targetName]or 0
+if(now-last)>=THREAT_WINDOW then
+self.InboundARMs[targetName]=(self.InboundARMs[targetName]or 0)+1
+self.LastThreatEval[targetName]=now
+self:T(string.format("MANTIS:SeadAllowSuppression NEW threat accepted | Δt=%.3f",now-last))
+else
+self:T(string.format("MANTIS:SeadAllowSuppression duplicate evaluation ignored | Δt=%.3f",now-last))
 end
+local inbound=self.InboundARMs[targetName]or 0
+self:T(string.format("MANTIS:SeadAllowSuppression THREAT COUNT | target=%s | inboundThreats=%d",tostring(targetName),inbound))
 if targetGroup and targetGroup:IsAlive()then
 local AmmotT,AmmoS,_,_,AmmoM=targetGroup:GetAmmunition()
 if AmmoM and AmmoM==0 then
+self:T(string.format("MANTIS:SeadAllowSuppression DECISION -> APPROVED (no MISSILES) | target=%s",tostring(targetName)))
 return true
 end
 end
-if self.InboundARMs[targetName]>armcap then
+if(not armcap)or armcap==0 then
+self:T(string.format("MANTIS:SeadAllowSuppression DECISION -> APPROVED (no ARMCAP) | target=%s",tostring(targetName)))
 return true
 end
+if inbound>=armcap then
+self:T(string.format("MANTIS:SeadAllowSuppression DECISION -> APPROVED (inbound %d >= cap %d) | target=%s",inbound,armcap,tostring(targetName)))
+return true
+end
+self:T(string.format("MANTIS:SeadAllowSuppression DECISION -> DENIED (inbound %d < cap %d) | target=%s",inbound,armcap,tostring(targetName)))
 return false
 end
 function MANTIS:_CheckLoop(samset,detset,dlink,limit)
@@ -58249,6 +58251,7 @@ switchedon=switchedon+1
 switch=true
 end
 if self.SamStateTracker[name]~="RED"and switch then
+self.SamStateTracker[name]="RED"
 self:__RedState(1,samgroup)
 end
 if shortsam==true and self.SmokeDecoy==true and Distance<self.DetectAccousticRadius*1.5 then
@@ -58275,27 +58278,13 @@ else
 samgroup:OptionAlarmStateGreen()
 end
 if self.SamStateTracker[name]~="GREEN"then
-self:__GreenState(1,samgroup)
 self.SamStateTracker[name]="GREEN"
+self:__GreenState(1,samgroup)
 end
 if self.debug or self.verbose then
 local text=string.format("SAM %s in alarm state GREEN!",name)
 if self.verbose then self:I(self.lid..text)end
 end
-end
-end
-end
-if self.debug or self.verbose or self.logsamstatus then
-for _,_status in pairs(self.SamStateTracker)do
-if _status=="GREEN"then
-instatusgreen=instatusgreen+1
-elseif _status=="RED"then
-instatusred=instatusred+1
-end
-end
-if self.Shorad then
-for _,_name in pairs(self.Shorad.ActiveGroups or{})do
-activeshorads=activeshorads+1
 end
 end
 end
@@ -58319,12 +58308,26 @@ local instatusredm,instatusgreenm,activeshoradsm=self:_CheckLoop(samset,detset,d
 local samset=self.SAM_Table_Short
 local instatusreds,instatusgreens,activeshoradss=self:_CheckLoop(samset,detset,dlink,self.maxshortrange)
 local samset=self.SAM_Table_PointDef
-instatusred,instatusgreen,activeshorads=self:_CheckLoop(samset,detset,dlink,self.maxpointdefrange)
+local instatusred,instatusgreen,activeshorads=self:_CheckLoop(samset,detset,dlink,self.maxpointdefrange)
 else
 local samset=self:_GetSAMTable()
-instatusred,instatusgreen,activeshorads=self:_CheckLoop(samset,detset,dlink,self.maxclassic)
+local instatusred,instatusgreen,activeshorads=self:_CheckLoop(samset,detset,dlink,self.maxclassic)
 end
 local function GetReport()
+if self.debug or self.verbose or self.logsamstatus then
+for _,_status in pairs(self.SamStateTracker)do
+if _status=="GREEN"then
+instatusgreen=instatusgreen+1
+elseif _status=="RED"then
+instatusred=instatusred+1
+end
+end
+if self.Shorad then
+for _,_name in pairs(self.Shorad.ActiveGroups or{})do
+activeshorads=activeshorads+1
+end
+end
+end
 local statusreport=REPORT:New("\nMANTIS Status "..self.name)
 statusreport:Add("+-----------------------------+")
 statusreport:Add(string.format("+ SAM in RED State: %2d",instatusred))
@@ -58510,7 +58513,6 @@ function MANTIS:onafterSeadSuppressionEnd(From,Event,To,Group,Name)
 self:T({From,Event,To,Name})
 self.SuppressedGroups[Name]=false
 self.InboundARMs[Name]=0
-self.ARMWeaponSeen[Name]=nil
 return self
 end
 function MANTIS:onafterSeadSuppressionPlanned(From,Event,To,Group,Name,SuppressionStartTime,SuppressionEndTime,Attacker)
