@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-01-22T17:18:59+01:00-3ab3278db41dd4699341f1f640b6a75fbd4b3984 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-01-23T19:21:22+01:00-c387749a81d7b1c238b5d21689f5e944af792eb9 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -158046,7 +158046,7 @@ function CTLD:_LoadTroopsQuantity(Group, Unit, Cargo, quantity)
   local prevSuppress = self.suppressmessages
   self.suppressmessages = true
   for i = 1, n do
-    timer.scheduleFunction(function() self:_LoadTroops(Group, Unit, Cargo, true) end, {}, timer.getTime() + 0.2 * i)
+    timer.scheduleFunction(function() self:_LoadTroops(Group, Unit, Cargo) end, {}, timer.getTime() + 0.2 * i)
   end
   timer.scheduleFunction(function()
     self.suppressmessages = prevSuppress
@@ -158498,7 +158498,7 @@ function CTLD:_GetCrates(Group, Unit, Cargo, number, drop, pack, quiet, suppress
   local capabilities = self:_GetUnitCapabilities(Unit) -- #CTLD.UnitTypeCapabilities
   local canloadcratesno = capabilities.cratelimit
   local loaddist = self.CrateDistance or 35
-  local nearcrates, numbernearby = self:_FindCratesNearby(Group,Unit,loaddist,true,true)
+  local nearcrates, numbernearby = self:_FindCratesNearby(Group,Unit,loaddist,true,true,true) -- to ignore what's inside
   if numbernearby >= canloadcratesno and not drop then
     self:_SendMessage("There are enough crates nearby already! Take care of those first!", 10, false, Group)
     return false
@@ -159507,6 +159507,8 @@ function CTLD:_UnloadTroops(Group, Unit)
       local loadedcargo = self.Loaded_Cargo[unitname] or {} -- #CTLD.LoadedCargo
       -- looking for troops
       local cargotable = loadedcargo.Cargo
+      local deployedTroopsByName = {}
+      local deployedEngineersByName = {}
       for _,_cargo in pairs (cargotable) do
         local cargo = _cargo -- #CTLD_CARGO
         local type = cargo:GetType() -- #CTLD_CARGO.Enum
@@ -159563,12 +159565,22 @@ function CTLD:_UnloadTroops(Group, Unit)
             self.Engineers = self.Engineers + 1
             local grpname = self.DroppedTroops[self.TroopCounter]:GetName()
             self.EngineersInField[self.Engineers] = CTLD_ENGINEERING:New(name, grpname)
-            self:_SendMessage(string.format("Dropped Engineers %s into action!",name), 10, false, Group)
+            deployedEngineersByName[name] = (deployedEngineersByName[name] or 0) + 1
           else
-            self:_SendMessage(string.format("Dropped Troops %s into action!",name), 10, false, Group)
+            deployedTroopsByName[name] = (deployedTroopsByName[name] or 0) + 1
           end
         end -- if type end
       end  -- cargotable loop
+      local parts = {}
+      for nName,nCount in pairs(deployedTroopsByName) do
+        parts[#parts + 1] = tostring(nCount).."x Troops "..nName
+      end
+      for nName,nCount in pairs(deployedEngineersByName) do
+        parts[#parts + 1] = tostring(nCount).."x Engineers "..nName
+      end
+      if #parts > 0 then
+        self:_SendMessage("Dropped "..table.concat(parts, ", ").." into action!", 10, false, Group)
+      end
     else -- droppingatbase
         self:_SendMessage("Troops have returned to base!", 10, false, Group) 
         self:__TroopsRTB(1, Group, Unit, zonename, zone)
@@ -159760,9 +159772,8 @@ function CTLD:_BuildCrates(Group, Unit,Engineering,MultiDrop)
   local baseDist = self.CrateDistance or 35
   local finddist=baseDist
   --if Engineering and self.EngineerSearch and self.EngineerSearch>baseDist then 
-    if self.EngineerSearch and self.EngineerSearch>baseDist then -- this make also helicopter to be able to crates that are further away due to herc airdrop
+    if Engineering and self.EngineerSearch and self.EngineerSearch>baseDist then -- this make also helicopter to be able to crates that are further away due to herc airdrop
       finddist=self.EngineerSearch
-  finddist=self.EngineerSearch
   end
   local crates,number = self:_FindCratesNearby(Group,Unit,finddist,true,true,not Engineering) -- #table
   local buildables = {}
@@ -159788,11 +159799,12 @@ function CTLD:_BuildCrates(Group, Unit,Engineering,MultiDrop)
         local isHercDrop=Crate:WasDropped(true)
         if not isHercDrop and distToUnit>baseDist then
       elseif self.UseC130LoadAndUnload and self:IsC130J(Unit) and distToUnit<15 then
-        self:_SendMessage("Please unload crates from the C-130 before building!",10,false,Group)
-        return self
+        -- self:_SendMessage("Please unload crates from the C-130 before building!",10,false,Group)
+        -- return self
       elseif self.UseC130LoadAndUnload and self:IsHook(Unit) and distToUnit<5 then
-        self:_SendMessage("Please unload crates from the CH-47 before building!",10,false,Group)
-        return self
+        -- self:_SendMessage("Please unload crates from the CH-47 before building!",10,false,Group)
+        -- return self
+      elseif self.UseC130LoadAndUnload and (Unit:GetTypeName()=="Mi-8MTV2" or Unit:GetTypeName()=="Mi-8MT") and distToUnit<8 then
       else
         --local testmarker = ccoord:MarkToAll("Crate found",true,"Build Position")
         if not buildables[name] then
@@ -159864,7 +159876,7 @@ function CTLD:_BuildCrates(Group, Unit,Engineering,MultiDrop)
           local base = Unit:GetCoordinate():Translate(20,hdg)
 
           if full == 1 then
-            local cratesNow, numberNow = self:_FindCratesNearby(Group,Unit, finddist,true,true)
+            local cratesNow, numberNow = self:_FindCratesNearby(Group,Unit, finddist,true,true, not Engineering)
             self:_CleanUpCrates(cratesNow,build,numberNow)
             self:_RefreshLoadCratesMenu(Group,Unit)
             if self.buildtime and self.buildtime > 0 then
@@ -159881,7 +159893,7 @@ function CTLD:_BuildCrates(Group, Unit,Engineering,MultiDrop)
           else
             local start = -((full-1)*sep)/2
             for n=1,full do
-              local cratesNow, numberNow = self:_FindCratesNearby(Group,Unit, finddist,true,true)
+              local cratesNow, numberNow = self:_FindCratesNearby(Group,Unit, finddist,true,true, not Engineering)
               self:_CleanUpCrates(cratesNow,build,numberNow)
               self:_RefreshLoadCratesMenu(Group,Unit)
               local off   = start + (n-1)*sep
@@ -160675,13 +160687,25 @@ function CTLD:_RefreshF10Menus()
               _group.CTLD_TroopMenus = {}
               if self.usesubcats then
                 local subcatmenus = {}
+                local subcatcount = 0
+                local onlycat = nil
                 for catName, _ in pairs(self.subcatsTroop) do
-                  subcatmenus[catName] = MENU_GROUP:New(_group, catName, troopsmenu)
+                  subcatcount = subcatcount + 1
+                  onlycat = catName
+                end
+                local useTroopSubcats = subcatcount > 1 or (subcatcount == 1 and onlycat ~= "Other")
+                if useTroopSubcats then
+                  for catName, _ in pairs(self.subcatsTroop) do
+                    subcatmenus[catName] = MENU_GROUP:New(_group, catName, troopsmenu)
+                  end
                 end
                 for _, cargoObj in pairs(self.Cargo_Troops) do
                   if not cargoObj.DontShowInMenu then
                     local menutext = cargoObj.Name
-                    local parent = subcatmenus[cargoObj.Subcategory] or troopsmenu
+                    local parent = troopsmenu
+                    if useTroopSubcats and cargoObj.Subcategory and subcatmenus[cargoObj.Subcategory] then
+                      parent = subcatmenus[cargoObj.Subcategory]
+                    end
                     local mSet = MENU_GROUP:New(_group, menutext, parent)
                     _group.CTLD_TroopMenus[cargoObj.Name] = mSet
                     self:_AddTroopQuantityMenus(_group,_unit,mSet,cargoObj)
@@ -244182,7 +244206,7 @@ end
 -- 
 -------------------------------------------------------------------------
 -- Date: September 2023
--- Last Update: Aug 2025
+-- Last Update: Jan 2026
 -------------------------------------------------------------------------
 --
 --- **Ops** - Easy GCI & CAP Manager
@@ -244250,6 +244274,8 @@ end
 -- @field #number FuelCriticalThreshold
 -- @field #boolean showpatrolpointmarks
 -- @field #table EngageTargetTypes
+-- @field #number maintenancetime
+-- @field #number repairtime
 -- @extends Core.Fsm#FSM
 
 --- *“Airspeed, altitude, and brains. Two are always needed to successfully complete the flight.”* -- Unknown.
@@ -244445,7 +244471,7 @@ EASYGCICAP = {
 
 --- EASYGCICAP class version.
 -- @field #string version
-EASYGCICAP.version="0.1.33"
+EASYGCICAP.version="0.1.34"
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 
@@ -244504,6 +244530,7 @@ function EASYGCICAP:New(Alias, AirbaseName, Coalition, EWRName)
   self.FuelCriticalThreshold = 10
   self.showpatrolpointmarks = false
   self.EngageTargetTypes = {"Air"}
+  self:SetDefaultTurnoverTime()
   
   -- Set some string id for output to DCS.log file.
   self.lid=string.format("EASYGCICAP %s | ", self.alias)
@@ -244766,6 +244793,18 @@ end
 function EASYGCICAP:SetDefaultMissionRange(Range)
   self:T(self.lid.."SetDefaultMissionRange")
   self.missionrange = Range or 100
+  return self
+end
+
+--- Set default turnover times for squadrons in minutes
+-- @param #EASYGCICAP self
+-- @param #number MaintenanceTime Time in minutes it takes until a flight is combat ready again. Default is 5 min.
+-- @param #number RepairTime Time in minutes it takes to repair a flight for each life point taken. Default is 10 min.
+-- @return #EASYGCICAP self
+function EASYGCICAP:SetDefaultTurnoverTime(MaintenanceTime,RepairTime)
+  self:T(self.lid.."SetDefaultTurnoverTime")
+  self.maintenancetime=MaintenanceTime or 5
+  self.repairtime=RepairTime or 10
   return self
 end
 
@@ -245378,7 +245417,7 @@ function EASYGCICAP:_AddSquadron(TemplateName, SquadName, AirbaseName, AirFrames
   Squadron_One:AddMissionCapability({AUFTRAG.Type.CAP, AUFTRAG.Type.GCICAP, AUFTRAG.Type.INTERCEPT, AUFTRAG.Type.PATROLRACETRACK, AUFTRAG.Type.ALERT5})
   --Squadron_One:SetFuelLowRefuel(true)
   Squadron_One:SetFuelLowThreshold(0.3)
-  Squadron_One:SetTurnoverTime(10,20)
+  Squadron_One:SetTurnoverTime(self.maintenancetime,self.repairtime)
   Squadron_One:SetModex(Modex)
   Squadron_One:SetLivery(Livery)
   Squadron_One:SetSkill(Skill or AI.Skill.AVERAGE)
@@ -245409,7 +245448,7 @@ function EASYGCICAP:_AddReconSquadron(TemplateName, SquadName, AirbaseName, AirF
   Squadron_One:AddMissionCapability({AUFTRAG.Type.RECON})
   --Squadron_One:SetFuelLowRefuel(true)
   Squadron_One:SetFuelLowThreshold(0.3)
-  Squadron_One:SetTurnoverTime(10,20)
+  Squadron_One:SetTurnoverTime(self.maintenancetime,self.repairtime)
   Squadron_One:SetModex(Modex)
   Squadron_One:SetLivery(Livery)
   Squadron_One:SetSkill(Skill or AI.Skill.AVERAGE)
@@ -245443,7 +245482,7 @@ function EASYGCICAP:_AddTankerSquadron(TemplateName, SquadName, AirbaseName, Air
   Squadron_One:AddMissionCapability({AUFTRAG.Type.TANKER})
   --Squadron_One:SetFuelLowRefuel(true)
   Squadron_One:SetFuelLowThreshold(0.3)
-  Squadron_One:SetTurnoverTime(10,20)
+  Squadron_One:SetTurnoverTime(self.maintenancetime,self.repairtime)
   Squadron_One:SetModex(Modex)
   Squadron_One:SetLivery(Livery)
   Squadron_One:SetSkill(Skill or AI.Skill.AVERAGE)
@@ -245480,7 +245519,7 @@ function EASYGCICAP:_AddAWACSSquadron(TemplateName, SquadName, AirbaseName, AirF
   Squadron_One:AddMissionCapability({AUFTRAG.Type.AWACS})
   --Squadron_One:SetFuelLowRefuel(true)
   Squadron_One:SetFuelLowThreshold(0.3)
-  Squadron_One:SetTurnoverTime(10,20)
+  Squadron_One:SetTurnoverTime(self.maintenancetime,self.repairtime)
   Squadron_One:SetModex(Modex)
   Squadron_One:SetLivery(Livery)
   Squadron_One:SetSkill(Skill or AI.Skill.AVERAGE)
@@ -245970,7 +246009,7 @@ end
 -- 
 -------------------------------------------------------------------------
 -- Date: Dec 2025
--- Last Update: Dec 2025
+-- Last Update: Jan 2026
 -------------------------------------------------------------------------
 --
 -- ===
@@ -246242,7 +246281,7 @@ EASYA2G = {
 
 --- EASYA2G class version.
 -- @field #string version
-EASYA2G.version="0.1.3"
+EASYA2G.version="0.1.4"
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- TODO list
@@ -246301,6 +246340,7 @@ function EASYA2G:New(Alias, AirbaseName, Coalition, ScoutName)
   self.FuelCriticalThreshold = 10
   self.showpatrolpointmarks = false
   self.EngageTargetTypes = {"Ground"}
+  self:SetDefaultTurnoverTime()
   
   -- Set some string id for output to DCS.log file.
   self.lid=string.format("EASYA2G %s | ", self.alias)
@@ -246495,7 +246535,7 @@ function EASYA2G:_AddSquadron(TemplateName, SquadName, AirbaseName, AirFrames, S
   Squadron_One:AddMissionCapability({AUFTRAG.Type.CAS, AUFTRAG.Type.CASENHANCED, AUFTRAG.Type.BAI, AUFTRAG.Type.ALERT5, AUFTRAG.Type.BOMBING, AUFTRAG.Type.STRIKE})
   --Squadron_One:SetFuelLowRefuel(true)
   Squadron_One:SetFuelLowThreshold(0.3)
-  Squadron_One:SetTurnoverTime(10,20)
+  Squadron_One:SetTurnoverTime(self.maintenancetime,self.repairtime)
   Squadron_One:SetModex(Modex)
   Squadron_One:SetLivery(Livery)
   Squadron_One:SetSkill(Skill or AI.Skill.AVERAGE)
