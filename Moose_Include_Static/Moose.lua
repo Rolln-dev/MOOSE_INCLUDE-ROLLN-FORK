@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-01-23T19:21:22+01:00-c387749a81d7b1c238b5d21689f5e944af792eb9 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-01-25T13:14:53+01:00-ac61c3a55c70de5bbc58b507a7c2fb03202a51f7 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -4844,16 +4844,27 @@ end
 -- @param #boolean Cinematic (Optional, needs Structured = true) If true, place a fire/smoke effect on the dead static position.
 -- @param #number Effect (Optional for Cinematic) What effect to use. Defaults to a random effect. Smoke presets are: 1=small smoke and fire, 2=medium smoke and fire, 3=large smoke and fire, 4=huge smoke and fire, 5=small smoke, 6=medium smoke, 7=large smoke, 8=huge smoke.
 -- @param #number Density (Optional for Cinematic) What smoke density to use, can be 0 to 1. Defaults to 0.5.
+-- @param #boolean Resurrection If true, dead units can be restored on load. Defaults to false.
+-- @param #number ResurrectPercentage Use this percentage of probability to resurrect a unit. [0..100], defaults to 25.
+-- @param #number Healmin If set, life points of a resurrected unit will be randomly restored to min this percentage. [0..100], defaults to 25.
+-- @param #number Healmax If set, life points of a resurrected unit will be randomly restored to max this percentage. [0..100], defaults to 75.
 -- @return #table Table of data objects (tables) containing groupname, coordinate and group object. Returns nil when file cannot be read.
 -- @return #table When using Cinematic: table of names of smoke and fire objects, so they can be extinguished with `COORDINATE.StopBigSmokeAndFire( name )`
-function UTILS.LoadStationaryListOfGroups(Path,Filename,Reduce,Structured,Cinematic,Effect,Density)
-
+function UTILS.LoadStationaryListOfGroups(Path,Filename,Reduce,Structured,Cinematic,Effect,Density,Resurrection,ResurrectPercentage,Healmin,Healmax)
+    
+  local healmin = Healmin or 25
+  local healmax = Healmax or 75
+  local resurrection = (Resurrection == true) and true or false  
+  local resurrectpercentage = ResurrectPercentage or 25
+  
   local fires = {}
 
+  ---
+  -- @param Core.Point#COORDINATE coord
   local function Smokers(name,coord,effect,density)
     local eff = math.random(8)
     if type(effect) == "number" then eff = effect end
-    coord:BigSmokeAndFire(eff,density,name)
+    coord:BigSmokeAndFire( eff, Density, 300, 1, name )
     table.insert(fires,name)
   end
 
@@ -4868,7 +4879,16 @@ function UTILS.LoadStationaryListOfGroups(Path,Filename,Reduce,Structured,Cinema
           local name = _unit:GetName()
           Smokers(name,coordinate,Effect,Density)
         end
-        _unit:Destroy(false)
+        -- TODO Resurrection logic
+        local resurectok = math.random(1,100)
+        BASE:E(string.format("Load Group | Resurrection | Resurrect %s | Thresh %d | Random %d",tostring(resurrection),resurrectpercentage,resurectok))
+        if resurrection == true and (resurectok < resurrectpercentage) then
+          local heallife = math.random(healmin,healmax)
+          BASE:E("Load Group | Resurrection | Life "..heallife)
+          _unit:SetLife(heallife)
+        else
+          _unit:Destroy(false)
+        end
         reduced = reduced + 1
         if reduced == anzahl then break end
       end
@@ -77491,7 +77511,7 @@ function SEAD:New( SEADGroupPrefixes, Padding )
   self:AddTransition("*",             "ManageEvasion",                "*")
   self:AddTransition("*",             "CalculateHitZone",             "*")
   
-  self:I("*** SEAD - Started Version 0.4.10")
+  self:I("*** SEAD - Started Version 0.4.11")
   return self
 end
 
@@ -77776,19 +77796,12 @@ function SEAD:onafterManageEvasion(From,Event,To,_targetskill,_targetgroup,SEADP
         local SuppressionStartTime = timer.getTime() + delay
         local SuppressionEndTime = timer.getTime() + delay + _tti + self.Padding + delay
         local _targetgroupname = _targetgroup:GetName()
-        if not self.SuppressedGroups[_targetgroupname] then
+        local shoradactive = _targetgroup:GetProperty("SHORAD_ACTIVE")
+        if not self.SuppressedGroups[_targetgroupname] and shoradactive ~= true then
           -- TODO: ask callback if suppression is allowed BEFORE scheduling timers
           local allow = true
           if self.UseCallBack and self.CallBack and self.CallBack.SeadAllowSuppression then
-            allow = self.CallBack:SeadAllowSuppression(
-              _targetgroup,
-              _targetgroupname,
-              SEADGroup,
-              SEADWeaponName,
-              Weapon,
-              _tti,
-              delay
-            )
+            allow = self.CallBack:SeadAllowSuppression(_targetgroup,_targetgroupname,SEADGroup,SEADWeaponName,Weapon,_tti,delay)
           end
           if not allow then
             self:T(string.format("*** SEAD - %s | Suppression vetoed by callback", _targetgroupname))
@@ -118099,7 +118112,7 @@ end
 MANTIS = {
   ClassName             = "MANTIS",
   name                  = "mymantis",
-  version               = "0.9.43",
+  version               = "0.9.44",
   SAM_Templates_Prefix  = "",
   SAM_Group             = nil,
   EWR_Templates_Prefix  = "",
@@ -118216,10 +118229,10 @@ MANTIS.SamData = {
   ["Silkworm"] = { Range=90, Blindspot=1, Height=0.2, Type="Long", Radar="Silkworm" },
   ["C-RAM"] = { Range=2, Blindspot=0, Height=2, Type="Point", Radar="HEMTT_C-RAM_Phalanx", Point="true" },
   -- units from HDS Mod, multi launcher options is tricky
-  ["SA-10B"] = { Range=75, Blindspot=0, Height=18, Type="Medium" , Radar="SA-10B"},
-  ["SA-17"] = { Range=50, Blindspot=3, Height=50, Type="Medium", Radar="SA-17", ARMCapacity=3 },
-  ["SA-20A"] = { Range=150, Blindspot=5, Height=27, Type="Long" , Radar="S-300PMU1"},
-  ["SA-20B"] = { Range=200, Blindspot=4, Height=27, Type="Long" , Radar="S-300PMU2"},
+  ["SA-10B"] = { Range=75, Blindspot=0, Height=18, Type="Medium" , Radar="SA-10B", ARMCapacity=4},
+  ["SA-17"] = { Range=50, Blindspot=3, Height=50, Type="Medium", Radar="SA-17", ARMCapacity=4 },
+  ["SA-20A"] = { Range=150, Blindspot=5, Height=27, Type="Long" , Radar="S-300PMU1", ARMCapacity=16},
+  ["SA-20B"] = { Range=200, Blindspot=4, Height=27, Type="Long" , Radar="S-300PMU2", ARMCapacity=18},
   ["SA-21"] = { Range=380, Blindspot=5, Height=30, Type="Long" , Radar="92N6E"},
   ["S-300VM"] = { Range=200, Blindspot=5, Height=30, Type="Long" , Radar="9S32M", ARMCapacity=4},
   ["S-300V4"] = { Range=380, Blindspot=5, Height=30, Type="Long" , Radar="9S32M", ARMCapacity=4},
@@ -118230,9 +118243,9 @@ MANTIS.SamData = {
   ["Nike"] = { Range=155, Blindspot=6, Height=30, Type="Long", Radar="HIPAR" },
   ["Dog Ear"] = { Range=11, Blindspot=0, Height=9, Type="Point", Radar="Dog Ear", Point="true" },
   -- CH Added to DCS core 2.9.19.x
-  ["Pantsir S1"] = { Range=20, Blindspot=1.2, Height=15, Type="Point", Radar="PantsirS1" , Point="true" }, 
+  ["Pantsir S1"] = { Range=20, Blindspot=1.2, Height=15, Type="Point", Radar="PantsirS1" , Point="true", ARMCapacity=3 }, 
   ["Tor M2"] = { Range=12, Blindspot=1, Height=10, Type="Point", Radar="TorM2", Point="true", ARMCapacity=4  },
-  ["IRIS-T SLM"] = { Range=40, Blindspot=0.5, Height=20, Type="Medium", Radar="CH_IRIST_SLM" }, 
+  ["IRIS-T SLM"] = { Range=40, Blindspot=0.5, Height=20, Type="Medium", Radar="CH_IRIST_SLM", ARMCapacity=12  }, -- 4 per starter, usually 3 starters in a battery
 }
 
 --- SAM data HDS
@@ -118248,13 +118261,13 @@ MANTIS.SamDataHDS = {
   -- group name MUST contain HDS to ID launcher type correctly!
   ["SA-2 HDS"] = { Range=56, Blindspot=7, Height=30, Type="Medium", Radar="V759" }, 
   ["SA-3 HDS"] = { Range=20, Blindspot=6, Height=30, Type="Short", Radar="V-601P" },  
-  ["SA-10B HDS"] = { Range=90, Blindspot=5, Height=25, Type="Long" , Radar="5P85CE ln"}, -- V55RUD
+  ["SA-10B HDS"] = { Range=90, Blindspot=5, Height=25, Type="Long" , Radar="5P85CE ln", ARMCapacity=8}, -- V55RUD
   ["SA-10C HDS"] = { Range=75, Blindspot=5, Height=25, Type="Long" , Radar="5P85SE ln", ARMCapacity=3}, -- V55RUD
-  ["SA-17 HDS"] = { Range=50, Blindspot=3, Height=50, Type="Medium", Radar="SA-17 " },
-  ["SA-12 HDS 2"] = { Range=100, Blindspot=13, Height=30, Type="Long" , Radar="S-300V 9A82 l"},
-  ["SA-12 HDS 1"] = { Range=75, Blindspot=6, Height=25, Type="Long" , Radar="S-300V 9A83 l"},
-  ["SA-23 HDS 2"] = { Range=200, Blindspot=5, Height=37, Type="Long", Radar="S-300VM 9A82ME" },
-  ["SA-23 HDS 1"] = { Range=100, Blindspot=1, Height=50, Type="Long", Radar="S-300VM 9A83ME" },
+  ["SA-17 HDS"] = { Range=50, Blindspot=3, Height=50, Type="Medium", Radar="SA-17", ARMCapacity=4 },
+  ["SA-12 HDS 2"] = { Range=100, Blindspot=13, Height=30, Type="Long" , Radar="S-300V 9A82 l", ARMCapacity=12},
+  ["SA-12 HDS 1"] = { Range=75, Blindspot=6, Height=25, Type="Long" , Radar="S-300V 9A83 l", ARMCapacity=12},
+  ["SA-23 HDS 2"] = { Range=200, Blindspot=5, Height=37, Type="Long", Radar="S-300VM 9A82ME", ARMCapacity=14 },
+  ["SA-23 HDS 1"] = { Range=100, Blindspot=1, Height=50, Type="Long", Radar="S-300VM 9A83ME", ARMCapacity=14 },
   ["HQ-2 HDS"] = { Range=50, Blindspot=6, Height=35, Type="Medium", Radar="HQ_2_Guideline_LN" },
   ["SAMPT Block 1 HDS"] = { Range=120, Blindspot=1, Height=20, Type="long", Radar="SAMPT_MLT_Blk1" }, -- Block 1 Launcher
   ["SAMPT Block 1INT HDS"] = { Range=150, Blindspot=1, Height=25, Type="long", Radar="SAMPT_MLT_Blk1NT" }, -- Block 1-INT Launcher
@@ -118299,20 +118312,20 @@ MANTIS.SamDataCH = {
     -- group name MUST contain CHM to ID launcher type correctly!
    ["2S38 CHM"] = { Range=6, Blindspot=0.1, Height=4.5, Type="Short", Radar="2S38" },
    ["PantsirS1 CHM"] = { Range=20, Blindspot=1.2, Height=15, Type="Point", Radar="PantsirS1", Point="true", ARMCapacity=3 }, 
-   ["PantsirS2 CHM"] = { Range=30, Blindspot=1.2, Height=18, Type="Medium", Radar="PantsirS2" }, 
+   ["PantsirS2 CHM"] = { Range=30, Blindspot=1.2, Height=18, Type="Medium", Radar="PantsirS2", ARMCapacity=4 }, 
    ["PGL-625 CHM"] = { Range=10, Blindspot=1, Height=5, Type="Short", Radar="PGL_625" }, 
    ["HQ-17A CHM"] = { Range=15, Blindspot=1.5, Height=10, Type="Short", Radar="HQ17A" }, 
    ["M903PAC2 CHM"] = { Range=120, Blindspot=3, Height=24.5, Type="Long", Radar="MIM104_M903_PAC2" },
    ["M903PAC3 CHM"] = { Range=160, Blindspot=1, Height=40, Type="Long", Radar="MIM104_M903_PAC3" }, 
-   ["TorM2 CHM"] = { Range=12, Blindspot=1, Height=10, Type="Point", Radar="TorM2", Point="true"  },
-   ["TorM2K CHM"] = { Range=12, Blindspot=1, Height=10, Type="Point", Radar="TorM2K", Point="true"  },
-   ["TorM2M CHM"] = { Range=16, Blindspot=1, Height=10, Type="Point", Radar="TorM2M", Point="true"  }, 
+   ["TorM2 CHM"] = { Range=12, Blindspot=1, Height=10, Type="Point", Radar="TorM2", Point="true", ARMCapacity=3  },
+   ["TorM2K CHM"] = { Range=12, Blindspot=1, Height=10, Type="Point", Radar="TorM2K", Point="true", ARMCapacity=4  },
+   ["TorM2M CHM"] = { Range=16, Blindspot=1, Height=10, Type="Point", Radar="TorM2M", Point="true", ARMCapacity=4  }, 
    ["NASAMS3-AMRAAMER CHM"] = { Range=50, Blindspot=2, Height=35.7, Type="Medium", Radar="CH_NASAMS3_LN_AMRAAM_ER" }, 
    ["NASAMS3-AIM9X2 CHM"] = { Range=20, Blindspot=0.2, Height=18, Type="Short", Radar="CH_NASAMS3_LN_AIM9X2" },
    ["C-RAM CHM"] = { Range=2, Blindspot=0, Height=2, Type="Point", Radar="CH_Centurion_C_RAM", Point="true" }, 
    ["PGZ-09 CHM"] = { Range=4, Blindspot=0.5, Height=3, Type="Point", Radar="CH_PGZ09", Point="true" },
-   ["S350-9M100 CHM"] = { Range=15, Blindspot=1, Height=8, Type="Short", Radar="CH_S350_50P6_9M100" },
-   ["S350-9M96D CHM"] = { Range=150, Blindspot=2.5, Height=30, Type="Long", Radar="CH_S350_50P6_9M96D" },
+   ["S350-9M100 CHM"] = { Range=15, Blindspot=1, Height=8, Type="Short", Radar="CH_S350_50P6_9M100", ARMCapacity=20 },
+   ["S350-9M96D CHM"] = { Range=150, Blindspot=2.5, Height=30, Type="Long", Radar="CH_S350_50P6_9M96D", ARMCapacity=20 },
    ["LAV-AD CHM"] = { Range=8, Blindspot=0.16, Height=4.8, Type="Short", Radar="CH_LAVAD" }, 
    ["HQ-22 CHM"] = { Range=170, Blindspot=5, Height=27, Type="Long", Radar="CH_HQ22_LN" }, 
    ["PGZ-95 CHM"] = { Range=2.5, Blindspot=0.5, Height=2, Type="Point", Radar="CH_PGZ95",Point="true" },
@@ -118324,8 +118337,8 @@ MANTIS.SamDataCH = {
    ["Skynex CHM"] = { Range=3.5, Blindspot=0.1, Height=3.5, Type="Point", Radar="CH_SkynexHX", Point="true" },
    ["Skyshield CHM"] = { Range=3.5, Blindspot=0.1, Height=3.5, Type="Point", Radar="CH_Skyshield_Gun", Point="true" },
    ["WieselOzelot CHM"] = { Range=8, Blindspot=0.16, Height=4.8, Type="Short", Radar="CH_Wiesel2Ozelot" }, 
-   ["BukM3-9M317M CHM"] = { Range=70, Blindspot=0.25, Height=35, Type="Medium", Radar="CH_BukM3_9A317M" },  
-   ["BukM3-9M317MA CHM"] = { Range=70, Blindspot=0.25, Height=35, Type="Medium", Radar="CH_BukM3_9A317MA" },  
+   ["BukM3-9M317M CHM"] = { Range=70, Blindspot=0.25, Height=35, Type="Medium", Radar="CH_BukM3_9A317M", ARMCapacity=20 },  
+   ["BukM3-9M317MA CHM"] = { Range=70, Blindspot=0.25, Height=35, Type="Medium", Radar="CH_BukM3_9A317MA",  ARMCapacity=20 },  
    ["SkySabre CHM"] = { Range=30, Blindspot=0.5, Height=10, Type="Medium", Radar="CH_SkySabreLN" },  
    ["Stormer CHM"] = { Range=7.5, Blindspot=0.3, Height=7, Type="Short", Radar="CH_StormerHVM" },  
    ["THAAD CHM"] = { Range=200, Blindspot=40, Height=150, Type="Long", Radar="CH_THAAD_M1120" },  
@@ -119625,6 +119638,7 @@ do
     local group = GROUP:FindByName(grpname) -- Wrapper.Group#GROUP
     local units = group:GetUnits()
     local SAMData = self.SamData
+    local ARMCapacity
     if mod then
       SAMData = self.SamDataHDS
     elseif sma then
@@ -119632,22 +119646,23 @@ do
     elseif chm then
       SAMData = self.SamDataCH
     end
-    --self:I("Looking to auto-match for "..grpname)
+    self:T("Looking to auto-match for "..grpname)
     for _,_unit in pairs(units) do
       local unit = _unit -- Wrapper.Unit#UNIT
-      local type = string.lower(unit:GetTypeName())
-      --self:I(string.format("Matching typename: %s",type))
+      local typename = string.lower(unit:GetTypeName())
+      self:T(string.format("Matching typename: %s",typename))
       for idx,entry in pairs(SAMData) do
         local _entry = entry -- #MANTIS.SamData
         local _radar = string.lower(_entry.Radar)
-        --self:I(string.format("Trying typename: %s",_radar))
-        if string.find(type,_radar,1,true) then
+        self:T(string.format("Trying typename: %s",_radar))
+        if string.find(typename,_radar,1,true) then
           type = _entry.Type
           radiusscale = self.radiusscale[type]
           range = _entry.Range * 1000 * radiusscale -- max firing range used as switch-on
           height = _entry.Height * 1000 -- max firing height
-          blind = _entry.Blindspot * 100 -- blind spot range 
-          --self:I(string.format("Match: %s - %s",_radar,type))
+          blind = _entry.Blindspot * 100 -- blind spot range
+          ARMCapacity = _entry.ARMCapacity 
+          self:T(string.format("Match: %s - %s",_radar,type))
           found = true
           break
         end
@@ -119668,7 +119683,7 @@ do
     if not found then
       self:E(self.lid .. string.format("*****Could not match radar data for %s! Will default to midrange values!",grpname))
     end
-    return range, height, type, blind
+    return range, height, type, blind, ARMCapacity
   end
   
   --- [Internal] Function to get SAM firing data
@@ -119727,7 +119742,7 @@ do
     end
     --- Tertiary filter if not found
     if (not found) or HDSmod or SMAMod or CHMod then
-      range, height, type = self:_GetSAMDataFromUnits(grpname,HDSmod,SMAMod,CHMod)
+      range, height, type, blind, ARMCapacity = self:_GetSAMDataFromUnits(grpname,HDSmod,SMAMod,CHMod)
     elseif not found then
       self:E(self.lid .. string.format("*****Could not match radar data for %s! Will default to midrange values!",grpname))
     end
@@ -119770,6 +119785,7 @@ do
         local grpname = group:GetName()
         local grpcoord = group:GetCoordinate()
         local grprange,grpheight,type,blind,ARMCapacity  = self:_GetSAMRange(grpname)
+        if ARMCapacity and ARMCapacity>0 then _group:SetProperty("ARMCapacity",ARMCapacity) end
         table.insert( SAM_Tbl, {grpname, grpcoord, grprange, grpheight, blind, type, ARMCapacity})
         --table.insert( SEAD_Grps, grpname )
         if type == MANTIS.SamType.LONG then
@@ -119837,9 +119853,12 @@ do
           local grprange, grpheight,type,blind, ARMCapacity  = self:_GetSAMRange(grpname)
           -- TODO the below might stop working at some point after some hours, needs testing
           --local radaralive = group:IsSAM()
+          if ARMCapacity and ARMCapacity>0 then _group:SetProperty("ARMCapacity",ARMCapacity) end
           local radaralive = true
           table.insert( SAM_Tbl, {grpname, grpcoord, grprange, grpheight, blind, type, ARMCapacity}) -- make the table lighter, as I don't really use the zone here
-          table.insert( SEAD_Grps, grpname )
+          if type ~= MANTIS.SamType.POINT then
+            table.insert( SEAD_Grps, grpname )
+          end
           if type == MANTIS.SamType.LONG and radaralive then
             table.insert( SAM_Tbl_lg, {grpname, grpcoord, grprange, grpheight, blind, type})
             self:T({grpname,grprange, grpheight})
@@ -119926,7 +119945,7 @@ do
 -- @param #MANTIS self
 -- @param Wrapper.Group#GROUP targetGroup
 -- @param #string targetName
--- @param Wrapper.Group#GROUPattackerGroup
+-- @param Wrapper.Group#GROUP attackerGroup
 -- @param #string weaponName
 -- @param Wrapper.Weapon#WEAPON weaponWrapper
 -- @param #number tti
@@ -119945,12 +119964,14 @@ function MANTIS:SeadAllowSuppression(targetGroup, targetName, attackerGroup, wea
   ----------------------------------------------------------------
   -- LOOK UP ARM CAPACITY FOR THIS SAM
   ----------------------------------------------------------------
-  local armcap = nil
-
-  for _, sam in pairs(self.SAM_Table or {}) do
-    if sam[1] == targetName then
-      armcap = sam[7] -- ARMCapacity
-      break
+  local armcap = targetGroup:GetProperty("ARMCapacity")
+  
+  if not armcap then
+    for _, sam in pairs(self.SAM_Table or {}) do
+      if sam[1] == targetName then
+        armcap = sam[7] -- ARMCapacity
+        break
+      end
     end
   end
 
@@ -120044,6 +120065,7 @@ function MANTIS:SeadAllowSuppression(targetGroup, targetName, attackerGroup, wea
       if self.Shorad and self.Shorad.ActiveGroups and self.Shorad.ActiveGroups[name] then
        activeshorad = true
       end
+      if samgroup:GetProperty("SHORAD_ACTIVE") == true and activeshorad == false then activeshorad = true end
       if IsInZone and (not suppressed) and (not activeshorad) then --check any target in zone and not currently managed by SEAD
         if samgroup:IsAlive() then
           -- switch on SAM
@@ -120276,6 +120298,7 @@ function MANTIS:SeadAllowSuppression(targetGroup, targetName, attackerGroup, wea
       self.ShoradLink = true
       self.Shorad.Groupset=self.ShoradGroupSet
       self.Shorad.debug = self.debug
+      self.Shorad:AddCallBack(self)
     end
     if self.shootandscoot and self.SkateZones and self.Shorad then
       self.Shorad:AddScootZones(self.SkateZones,self.SkateNumber or 3,self.ScootRandom,self.ScootFormation)
@@ -120527,7 +120550,7 @@ end
 -- @image Functional.Shorad.jpg
 --
 -- Date: Nov 2021
--- Last Update: Jan 2025
+-- Last Update: Jan 2026
 
 -------------------------------------------------------------------------
 --- **SHORAD** class, extends Core.Base#BASE
@@ -120702,7 +120725,7 @@ do
       self.SmokeDecoyColor = SmokeDecoyColor or SMOKECOLOR.White
     end
     
-    self:I("*** SHORAD - Started Version 0.3.5")
+    self:I("*** SHORAD - Started Version 0.3.6")
     -- Set the string id for output to DCS.log file.
     self.lid=string.format("SHORAD %s | ", self.name)
     self:_InitState()
@@ -120971,6 +120994,17 @@ do
     return returnname
   end
   
+  --- Set an object to call back when going evasive.
+  -- @param #SHORAD self
+  -- @param #table Object The object to call. 
+  -- @return #SHORAD self
+  function SHORAD:AddCallBack(Object)
+    self:T({Class=Object.ClassName})
+    self.CallBack = Object
+    self.UseCallBack = true
+    return self
+  end
+  
   --- Smoke a SHORAD Group
   -- @param #SHORAD self
   -- @param Wrapper.Group#GROUP Group The Shorad Group to Smoke
@@ -121030,7 +121064,56 @@ do
   -- mymantis:Start()
   function SHORAD:onafterWakeUpShorad(From, Event, To, TargetGroup, Radius, ActiveTimer, TargetCat, ShotAt)
     self:T(self.lid .. " WakeUpShorad")
-    self:T({TargetGroup, Radius, ActiveTimer, TargetCat})
+    --self:T({TargetGroup, Radius, ActiveTimer, TargetCat})
+    
+    local TDiff = 4
+    
+    -- local function to switch off shorad again
+    local function SleepShorad(group)
+      if group and group:IsAlive() then
+        local groupname = group:GetName()
+        self.ActiveGroups[groupname] = nil
+        if self.UseEmOnOff then
+          group:EnableEmission(false)
+        else
+          group:OptionAlarmStateGreen()
+        end
+        group:SetProperty("SHORAD_ACTIVE",false)
+        local text = string.format("Sleeping SHORAD %s", group:GetName())
+        self:T(text)
+        local m = MESSAGE:New(text,10,"SHORAD"):ToAllIf(self.debug)
+        --Shoot and Scoot
+        if self.shootandscoot then
+          self:__ShootAndScoot(1,group)
+        else
+          --group:RelocateGroundRandomInRadius(30,500,false,true,"Diamond",true)
+        end
+      end
+    end
+    
+    local function WakeUp(_group,groupname)
+      -- shot at a group we protect
+      local text = string.format("Waking up SHORAD %s", _group:GetName())
+      self:T(text)
+      local m = MESSAGE:New(text,10,"SHORAD"):ToAllIf(self.debug)
+      if self.UseEmOnOff then
+        _group:EnableEmission(true)
+      end
+      _group:OptionAlarmStateRed()
+      _group:SetProperty("SHORAD_ACTIVE",true)
+      self:_SmokeUnits(_group)
+      if self.ActiveGroups[groupname] == nil then -- no timer yet for this group
+        self.ActiveGroups[groupname] = { Timing = ActiveTimer }
+        local endtime = timer.getTime() + (ActiveTimer * math.random(75,100) / 100 ) -- randomize wakeup a bit
+        self.ActiveGroups[groupname].Timer = TIMER:New(SleepShorad,_group):Start(endtime)
+        --Shoot and Scoot
+        if self.shootandscoot then
+          self:__ShootAndScoot(TDiff,_group)
+          TDiff=TDiff+1
+        end
+      end
+    end   
+    
     local targetcat = TargetCat or Object.Category.UNIT
     local targetgroup = TargetGroup
     local targetvec2 = nil
@@ -121047,70 +121130,41 @@ do
     local groupset = self.Groupset --Core.Set#SET_GROUP
     local shoradset = groupset:GetAliveSet() --#table
     
-    -- local function to switch off shorad again
-    local function SleepShorad(group)
-      if group and group:IsAlive() then
-        local groupname = group:GetName()
-        self.ActiveGroups[groupname] = nil
-        if self.UseEmOnOff then
-          group:EnableEmission(false)
-        else
-          group:OptionAlarmStateGreen()
-        end
-        local text = string.format("Sleeping SHORAD %s", group:GetName())
-        self:T(text)
-        local m = MESSAGE:New(text,10,"SHORAD"):ToAllIf(self.debug)
-        --Shoot and Scoot
-        if self.shootandscoot then
-          self:__ShootAndScoot(1,group)
-        end
-      end
-    end
-    
     -- go through set and find the one(s) to activate
-    local TDiff = 4
+   
     for _,_group in pairs (shoradset) do
       
       local groupname = _group:GetName()
       
       if groupname == TargetGroup and ShotAt==true then
         -- Shot at a SHORAD group
-        if self.UseEmOnOff then
-          _group:EnableEmission(false)
+        local allow = false
+        if self.CallBack and self.UseCallBack == true then
+          allow = self.CallBack:SeadAllowSuppression(_group,groupname)
         end
-        _group:OptionAlarmStateGreen()
-        self.ActiveGroups[groupname] = nil
-        local text = string.format("Shot at SHORAD %s! Evading!", _group:GetName())
-        self:T(text)
-        local m = MESSAGE:New(text,10,"SHORAD"):ToAllIf(self.debug)
-        self:_SmokeUnits(_group)
-        --Shoot and Scoot
-        if self.shootandscoot then
-          self:__ShootAndScoot(1,_group)
-        end
-        
-      elseif _group:IsAnyInZone(targetzone) or groupname == TargetGroup then
-        -- shot at a group we protect
-        local text = string.format("Waking up SHORAD %s", _group:GetName())
-        self:T(text)
-        local m = MESSAGE:New(text,10,"SHORAD"):ToAllIf(self.debug)
-        if self.UseEmOnOff then
-          _group:EnableEmission(true)
-        end
-        _group:OptionAlarmStateRed()
-        self:_SmokeUnits(_group)
-        if self.ActiveGroups[groupname] == nil then -- no timer yet for this group
-          self.ActiveGroups[groupname] = { Timing = ActiveTimer }
-          local endtime = timer.getTime() + (ActiveTimer * math.random(75,100) / 100 ) -- randomize wakeup a bit
-          self.ActiveGroups[groupname].Timer = TIMER:New(SleepShorad,_group):Start(endtime)
+        if allow == true then
+          if self.UseEmOnOff then
+            _group:EnableEmission(false)
+          end
+          _group:OptionAlarmStateGreen()
+          self.ActiveGroups[groupname] = nil
+          local text = string.format("Shot at SHORAD %s! Evading!", _group:GetName())
+          self:T(text)
+          local m = MESSAGE:New(text,10,"SHORAD"):ToAllIf(self.debug)
+          self:_SmokeUnits(_group)
           --Shoot and Scoot
           if self.shootandscoot then
-            self:__ShootAndScoot(TDiff,_group)
-            TDiff=TDiff+1
+            self:__ShootAndScoot(1,_group)
+          else
+            _group:RelocateGroundRandomInRadius(30,500,false,true,"Diamond",true)
           end
+        else
+          WakeUp(_group,groupname)
         end
-      end
-    end
+      elseif _group:IsAnyInZone(targetzone) or groupname == TargetGroup then
+        WakeUp(_group,groupname)
+      end -- end if
+    end -- end in pairs
     return self
   end
   
@@ -121226,7 +121280,7 @@ do
   -- @param Core.Event#EVENTDATA EventData The event details table data set
   -- @return #SHORAD self 
   function SHORAD:HandleEventShot( EventData )
-    self:T( { EventData } )
+    --self:T( { EventData.id } )
     self:T(self.lid .. " HandleEventShot")
     local ShootingWeapon = EventData.Weapon -- Identify the weapon fired
     local ShootingWeaponName = EventData.WeaponName -- return weapon type
@@ -121251,7 +121305,7 @@ do
         -- Is there target data?
         if not targetdata or self.debug then 
           if string.find(ShootingWeaponName,"AGM_88",1,true) then
-            self:I("**** Tracking AGM-88 with no target data.")
+            self:T("**** Tracking AGM-88 with no target data.")
             local pos0 = EventData.IniUnit:GetCoordinate()
             local fheight = EventData.IniUnit:GetHeight()
             self:__CalculateHitZone(20,ShootingWeapon,pos0,fheight,EventData.IniGroup)
@@ -161782,11 +161836,13 @@ function CTLD:_RefreshDropTroopsMenu(Group, Unit)
   if not theGroup.CTLDTopmenu then return end
   local topTroops = theGroup.MyTopTroopsMenu
   if not topTroops then return end
-  if topTroops.DropTroopsMenu then
-    topTroops.DropTroopsMenu:Remove()
+  local dropTroopsMenu = topTroops.DropTroopsMenu
+  if dropTroopsMenu then
+    dropTroopsMenu:RemoveSubMenus()
+  else
+    dropTroopsMenu = MENU_GROUP:New(theGroup, "Drop Troops", topTroops)
+    topTroops.DropTroopsMenu = dropTroopsMenu
   end
-  local dropTroopsMenu = MENU_GROUP:New(theGroup, "Drop Troops", topTroops)
-  topTroops.DropTroopsMenu = dropTroopsMenu
   MENU_GROUP_COMMAND:New(theGroup, "Drop ALL troops", dropTroopsMenu, self._UnloadTroops, self, theGroup, theUnit)
 
   local loadedData = self.Loaded_Cargo[theUnit:GetName()]
@@ -244497,6 +244553,10 @@ function EASYGCICAP:New(Alias, AirbaseName, Coalition, EWRName)
   
   -- defaults
   self.alias = Alias or AirbaseName.." CAP Wing"
+      
+  -- Set some string id for output to DCS.log file.
+  self.lid=string.format("EASYGCICAP %s | ", self.alias)
+  
   self.coalitionname = string.lower(Coalition) or "blue"
   self.coalition = self.coalitionname == "blue" and coalition.side.BLUE or coalition.side.RED
   self.wings = {}
@@ -244532,9 +244592,6 @@ function EASYGCICAP:New(Alias, AirbaseName, Coalition, EWRName)
   self.EngageTargetTypes = {"Air"}
   self:SetDefaultTurnoverTime()
   
-  -- Set some string id for output to DCS.log file.
-  self.lid=string.format("EASYGCICAP %s | ", self.alias)
-
   -- Add FSM transitions.
   --               From State  -->   Event      -->      To State
   self:SetStartState("Stopped")
@@ -246307,6 +246364,10 @@ function EASYA2G:New(Alias, AirbaseName, Coalition, ScoutName)
   
   -- defaults
   self.alias = Alias or AirbaseName.." A2G Wing"
+  
+  -- Set some string id for output to DCS.log file.
+  self.lid=string.format("EASYA2G %s | ", self.alias)
+  
   self.coalitionname = string.lower(Coalition) or "blue"
   self.coalition = self.coalitionname == "blue" and coalition.side.BLUE or coalition.side.RED
   self.wings = {}
@@ -246342,9 +246403,6 @@ function EASYA2G:New(Alias, AirbaseName, Coalition, ScoutName)
   self.EngageTargetTypes = {"Ground"}
   self:SetDefaultTurnoverTime()
   
-  -- Set some string id for output to DCS.log file.
-  self.lid=string.format("EASYA2G %s | ", self.alias)
-
   -- Add FSM transitions.
   --               From State  -->   Event      -->      To State
   self:SetStartState("Stopped")

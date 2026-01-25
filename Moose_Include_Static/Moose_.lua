@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-01-23T19:21:22+01:00-c387749a81d7b1c238b5d21689f5e944af792eb9 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-01-25T13:14:53+01:00-ac61c3a55c70de5bbc58b507a7c2fb03202a51f7 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -3557,12 +3557,16 @@ end
 local outcome=UTILS.SaveToFile(Path,Filename,data)
 return outcome
 end
-function UTILS.LoadStationaryListOfGroups(Path,Filename,Reduce,Structured,Cinematic,Effect,Density)
+function UTILS.LoadStationaryListOfGroups(Path,Filename,Reduce,Structured,Cinematic,Effect,Density,Resurrection,ResurrectPercentage,Healmin,Healmax)
+local healmin=Healmin or 25
+local healmax=Healmax or 75
+local resurrection=(Resurrection==true)and true or false
+local resurrectpercentage=ResurrectPercentage or 25
 local fires={}
 local function Smokers(name,coord,effect,density)
 local eff=math.random(8)
 if type(effect)=="number"then eff=effect end
-coord:BigSmokeAndFire(eff,density,name)
+coord:BigSmokeAndFire(eff,Density,300,1,name)
 table.insert(fires,name)
 end
 local function Cruncher(group,typename,anzahl)
@@ -3576,7 +3580,15 @@ local coordinate=_unit:GetCoordinate()
 local name=_unit:GetName()
 Smokers(name,coordinate,Effect,Density)
 end
+local resurectok=math.random(1,100)
+BASE:E(string.format("Load Group | Resurrection | Resurrect %s | Thresh %d | Random %d",tostring(resurrection),resurrectpercentage,resurectok))
+if resurrection==true and(resurectok<resurrectpercentage)then
+local heallife=math.random(healmin,healmax)
+BASE:E("Load Group | Resurrection | Life "..heallife)
+_unit:SetLife(heallife)
+else
 _unit:Destroy(false)
+end
 reduced=reduced+1
 if reduced==anzahl then break end
 end
@@ -38677,7 +38689,7 @@ self:HandleEvent(EVENTS.Shot,self.HandleEventShot)
 self:SetStartState("Running")
 self:AddTransition("*","ManageEvasion","*")
 self:AddTransition("*","CalculateHitZone","*")
-self:I("*** SEAD - Started Version 0.4.10")
+self:I("*** SEAD - Started Version 0.4.11")
 return self
 end
 function SEAD:UpdateSet(SEADGroupPrefixes)
@@ -38876,18 +38888,11 @@ if _tti>600 then delay=_tti-90 end
 local SuppressionStartTime=timer.getTime()+delay
 local SuppressionEndTime=timer.getTime()+delay+_tti+self.Padding+delay
 local _targetgroupname=_targetgroup:GetName()
-if not self.SuppressedGroups[_targetgroupname]then
+local shoradactive=_targetgroup:GetProperty("SHORAD_ACTIVE")
+if not self.SuppressedGroups[_targetgroupname]and shoradactive~=true then
 local allow=true
 if self.UseCallBack and self.CallBack and self.CallBack.SeadAllowSuppression then
-allow=self.CallBack:SeadAllowSuppression(
-_targetgroup,
-_targetgroupname,
-SEADGroup,
-SEADWeaponName,
-Weapon,
-_tti,
-delay
-)
+allow=self.CallBack:SeadAllowSuppression(_targetgroup,_targetgroupname,SEADGroup,SEADWeaponName,Weapon,_tti,delay)
 end
 if not allow then
 self:T(string.format("*** SEAD - %s | Suppression vetoed by callback",_targetgroupname))
@@ -56978,7 +56983,7 @@ end
 MANTIS={
 ClassName="MANTIS",
 name="mymantis",
-version="0.9.43",
+version="0.9.44",
 SAM_Templates_Prefix="",
 SAM_Group=nil,
 EWR_Templates_Prefix="",
@@ -57075,10 +57080,10 @@ MANTIS.SamData={
 ["Linebacker"]={Range=4,Blindspot=0,Height=3,Type="Point",Radar="Linebacker",Point="true"},
 ["Silkworm"]={Range=90,Blindspot=1,Height=0.2,Type="Long",Radar="Silkworm"},
 ["C-RAM"]={Range=2,Blindspot=0,Height=2,Type="Point",Radar="HEMTT_C-RAM_Phalanx",Point="true"},
-["SA-10B"]={Range=75,Blindspot=0,Height=18,Type="Medium",Radar="SA-10B"},
-["SA-17"]={Range=50,Blindspot=3,Height=50,Type="Medium",Radar="SA-17",ARMCapacity=3},
-["SA-20A"]={Range=150,Blindspot=5,Height=27,Type="Long",Radar="S-300PMU1"},
-["SA-20B"]={Range=200,Blindspot=4,Height=27,Type="Long",Radar="S-300PMU2"},
+["SA-10B"]={Range=75,Blindspot=0,Height=18,Type="Medium",Radar="SA-10B",ARMCapacity=4},
+["SA-17"]={Range=50,Blindspot=3,Height=50,Type="Medium",Radar="SA-17",ARMCapacity=4},
+["SA-20A"]={Range=150,Blindspot=5,Height=27,Type="Long",Radar="S-300PMU1",ARMCapacity=16},
+["SA-20B"]={Range=200,Blindspot=4,Height=27,Type="Long",Radar="S-300PMU2",ARMCapacity=18},
 ["SA-21"]={Range=380,Blindspot=5,Height=30,Type="Long",Radar="92N6E"},
 ["S-300VM"]={Range=200,Blindspot=5,Height=30,Type="Long",Radar="9S32M",ARMCapacity=4},
 ["S-300V4"]={Range=380,Blindspot=5,Height=30,Type="Long",Radar="9S32M",ARMCapacity=4},
@@ -57088,20 +57093,20 @@ MANTIS.SamData={
 ["STUNNER IDFA"]={Range=250,Blindspot=1,Height=45,Type="Long",Radar="DAVID_SLING_LN"},
 ["Nike"]={Range=155,Blindspot=6,Height=30,Type="Long",Radar="HIPAR"},
 ["Dog Ear"]={Range=11,Blindspot=0,Height=9,Type="Point",Radar="Dog Ear",Point="true"},
-["Pantsir S1"]={Range=20,Blindspot=1.2,Height=15,Type="Point",Radar="PantsirS1",Point="true"},
+["Pantsir S1"]={Range=20,Blindspot=1.2,Height=15,Type="Point",Radar="PantsirS1",Point="true",ARMCapacity=3},
 ["Tor M2"]={Range=12,Blindspot=1,Height=10,Type="Point",Radar="TorM2",Point="true",ARMCapacity=4},
-["IRIS-T SLM"]={Range=40,Blindspot=0.5,Height=20,Type="Medium",Radar="CH_IRIST_SLM"},
+["IRIS-T SLM"]={Range=40,Blindspot=0.5,Height=20,Type="Medium",Radar="CH_IRIST_SLM",ARMCapacity=12},
 }
 MANTIS.SamDataHDS={
 ["SA-2 HDS"]={Range=56,Blindspot=7,Height=30,Type="Medium",Radar="V759"},
 ["SA-3 HDS"]={Range=20,Blindspot=6,Height=30,Type="Short",Radar="V-601P"},
-["SA-10B HDS"]={Range=90,Blindspot=5,Height=25,Type="Long",Radar="5P85CE ln"},
+["SA-10B HDS"]={Range=90,Blindspot=5,Height=25,Type="Long",Radar="5P85CE ln",ARMCapacity=8},
 ["SA-10C HDS"]={Range=75,Blindspot=5,Height=25,Type="Long",Radar="5P85SE ln",ARMCapacity=3},
-["SA-17 HDS"]={Range=50,Blindspot=3,Height=50,Type="Medium",Radar="SA-17 "},
-["SA-12 HDS 2"]={Range=100,Blindspot=13,Height=30,Type="Long",Radar="S-300V 9A82 l"},
-["SA-12 HDS 1"]={Range=75,Blindspot=6,Height=25,Type="Long",Radar="S-300V 9A83 l"},
-["SA-23 HDS 2"]={Range=200,Blindspot=5,Height=37,Type="Long",Radar="S-300VM 9A82ME"},
-["SA-23 HDS 1"]={Range=100,Blindspot=1,Height=50,Type="Long",Radar="S-300VM 9A83ME"},
+["SA-17 HDS"]={Range=50,Blindspot=3,Height=50,Type="Medium",Radar="SA-17",ARMCapacity=4},
+["SA-12 HDS 2"]={Range=100,Blindspot=13,Height=30,Type="Long",Radar="S-300V 9A82 l",ARMCapacity=12},
+["SA-12 HDS 1"]={Range=75,Blindspot=6,Height=25,Type="Long",Radar="S-300V 9A83 l",ARMCapacity=12},
+["SA-23 HDS 2"]={Range=200,Blindspot=5,Height=37,Type="Long",Radar="S-300VM 9A82ME",ARMCapacity=14},
+["SA-23 HDS 1"]={Range=100,Blindspot=1,Height=50,Type="Long",Radar="S-300VM 9A83ME",ARMCapacity=14},
 ["HQ-2 HDS"]={Range=50,Blindspot=6,Height=35,Type="Medium",Radar="HQ_2_Guideline_LN"},
 ["SAMPT Block 1 HDS"]={Range=120,Blindspot=1,Height=20,Type="long",Radar="SAMPT_MLT_Blk1"},
 ["SAMPT Block 1INT HDS"]={Range=150,Blindspot=1,Height=25,Type="long",Radar="SAMPT_MLT_Blk1NT"},
@@ -57122,20 +57127,20 @@ MANTIS.SamDataSMA={
 MANTIS.SamDataCH={
 ["2S38 CHM"]={Range=6,Blindspot=0.1,Height=4.5,Type="Short",Radar="2S38"},
 ["PantsirS1 CHM"]={Range=20,Blindspot=1.2,Height=15,Type="Point",Radar="PantsirS1",Point="true",ARMCapacity=3},
-["PantsirS2 CHM"]={Range=30,Blindspot=1.2,Height=18,Type="Medium",Radar="PantsirS2"},
+["PantsirS2 CHM"]={Range=30,Blindspot=1.2,Height=18,Type="Medium",Radar="PantsirS2",ARMCapacity=4},
 ["PGL-625 CHM"]={Range=10,Blindspot=1,Height=5,Type="Short",Radar="PGL_625"},
 ["HQ-17A CHM"]={Range=15,Blindspot=1.5,Height=10,Type="Short",Radar="HQ17A"},
 ["M903PAC2 CHM"]={Range=120,Blindspot=3,Height=24.5,Type="Long",Radar="MIM104_M903_PAC2"},
 ["M903PAC3 CHM"]={Range=160,Blindspot=1,Height=40,Type="Long",Radar="MIM104_M903_PAC3"},
-["TorM2 CHM"]={Range=12,Blindspot=1,Height=10,Type="Point",Radar="TorM2",Point="true"},
-["TorM2K CHM"]={Range=12,Blindspot=1,Height=10,Type="Point",Radar="TorM2K",Point="true"},
-["TorM2M CHM"]={Range=16,Blindspot=1,Height=10,Type="Point",Radar="TorM2M",Point="true"},
+["TorM2 CHM"]={Range=12,Blindspot=1,Height=10,Type="Point",Radar="TorM2",Point="true",ARMCapacity=3},
+["TorM2K CHM"]={Range=12,Blindspot=1,Height=10,Type="Point",Radar="TorM2K",Point="true",ARMCapacity=4},
+["TorM2M CHM"]={Range=16,Blindspot=1,Height=10,Type="Point",Radar="TorM2M",Point="true",ARMCapacity=4},
 ["NASAMS3-AMRAAMER CHM"]={Range=50,Blindspot=2,Height=35.7,Type="Medium",Radar="CH_NASAMS3_LN_AMRAAM_ER"},
 ["NASAMS3-AIM9X2 CHM"]={Range=20,Blindspot=0.2,Height=18,Type="Short",Radar="CH_NASAMS3_LN_AIM9X2"},
 ["C-RAM CHM"]={Range=2,Blindspot=0,Height=2,Type="Point",Radar="CH_Centurion_C_RAM",Point="true"},
 ["PGZ-09 CHM"]={Range=4,Blindspot=0.5,Height=3,Type="Point",Radar="CH_PGZ09",Point="true"},
-["S350-9M100 CHM"]={Range=15,Blindspot=1,Height=8,Type="Short",Radar="CH_S350_50P6_9M100"},
-["S350-9M96D CHM"]={Range=150,Blindspot=2.5,Height=30,Type="Long",Radar="CH_S350_50P6_9M96D"},
+["S350-9M100 CHM"]={Range=15,Blindspot=1,Height=8,Type="Short",Radar="CH_S350_50P6_9M100",ARMCapacity=20},
+["S350-9M96D CHM"]={Range=150,Blindspot=2.5,Height=30,Type="Long",Radar="CH_S350_50P6_9M96D",ARMCapacity=20},
 ["LAV-AD CHM"]={Range=8,Blindspot=0.16,Height=4.8,Type="Short",Radar="CH_LAVAD"},
 ["HQ-22 CHM"]={Range=170,Blindspot=5,Height=27,Type="Long",Radar="CH_HQ22_LN"},
 ["PGZ-95 CHM"]={Range=2.5,Blindspot=0.5,Height=2,Type="Point",Radar="CH_PGZ95",Point="true"},
@@ -57147,8 +57152,8 @@ MANTIS.SamDataCH={
 ["Skynex CHM"]={Range=3.5,Blindspot=0.1,Height=3.5,Type="Point",Radar="CH_SkynexHX",Point="true"},
 ["Skyshield CHM"]={Range=3.5,Blindspot=0.1,Height=3.5,Type="Point",Radar="CH_Skyshield_Gun",Point="true"},
 ["WieselOzelot CHM"]={Range=8,Blindspot=0.16,Height=4.8,Type="Short",Radar="CH_Wiesel2Ozelot"},
-["BukM3-9M317M CHM"]={Range=70,Blindspot=0.25,Height=35,Type="Medium",Radar="CH_BukM3_9A317M"},
-["BukM3-9M317MA CHM"]={Range=70,Blindspot=0.25,Height=35,Type="Medium",Radar="CH_BukM3_9A317MA"},
+["BukM3-9M317M CHM"]={Range=70,Blindspot=0.25,Height=35,Type="Medium",Radar="CH_BukM3_9A317M",ARMCapacity=20},
+["BukM3-9M317MA CHM"]={Range=70,Blindspot=0.25,Height=35,Type="Medium",Radar="CH_BukM3_9A317MA",ARMCapacity=20},
 ["SkySabre CHM"]={Range=30,Blindspot=0.5,Height=10,Type="Medium",Radar="CH_SkySabreLN"},
 ["Stormer CHM"]={Range=7.5,Blindspot=0.3,Height=7,Type="Short",Radar="CH_StormerHVM"},
 ["THAAD CHM"]={Range=200,Blindspot=40,Height=150,Type="Long",Radar="CH_THAAD_M1120"},
@@ -57930,6 +57935,7 @@ local blind=0
 local group=GROUP:FindByName(grpname)
 local units=group:GetUnits()
 local SAMData=self.SamData
+local ARMCapacity
 if mod then
 SAMData=self.SamDataHDS
 elseif sma then
@@ -57937,18 +57943,23 @@ SAMData=self.SamDataSMA
 elseif chm then
 SAMData=self.SamDataCH
 end
+self:T("Looking to auto-match for "..grpname)
 for _,_unit in pairs(units)do
 local unit=_unit
-local type=string.lower(unit:GetTypeName())
+local typename=string.lower(unit:GetTypeName())
+self:T(string.format("Matching typename: %s",typename))
 for idx,entry in pairs(SAMData)do
 local _entry=entry
 local _radar=string.lower(_entry.Radar)
-if string.find(type,_radar,1,true)then
+self:T(string.format("Trying typename: %s",_radar))
+if string.find(typename,_radar,1,true)then
 type=_entry.Type
 radiusscale=self.radiusscale[type]
 range=_entry.Range*1000*radiusscale
 height=_entry.Height*1000
 blind=_entry.Blindspot*100
+ARMCapacity=_entry.ARMCapacity
+self:T(string.format("Match: %s - %s",_radar,type))
 found=true
 break
 end
@@ -57968,7 +57979,7 @@ end
 if not found then
 self:E(self.lid..string.format("*****Could not match radar data for %s! Will default to midrange values!",grpname))
 end
-return range,height,type,blind
+return range,height,type,blind,ARMCapacity
 end
 function MANTIS:_GetSAMRange(grpname)
 self:T(self.lid.."_GetSAMRange for "..tostring(grpname))
@@ -58015,7 +58026,7 @@ found=true
 end
 end
 if(not found)or HDSmod or SMAMod or CHMod then
-range,height,type=self:_GetSAMDataFromUnits(grpname,HDSmod,SMAMod,CHMod)
+range,height,type,blind,ARMCapacity=self:_GetSAMDataFromUnits(grpname,HDSmod,SMAMod,CHMod)
 elseif not found then
 self:E(self.lid..string.format("*****Could not match radar data for %s! Will default to midrange values!",grpname))
 end
@@ -58048,6 +58059,7 @@ group:OptionEngageRange(engagerange)
 local grpname=group:GetName()
 local grpcoord=group:GetCoordinate()
 local grprange,grpheight,type,blind,ARMCapacity=self:_GetSAMRange(grpname)
+if ARMCapacity and ARMCapacity>0 then _group:SetProperty("ARMCapacity",ARMCapacity)end
 table.insert(SAM_Tbl,{grpname,grpcoord,grprange,grpheight,blind,type,ARMCapacity})
 if type==MANTIS.SamType.LONG then
 table.insert(SAM_Tbl_lg,{grpname,grpcoord,grprange,grpheight,blind,type})
@@ -58104,9 +58116,12 @@ if group:IsGround()and group:IsAlive()then
 local grpname=group:GetName()
 local grpcoord=group:GetCoordinate()
 local grprange,grpheight,type,blind,ARMCapacity=self:_GetSAMRange(grpname)
+if ARMCapacity and ARMCapacity>0 then _group:SetProperty("ARMCapacity",ARMCapacity)end
 local radaralive=true
 table.insert(SAM_Tbl,{grpname,grpcoord,grprange,grpheight,blind,type,ARMCapacity})
+if type~=MANTIS.SamType.POINT then
 table.insert(SEAD_Grps,grpname)
+end
 if type==MANTIS.SamType.LONG and radaralive then
 table.insert(SAM_Tbl_lg,{grpname,grpcoord,grprange,grpheight,blind,type})
 self:T({grpname,grprange,grpheight})
@@ -58174,11 +58189,13 @@ function MANTIS:SeadAllowSuppression(targetGroup,targetName,attackerGroup,weapon
 self:T(self.lid.."SeadAllowSuppression")
 self:T(string.format("MANTIS:SeadAllowSuppression REQUEST | target=%s | weapon=%s | tti=%s | delay=%s",tostring(targetName),
 tostring(weaponName),tostring(tti),tostring(delay)))
-local armcap=nil
+local armcap=targetGroup:GetProperty("ARMCapacity")
+if not armcap then
 for _,sam in pairs(self.SAM_Table or{})do
 if sam[1]==targetName then
 armcap=sam[7]
 break
+end
 end
 end
 self:T(string.format("MANTIS:SeadAllowSuppression SAM DATA | target=%s | ARMCapacity=%s",tostring(targetName),armcap and tostring(armcap)or"nil"))
@@ -58238,6 +58255,7 @@ local activeshorad=false
 if self.Shorad and self.Shorad.ActiveGroups and self.Shorad.ActiveGroups[name]then
 activeshorad=true
 end
+if samgroup:GetProperty("SHORAD_ACTIVE")==true and activeshorad==false then activeshorad=true end
 if IsInZone and(not suppressed)and(not activeshorad)then
 if samgroup:IsAlive()then
 local switch=false
@@ -58404,6 +58422,7 @@ self.Shorad:SetDefenseLimits(80,95)
 self.ShoradLink=true
 self.Shorad.Groupset=self.ShoradGroupSet
 self.Shorad.debug=self.debug
+self.Shorad:AddCallBack(self)
 end
 if self.shootandscoot and self.SkateZones and self.Shorad then
 self.Shorad:AddScootZones(self.SkateZones,self.SkateNumber or 3,self.ScootRandom,self.ScootFormation)
@@ -58593,7 +58612,7 @@ if SmokeDecoy then
 self.SmokeDecoy=SmokeDecoy
 self.SmokeDecoyColor=SmokeDecoyColor or SMOKECOLOR.White
 end
-self:I("*** SHORAD - Started Version 0.3.5")
+self:I("*** SHORAD - Started Version 0.3.6")
 self.lid=string.format("SHORAD %s | ",self.name)
 self:_InitState()
 self:HandleEvent(EVENTS.Shot,self.HandleEventShot)
@@ -58771,6 +58790,12 @@ end
 end
 return returnname
 end
+function SHORAD:AddCallBack(Object)
+self:T({Class=Object.ClassName})
+self.CallBack=Object
+self.UseCallBack=true
+return self
+end
 function SHORAD:_SmokeUnits(Group)
 if self.SmokeDecoy==true then
 if Group and Group:IsAlive()then
@@ -58805,7 +58830,46 @@ return IsDetected
 end
 function SHORAD:onafterWakeUpShorad(From,Event,To,TargetGroup,Radius,ActiveTimer,TargetCat,ShotAt)
 self:T(self.lid.." WakeUpShorad")
-self:T({TargetGroup,Radius,ActiveTimer,TargetCat})
+local TDiff=4
+local function SleepShorad(group)
+if group and group:IsAlive()then
+local groupname=group:GetName()
+self.ActiveGroups[groupname]=nil
+if self.UseEmOnOff then
+group:EnableEmission(false)
+else
+group:OptionAlarmStateGreen()
+end
+group:SetProperty("SHORAD_ACTIVE",false)
+local text=string.format("Sleeping SHORAD %s",group:GetName())
+self:T(text)
+local m=MESSAGE:New(text,10,"SHORAD"):ToAllIf(self.debug)
+if self.shootandscoot then
+self:__ShootAndScoot(1,group)
+else
+end
+end
+end
+local function WakeUp(_group,groupname)
+local text=string.format("Waking up SHORAD %s",_group:GetName())
+self:T(text)
+local m=MESSAGE:New(text,10,"SHORAD"):ToAllIf(self.debug)
+if self.UseEmOnOff then
+_group:EnableEmission(true)
+end
+_group:OptionAlarmStateRed()
+_group:SetProperty("SHORAD_ACTIVE",true)
+self:_SmokeUnits(_group)
+if self.ActiveGroups[groupname]==nil then
+self.ActiveGroups[groupname]={Timing=ActiveTimer}
+local endtime=timer.getTime()+(ActiveTimer*math.random(75,100)/100)
+self.ActiveGroups[groupname].Timer=TIMER:New(SleepShorad,_group):Start(endtime)
+if self.shootandscoot then
+self:__ShootAndScoot(TDiff,_group)
+TDiff=TDiff+1
+end
+end
+end
 local targetcat=TargetCat or Object.Category.UNIT
 local targetgroup=TargetGroup
 local targetvec2=nil
@@ -58821,27 +58885,14 @@ end
 local targetzone=ZONE_RADIUS:New("Shorad",targetvec2,Radius)
 local groupset=self.Groupset
 local shoradset=groupset:GetAliveSet()
-local function SleepShorad(group)
-if group and group:IsAlive()then
-local groupname=group:GetName()
-self.ActiveGroups[groupname]=nil
-if self.UseEmOnOff then
-group:EnableEmission(false)
-else
-group:OptionAlarmStateGreen()
-end
-local text=string.format("Sleeping SHORAD %s",group:GetName())
-self:T(text)
-local m=MESSAGE:New(text,10,"SHORAD"):ToAllIf(self.debug)
-if self.shootandscoot then
-self:__ShootAndScoot(1,group)
-end
-end
-end
-local TDiff=4
 for _,_group in pairs(shoradset)do
 local groupname=_group:GetName()
 if groupname==TargetGroup and ShotAt==true then
+local allow=false
+if self.CallBack and self.UseCallBack==true then
+allow=self.CallBack:SeadAllowSuppression(_group,groupname)
+end
+if allow==true then
 if self.UseEmOnOff then
 _group:EnableEmission(false)
 end
@@ -58853,25 +58904,14 @@ local m=MESSAGE:New(text,10,"SHORAD"):ToAllIf(self.debug)
 self:_SmokeUnits(_group)
 if self.shootandscoot then
 self:__ShootAndScoot(1,_group)
+else
+_group:RelocateGroundRandomInRadius(30,500,false,true,"Diamond",true)
+end
+else
+WakeUp(_group,groupname)
 end
 elseif _group:IsAnyInZone(targetzone)or groupname==TargetGroup then
-local text=string.format("Waking up SHORAD %s",_group:GetName())
-self:T(text)
-local m=MESSAGE:New(text,10,"SHORAD"):ToAllIf(self.debug)
-if self.UseEmOnOff then
-_group:EnableEmission(true)
-end
-_group:OptionAlarmStateRed()
-self:_SmokeUnits(_group)
-if self.ActiveGroups[groupname]==nil then
-self.ActiveGroups[groupname]={Timing=ActiveTimer}
-local endtime=timer.getTime()+(ActiveTimer*math.random(75,100)/100)
-self.ActiveGroups[groupname].Timer=TIMER:New(SleepShorad,_group):Start(endtime)
-if self.shootandscoot then
-self:__ShootAndScoot(TDiff,_group)
-TDiff=TDiff+1
-end
-end
+WakeUp(_group,groupname)
 end
 end
 return self
@@ -58957,7 +58997,6 @@ end
 return self
 end
 function SHORAD:HandleEventShot(EventData)
-self:T({EventData})
 self:T(self.lid.." HandleEventShot")
 local ShootingWeapon=EventData.Weapon
 local ShootingWeaponName=EventData.WeaponName
@@ -58976,7 +59015,7 @@ if(self:_CheckHarms(ShootingWeaponName)or self:_CheckMavs(ShootingWeaponName))an
 local targetdata=EventData.Weapon:getTarget()
 if not targetdata or self.debug then
 if string.find(ShootingWeaponName,"AGM_88",1,true)then
-self:I("**** Tracking AGM-88 with no target data.")
+self:T("**** Tracking AGM-88 with no target data.")
 local pos0=EventData.IniUnit:GetCoordinate()
 local fheight=EventData.IniUnit:GetHeight()
 self:__CalculateHitZone(20,ShootingWeapon,pos0,fheight,EventData.IniGroup)
@@ -79684,11 +79723,13 @@ local theUnit=Unit
 if not theGroup.CTLDTopmenu then return end
 local topTroops=theGroup.MyTopTroopsMenu
 if not topTroops then return end
-if topTroops.DropTroopsMenu then
-topTroops.DropTroopsMenu:Remove()
-end
-local dropTroopsMenu=MENU_GROUP:New(theGroup,"Drop Troops",topTroops)
+local dropTroopsMenu=topTroops.DropTroopsMenu
+if dropTroopsMenu then
+dropTroopsMenu:RemoveSubMenus()
+else
+dropTroopsMenu=MENU_GROUP:New(theGroup,"Drop Troops",topTroops)
 topTroops.DropTroopsMenu=dropTroopsMenu
+end
 MENU_GROUP_COMMAND:New(theGroup,"Drop ALL troops",dropTroopsMenu,self._UnloadTroops,self,theGroup,theUnit)
 local loadedData=self.Loaded_Cargo[theUnit:GetName()]
 if not loadedData or not loadedData.Cargo then return end
@@ -120232,6 +120273,7 @@ EASYGCICAP.version="0.1.34"
 function EASYGCICAP:New(Alias,AirbaseName,Coalition,EWRName)
 local self=BASE:Inherit(self,FSM:New())
 self.alias=Alias or AirbaseName.." CAP Wing"
+self.lid=string.format("EASYGCICAP %s | ",self.alias)
 self.coalitionname=string.lower(Coalition)or"blue"
 self.coalition=self.coalitionname=="blue"and coalition.side.BLUE or coalition.side.RED
 self.wings={}
@@ -120265,7 +120307,6 @@ self.FuelCriticalThreshold=10
 self.showpatrolpointmarks=false
 self.EngageTargetTypes={"Air"}
 self:SetDefaultTurnoverTime()
-self.lid=string.format("EASYGCICAP %s | ",self.alias)
 self:SetStartState("Stopped")
 self:AddTransition("Stopped","Start","Running")
 self:AddTransition("Running","Stop","Stopped")
@@ -121234,6 +121275,7 @@ EASYA2G.version="0.1.4"
 function EASYA2G:New(Alias,AirbaseName,Coalition,ScoutName)
 local self=BASE:Inherit(self,EASYGCICAP:New(Alias,AirbaseName,Coalition,ScoutName))
 self.alias=Alias or AirbaseName.." A2G Wing"
+self.lid=string.format("EASYA2G %s | ",self.alias)
 self.coalitionname=string.lower(Coalition)or"blue"
 self.coalition=self.coalitionname=="blue"and coalition.side.BLUE or coalition.side.RED
 self.wings={}
@@ -121267,7 +121309,6 @@ self.FuelCriticalThreshold=10
 self.showpatrolpointmarks=false
 self.EngageTargetTypes={"Ground"}
 self:SetDefaultTurnoverTime()
-self.lid=string.format("EASYA2G %s | ",self.alias)
 self:SetStartState("Stopped")
 self:AddTransition("Stopped","Start","Running")
 self:AddTransition("Running","Stop","Stopped")
