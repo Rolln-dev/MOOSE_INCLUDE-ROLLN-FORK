@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-01-25T13:14:53+01:00-ac61c3a55c70de5bbc58b507a7c2fb03202a51f7 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-01-28T14:41:51+01:00-f20c22ab49a807509ee9f72db409a65f856ea2b8 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -7707,6 +7707,7 @@ EVENT={
 ClassName="EVENT",
 ClassID=0,
 MissionEnd=false,
+CreateMarkCoordinateOnEvent=false,
 }
 world.event.S_EVENT_NEW_CARGO=world.event.S_EVENT_MAX+1000
 world.event.S_EVENT_DELETE_CARGO=world.event.S_EVENT_MAX+1001
@@ -8318,24 +8319,6 @@ return self
 end
 end
 do
-function EVENT:CreateEventNewCargo(Cargo)
-self:F({Cargo})
-local Event={
-id=EVENTS.NewCargo,
-time=timer.getTime(),
-cargo=Cargo,
-}
-world.onEvent(Event)
-end
-function EVENT:CreateEventDeleteCargo(Cargo)
-self:F({Cargo})
-local Event={
-id=EVENTS.DeleteCargo,
-time=timer.getTime(),
-cargo=Cargo,
-}
-world.onEvent(Event)
-end
 function EVENT:CreateEventNewZone(Zone)
 self:F({Zone})
 local Event={
@@ -8512,7 +8495,7 @@ Event.IniDynamicCargo=DYNAMICCARGO:FindByName(Event.IniUnitName)
 Event.IniDynamicCargoName=Event.IniUnitName
 Event.IniPlayerName=string.match(Event.IniUnitName,"^(.+)|%d%d:%d%d|PKG%d+")
 else
-Event.IniUnit=CARGO:FindByName(Event.IniDCSUnitName)
+Event.IniUnit=STATIC:FindByName(Event.IniDCSUnitName,false)
 end
 Event.IniCoalition=Event.IniDCSUnit:getCoalition()
 Event.IniCategory=Event.IniDCSUnit:getDesc().category
@@ -8521,7 +8504,8 @@ elseif Event.IniObjectCategory==Object.Category.SCENERY then
 Event.IniDCSUnit=Event.initiator
 Event.IniDCSUnitName=(Event.IniDCSUnit and Event.IniDCSUnit.getName)and Event.IniDCSUnit:getName()or"Scenery no name "..math.random(1,20000)
 Event.IniUnitName=Event.IniDCSUnitName
-Event.IniUnit=SCENERY:Register(Event.IniDCSUnitName,Event.initiator)
+local ID=(Event.IniDCSUnit and Event.IniDCSUnit.getID)and Event.IniDCSUnit:getID()or Event.IniDCSUnitName
+Event.IniUnit=(_SCENERY~=nil)and _SCENERY[ID]or nil
 Event.IniCategory=(Event.IniDCSUnit and Event.IniDCSUnit.getDesc)and Event.IniDCSUnit:getDesc().category
 Event.IniTypeName=(Event.initiator and Event.initiator.isExist
 and Event.initiator:isExist()and Event.IniDCSUnit and Event.IniDCSUnit.getTypeName)and Event.IniDCSUnit:getTypeName()or"SCENERY"
@@ -8597,7 +8581,8 @@ Event.TgtDCSUnit=Event.target
 Event.TgtDCSUnitName=Event.TgtDCSUnit.getName and Event.TgtDCSUnit:getName()or nil
 if Event.TgtDCSUnitName~=nil then
 Event.TgtUnitName=Event.TgtDCSUnitName
-Event.TgtUnit=SCENERY:Register(Event.TgtDCSUnitName,Event.target)
+local ID=(Event.TgtDCSUnit and Event.TgtDCSUnit.getID)and Event.TgtDCSUnit:getID()or Event.TgtDCSUnitName
+Event.TgtUnit=(_SCENERY~=nil)and _SCENERY[ID]or nil
 Event.TgtCategory=Event.TgtDCSUnit:getDesc().category
 Event.TgtTypeName=Event.TgtDCSUnit:getTypeName()
 end
@@ -8626,7 +8611,9 @@ end
 if Event.idx then
 Event.MarkID=Event.idx
 Event.MarkVec3=Event.pos
+if self.CreateMarkCoordinateOnEvent==true then
 Event.MarkCoordinate=COORDINATE:NewFromVec3(Event.pos)
+end
 Event.MarkText=Event.text
 Event.MarkCoalition=Event.coalition
 Event.IniCoalition=Event.coalition
