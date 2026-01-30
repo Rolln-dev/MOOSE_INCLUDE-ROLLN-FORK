@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-01-28T14:41:51+01:00-f20c22ab49a807509ee9f72db409a65f856ea2b8 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-01-30T06:39:41+01:00-c91b59f8cd59c01085612cb886011b88233c0ffd ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -187976,7 +187976,8 @@ function CHIEF:New(Coalition, AgentSet, Alias)
   self.TransportCategories = {Group.Category.HELICOPTER}
   
   -- Create a new COMMANDER.
-  self.commander=COMMANDER:New(Coalition)  
+  self.commander=COMMANDER:New(Coalition, Alias)
+
 
   -- Add FSM transitions.
   --                 From State   -->    Event                     -->    To State
@@ -190935,6 +190936,15 @@ function CHIEF._CheckAssetProperties(Asset, Properties)
   end
 
   return false
+end
+
+
+--- Checks whether or not any of the legions con run a mission.
+-- @param #CHIEF self
+-- @param Ops.Auftrag#AUFTRAG Mission The mission.
+-- @return #boolean If `true`, one of the cohorts can run the mission.
+function CHIEF:CanMission(Mission)
+    return self.commander and self.commander:CanStartMission(Mission)
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -194363,6 +194373,70 @@ function COMMANDER:_GetCohorts(Legions, Cohorts, Operation)
   end
 
   return cohorts
+end
+
+--- Checks whether or not any of the legions con run a mission.
+-- @param #COMMANDER self
+-- @param Ops.Auftrag#AUFTRAG Mission The mission.
+-- @return #boolean If `true`, one of the cohorts can run the mission.
+function COMMANDER:CanMission(Mission)
+    local commander = self
+
+    -- Target position.
+    local TargetVec2 = Mission:GetTargetVec2()
+
+    local MaxWeight = nil
+
+    if Mission.NcarriersMin then
+
+        local legions = commander.legions
+        local cohorts = nil
+        if Mission.transportLegions or Mission.transportCohorts then
+            legions = Mission.transportLegions
+            cohorts = Mission.transportCohorts
+        end
+
+        -- Get transport cohorts.
+        local Cohorts = LEGION._GetCohorts(legions, cohorts)
+
+        -- Filter cohorts that can actually perform transport missions.
+        local transportcohorts = {}
+        for _, _cohort in pairs(Cohorts) do
+            local cohort = _cohort --Ops.Cohort#COHORT
+
+            -- Check if cohort can perform transport to target.
+            local can = LEGION._CohortCan(cohort, AUFTRAG.Type.OPSTRANSPORT, Mission.carrierCategories, Mission.carrierAttributes, Mission.carrierProperties, nil, TargetVec2)
+
+            -- MaxWeight of cargo assets is limited by the largets available cargo bay. We don't want to select, e.g., tanks that cannot be transported by APCs or helos.
+            if can and (MaxWeight == nil or cohort.cargobayLimit > MaxWeight) then
+                MaxWeight = cohort.cargobayLimit
+            end
+        end
+
+    end
+
+    local legions = commander.legions
+    local cohorts = nil
+    if Mission.specialLegions or Mission.specialCohorts then
+        legions = Mission.specialLegions
+        cohorts = Mission.specialCohorts
+    end
+
+    -- Get cohorts.
+    local Cohorts = LEGION._GetCohorts(legions, cohorts, Mission.operation, commander.opsqueue)
+
+    for _, _cohort in pairs(Cohorts) do
+        local cohort = _cohort --Ops.Cohort#COHORT
+
+        -- Check if cohort can do the mission.
+        local can = LEGION._CohortCan(cohort, Mission.type, nil, Mission.attributes, Mission.properties, { Mission.engageWeaponType }, TargetVec2, Mission.engageRange, Mission.refuelSystem, nil, MaxWeight)
+        if can then
+            return true
+        end
+
+    end
+
+    return false
 end
 
 --- Recruit assets for a given mission.
