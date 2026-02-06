@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-02-05T12:20:48+01:00-dab6f48fe92a77c8f9a675fbb08aa8ae74ecf89e ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-02-06T12:37:28+01:00-130d358f4a57756c2663c99a0fe7e732538a191d ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -95025,7 +95025,7 @@ end
 return false
 end
 function CHIEF:CanMission(Mission)
-return self.commander and self.commander:CanStartMission(Mission)
+return self.commander and self.commander:CanMission(Mission)
 end
 COHORT={
 ClassName="COHORT",

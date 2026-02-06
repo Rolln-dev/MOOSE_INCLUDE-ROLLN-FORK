@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-02-05T12:20:48+01:00-dab6f48fe92a77c8f9a675fbb08aa8ae74ecf89e ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-02-06T12:37:28+01:00-130d358f4a57756c2663c99a0fe7e732538a191d ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -190943,7 +190943,7 @@ end
 -- @param Ops.Auftrag#AUFTRAG Mission The mission.
 -- @return #boolean If `true`, one of the cohorts can run the mission.
 function CHIEF:CanMission(Mission)
-    return self.commander and self.commander:CanStartMission(Mission)
+    return self.commander and self.commander:CanMission(Mission)
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
