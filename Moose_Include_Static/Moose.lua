@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-02-22T13:45:16+01:00-2449ed4c9663f8580bcd44fd5a2060223d25cb94 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-02-22T16:33:54+01:00-6362e37804dcfdffa5beff2e20ba344df97d7239 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -25267,6 +25267,28 @@ do -- SET_BASE
 
     return ObjectNames
   end
+  
+  --- Checks whether all or optionally any objects is inside a given zone.
+  -- @param #SET_BASE self
+  -- @param Core.Zone#ZONE Zone The zone.
+  -- @param #boolean Any If `true`, at least one object has to be inside the zone. If `false` or `nil`, all objects need to be in the zone.
+  -- @return #boolean Retruns `true` if objects are in the zone and `false` otherwise.
+  function SET_BASE:IsInZone(Zone, Any)
+  
+    for ObjectName, Object in pairs(self.Set) do
+      local object=Object --Wrapper.Positionable#POSITIONABLE
+      local inzone=object:IsInZone(Zone)
+      if inzone and Any then
+        -- We want at least one and this one is
+        return true
+      elseif not inzone then
+        -- We want all but at least one is not
+        return false
+      end
+    end    
+  
+    return true
+  end  
 
   --- Flushes the current SET_BASE contents in the log ... (for debugging reasons).
   -- @param #SET_BASE self
@@ -168648,7 +168670,7 @@ AUFTRAG.Category={
 
 --- AUFTRAG class version.
 -- @field #string version
-AUFTRAG.version="1.3.0"
+AUFTRAG.version="1.4.0"
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- TODO list
@@ -170149,6 +170171,11 @@ end
 --- **[AIR]** Create a FREIGHT TRANSPORT mission.
 -- This mission type can be used to transport cargo items internally via suitable transport aircraft (planes and helicopters), e.g. C-130 or CH-47.
 -- It supports transporting one or multiple cargos (weight limits are not checked).
+-- 
+-- All cargo must be within a 40 meter radius around the transport aircraft for the mission to start.
+-- The mission is successful if any cargo item is delivered to the destination.
+-- 
+-- This mission type uses the underlying DCS tasks: "Cargo Transportation (internal)", "Cargo Unload"
 -- @param #AUFTRAG self
 -- @param Wrapper.Static#STATIC StaticCargo Static cargo object. Can also be passed as a `SET_STATIC` object.
 -- @param Wrapper.Airbase#AIRBASE Destination Destination airbase, where the cargo is unloaded.
@@ -172199,6 +172226,28 @@ function AUFTRAG:IsReadyToGo()
   if not startme then
     return false
   end
+  
+  if self.type==AUFTRAG.Type.FREIGHTTRANSPORT then
+  
+    local cargoset=self.DCStask.params.cargo --Core.Set#SET_STATIC
+    
+    for _,_opsgroup in pairs(self:GetOpsGroups()) do
+      local opsgroup=_opsgroup --Ops.OpsGroup#OPSGROUP
+      
+      local vec2=opsgroup.group:GetFirstUnitAlive():GetVec2()
+      
+      local zone=ZONE_RADIUS:New("Freighttransport", vec2, 40, true)
+    
+      local inzone=cargoset:IsInZone(zone)
+      
+      if not inzone then
+        self:T(self.lid.."FREIGHTTRANSPORT: cargo is not inside zone ==> mission not ready to start yet!")
+        return false
+      end
+      
+    end
+    
+  end
 
 
   -- We're good to go!
@@ -172541,6 +172590,22 @@ function AUFTRAG:Evaluate()
       if cargo and zone then
         failed=not cargo:IsInZone(zone)
       else
+        failed=true
+      end
+      
+    elseif self.type==AUFTRAG.Type.FREIGHTTRANSPORT then
+    
+      local cargoset=self.DCStask.params.cargo --Core.Set#SET_STATIC
+      
+      -- Get the destination airbase zone
+      local dest=self.DCStask.params.destination --Wrapper.Airbase#AIRBASE
+      local zone=dest:GetZone()
+    
+      -- Check if ANY cargo is inside the zone (might want to make it optional that all cargo needs to be)
+      local inzone=cargoset:IsInZone(zone, true)
+      
+      if not inzone then
+        self:I(self.lid.."FF Freight/cargo not delivered to airbase zone")
         failed=true
       end
 

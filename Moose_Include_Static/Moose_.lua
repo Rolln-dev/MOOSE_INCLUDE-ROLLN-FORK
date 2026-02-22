@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-02-22T13:45:16+01:00-2449ed4c9663f8580bcd44fd5a2060223d25cb94 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-02-22T16:33:54+01:00-6362e37804dcfdffa5beff2e20ba344df97d7239 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -13883,6 +13883,18 @@ for ObjectName,Object in pairs(self.Set)do
 ObjectNames=ObjectNames..ObjectName..", "
 end
 return ObjectNames
+end
+function SET_BASE:IsInZone(Zone,Any)
+for ObjectName,Object in pairs(self.Set)do
+local object=Object
+local inzone=object:IsInZone(Zone)
+if inzone and Any then
+return true
+elseif not inzone then
+return false
+end
+end
+return true
 end
 function SET_BASE:Flush(MasterObject)
 local ObjectNames=""
@@ -84256,7 +84268,7 @@ HELICOPTER="Helicopter",
 GROUND="Ground",
 NAVAL="Naval",
 }
-AUFTRAG.version="1.3.0"
+AUFTRAG.version="1.4.0"
 function AUFTRAG:New(Type)
 local self=BASE:Inherit(self,FSM:New())
 _AUFTRAGSNR=_AUFTRAGSNR+1
@@ -85814,6 +85826,19 @@ local startme=self:EvalConditionsAll(self.conditionStart)
 if not startme then
 return false
 end
+if self.type==AUFTRAG.Type.FREIGHTTRANSPORT then
+local cargoset=self.DCStask.params.cargo
+for _,_opsgroup in pairs(self:GetOpsGroups())do
+local opsgroup=_opsgroup
+local vec2=opsgroup.group:GetFirstUnitAlive():GetVec2()
+local zone=ZONE_RADIUS:New("Freighttransport",vec2,40,true)
+local inzone=cargoset:IsInZone(zone)
+if not inzone then
+self:T(self.lid.."FREIGHTTRANSPORT: cargo is not inside zone ==> mission not ready to start yet!")
+return false
+end
+end
+end
 return true
 end
 function AUFTRAG:IsReadyToCancel()
@@ -85978,6 +86003,15 @@ local cargo=self.DCStask.params.cargo
 if cargo and zone then
 failed=not cargo:IsInZone(zone)
 else
+failed=true
+end
+elseif self.type==AUFTRAG.Type.FREIGHTTRANSPORT then
+local cargoset=self.DCStask.params.cargo
+local dest=self.DCStask.params.destination
+local zone=dest:GetZone()
+local inzone=cargoset:IsInZone(zone,true)
+if not inzone then
+self:I(self.lid.."FF Freight/cargo not delivered to airbase zone")
 failed=true
 end
 elseif self.type==AUFTRAG.Type.RESCUEHELO then
