@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-02-28T17:43:05+01:00-68ac89201570e5d55761fe2cc7b1e33c853fcf07 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-02-28T18:34:55+01:00-44cfbb2c30f775293480236b324c8404061815c2 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -73752,6 +73752,7 @@ self.SRS:SetGender(self.Gender)
 self.SRS:SetCulture(self.Culture)
 self.SRS:SetPort(self.Port)
 self.SRS:SetVolume(self.Volume)
+self.SRS.Label="CTLD"
 if Provider then
 self.SRS:SetProvider(Provider)
 end
@@ -73770,6 +73771,7 @@ end
 self.SRS:SetVoice(self.Voice)
 self.SRSQueue=MSRSQUEUE:New(self.Label)
 self.SRSQueue:SetTransmitOnlyWithPlayers(true)
+self.SRSQueue.Label="CTLD"
 return self
 end
 function CTLD:_GetUnitCapabilities(Unit)
@@ -77860,7 +77862,7 @@ local count=#objList
 if count>0 then
 local chunkID=objList[1]:GetID()
 self.TroopsIDToChunk[chunkID]=objList
-local label=string.format(self.gettext:GetEntry("MENU_DROP_N_TROOPS",self.locale),tName,count)
+local label=string.format(self.gettext:GetEntry("MENU_DROP_N_TROOPS",self.locale),count,tName)
 if count==1 then
 MENU_GROUP_COMMAND:New(theGroup,label,dropTroopsMenu,self._UnloadSingleTroopByID,self,theGroup,theUnit,chunkID,1)
 else
