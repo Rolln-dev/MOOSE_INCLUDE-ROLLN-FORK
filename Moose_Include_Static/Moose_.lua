@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-01T15:42:19+01:00-a57532d7bfdd3be3d4aa2a3d9ee89ae2ab55397e ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-01T23:11:36+01:00-216d023c45703575b45a67a68198918c7aa4b32a ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -85225,7 +85225,7 @@ HELICOPTER="Helicopter",
 GROUND="Ground",
 NAVAL="Naval",
 }
-AUFTRAG.version="1.4.0"
+AUFTRAG.version="1.4.1"
 function AUFTRAG:New(Type)
 local self=BASE:Inherit(self,FSM:New())
 _AUFTRAGSNR=_AUFTRAGSNR+1
@@ -85797,13 +85797,13 @@ return mission
 end
 function AUFTRAG:NewFREIGHTTRANSPORT(StaticCargo,Destination)
 if Destination==nil then
-self:E(self.lid..string.format("ERROR: Destination is nil for AUFTRAG:NewFREIGHTTRANSPORT! You must specify the destination airbase"))
+BASE:E(self.lid..string.format("ERROR: Destination is nil for AUFTRAG:NewFREIGHTTRANSPORT! You must specify the destination airbase"))
 return nil
 elseif type(Destination)=="string"then
 Destination=AIRBASE:FindByName(Destination)
 end
 if StaticCargo==nil then
-self:E(self.lid..string.format("ERROR: StaticCargo is nil for AUFTRAG:NewFREIGHTTRANSPORT! You must specify the static object that represents the cargo"))
+BASE:E(self.lid..string.format("ERROR: StaticCargo is nil for AUFTRAG:NewFREIGHTTRANSPORT! You must specify the static object that represents the cargo"))
 return nil
 elseif type(StaticCargo)=="string"then
 StaticCargo=STATIC:FindByName(StaticCargo)
@@ -85814,6 +85814,13 @@ StaticCargoSet:AddCargo(StaticCargo)
 StaticCargo=StaticCargoSet
 end
 local mission=AUFTRAG:New(AUFTRAG.Type.FREIGHTTRANSPORT)
+local Ncargo=StaticCargo:Count()
+if Ncargo==0 then
+mission:E(mission.lid..string.format("ERROR: No cargo items in set!"))
+return nil
+else
+mission:T(mission.lid..string.format("FREIGHTTRANSPORT with N=%d cargo items in set",Ncargo))
+end
 mission:_TargetFromObject(StaticCargo)
 mission.missionTask=mission:GetMissionTaskforMissionType(AUFTRAG.Type.FREIGHTTRANSPORT)
 mission.optionROE=ENUMS.ROE.ReturnFire
@@ -105359,7 +105366,7 @@ ASSIGNED="assigned to carrier",
 BOARDING="boarding",
 LOADED="loaded",
 }
-OPSGROUP.version="1.0.5"
+OPSGROUP.version="1.0.6"
 function OPSGROUP:New(group)
 local self=BASE:Inherit(self,FSM:New())
 if type(group)=="string"then
@@ -108149,7 +108156,7 @@ else
 TaskCargo=CONTROLLABLE.TaskCombo(nil,tasks)
 end
 self:_ClearFSMEvent("UpdateRoute")
-delayGo=-30
+delayGo=-50
 self.group:SetTask(TaskCargo)
 elseif mission.type==AUFTRAG.Type.ARTY then
 local targetcoord=mission:GetTargetCoordinate()
