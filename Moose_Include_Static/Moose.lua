@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-03-01T14:04:49+01:00-ea1fa521c4ea3c0427c995ee6a9affe38a6d9fe7 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-03-01T14:07:02+01:00-9c167341416e93cb5ea77e3051877a22f77a052b ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -160809,6 +160809,7 @@ CTLD.Messages = {
         MENU_SHOW_LOADABLE_CRATES       = "Show loadable crates",
         MENU_NO_CRATES_FOUND_RESCAN     = "No crates found! Rescan?",
         MENU_USE_C130_LOAD              = "Use C-130 Load system",
+        MENU_LOAD_SINGLE                = "Load",
         -- ============================================================
         -- Menu labels - Crates: Drop
         -- ============================================================
@@ -161058,6 +161059,7 @@ CTLD.Messages = {
         MENU_SHOW_LOADABLE_CRATES       = "Ladbare Kisten anzeigen",
         MENU_NO_CRATES_FOUND_RESCAN     = "Keine Kisten gefunden! Neu scannen?",
         MENU_USE_C130_LOAD              = "C-130-Ladesystem verwenden",
+        MENU_LOAD_SINGLE                = "Lade",
         -- ============================================================
         -- Menübezeichnungen - Kisten: Abwerfen
         -- ============================================================
@@ -161307,6 +161309,7 @@ FR = {
         MENU_SHOW_LOADABLE_CRATES       = "Afficher caisses chargeables",
         MENU_NO_CRATES_FOUND_RESCAN     = "Aucune caisse trouvée ! Rescanner ?",
         MENU_USE_C130_LOAD              = "Utiliser le système de chargement C-130",
+        MENU_LOAD_SINGLE                = "Charger",
         -- ============================================================
         -- Libellés de menu - Caisses : Larguer
         -- ============================================================

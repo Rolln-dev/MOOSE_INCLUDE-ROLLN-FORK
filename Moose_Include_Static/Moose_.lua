@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-01T14:04:49+01:00-ea1fa521c4ea3c0427c995ee6a9affe38a6d9fe7 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-01T14:07:02+01:00-9c167341416e93cb5ea77e3051877a22f77a052b ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -80525,6 +80525,7 @@ MENU_LOAD_ALL="Load ALL",
 MENU_SHOW_LOADABLE_CRATES="Show loadable crates",
 MENU_NO_CRATES_FOUND_RESCAN="No crates found! Rescan?",
 MENU_USE_C130_LOAD="Use C-130 Load system",
+MENU_LOAD_SINGLE="Load",
 MENU_DROP_CRATES="Drop Crates",
 MENU_DROP_ALL_CRATES="Drop ALL crates",
 MENU_DROP="Drop",
@@ -80696,6 +80697,7 @@ MENU_LOAD_ALL="ALLE laden",
 MENU_SHOW_LOADABLE_CRATES="Ladbare Kisten anzeigen",
 MENU_NO_CRATES_FOUND_RESCAN="Keine Kisten gefunden! Neu scannen?",
 MENU_USE_C130_LOAD="C-130-Ladesystem verwenden",
+MENU_LOAD_SINGLE="Lade",
 MENU_DROP_CRATES="Kisten abwerfen",
 MENU_DROP_ALL_CRATES="ALLE Kisten abwerfen",
 MENU_DROP="Abwerfen",
@@ -80867,6 +80869,7 @@ MENU_LOAD_ALL="Tout charger",
 MENU_SHOW_LOADABLE_CRATES="Afficher caisses chargeables",
 MENU_NO_CRATES_FOUND_RESCAN="Aucune caisse trouvée ! Rescanner ?",
 MENU_USE_C130_LOAD="Utiliser le système de chargement C-130",
+MENU_LOAD_SINGLE="Charger",
 MENU_DROP_CRATES="Larguer caisses",
 MENU_DROP_ALL_CRATES="Larguer TOUTES les caisses",
 MENU_DROP="Larguer",
