@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-02T13:26:59+01:00-88e6d1c3fff1877f678aee5826652c33e0351ef0 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-02T16:28:20+01:00-6698bf0c6754d3cfa2adc6deb0ccd8af578fc30f ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -77195,8 +77195,10 @@ MENU_GROUP_COMMAND:New(Group,self.gettext:GetEntry("MENU_LOAD_ALL",self.locale),
 local cargoByName={}
 for _,crate in pairs(nearby)do
 local name=crate:GetName()
+if name then
 cargoByName[name]=cargoByName[name]or{}
 table.insert(cargoByName[name],crate)
+end
 end
 local lineIndex=1
 for cName,list in pairs(cargoByName)do
@@ -77208,7 +77210,7 @@ local left=#list-i+1
 local label
 local loadkey=self.gettext:GetEntry("MENU_LOAD_SINGLE",self.locale)
 if left>=needed then
-label=string.format("%d. %s %s",lineIndex,loadkey,cName)
+label=string.format("%d. %s %s",cName,lineIndex,loadkey)
 i=i+needed
 else
 label=string.format("%d. %s %s (%d/%d)",lineIndex,loadkey,cName,left,needed)
