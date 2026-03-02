@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-02T06:43:41+01:00-9c3a2470c25e1d65eaaba7a7bbe34b03bc15b562 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-02T13:26:59+01:00-88e6d1c3fff1877f678aee5826652c33e0351ef0 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -2332,37 +2332,55 @@ local count=0
 for _ in pairs(T or{})do count=count+1 end
 return count
 end
-function UTILS.PrintTableToLog(table,indent,noprint)
-local text="\n"
-if not table or type(table)~="table"then
+function UTILS.PrintTableToLog(t,indent,noprint,maxDepth,seen)
+maxDepth=maxDepth or 5
+indent=indent or 0
+seen=seen or{}
+if not t or type(t)~="table"then
 env.warning("No table passed!")
 return nil
 end
-if not indent then indent=0 end
-for k,v in pairs(table)do
-if string.find(k," ")then k='"'..k..'"'end
-if type(v)=="table"and UTILS.TableLength(v)>0 then
-if not noprint then
-env.info(string.rep("  ",indent)..tostring(k).." = {")
+if indent>maxDepth then
+local msg=string.rep("  ",indent).."<max depth reached>\n"
+if not noprint then env.info(msg)end
+return msg
 end
-text=text..string.rep("  ",indent)..tostring(k).." = {\n"
-text=text..tostring(UTILS.PrintTableToLog(v,indent+1),noprint).."\n"
+if seen[t]then
+local msg=string.rep("  ",indent).."<cycle>\n"
+if not noprint then env.info(msg)end
+return msg
+end
+seen[t]=true
+local text="\n"
+for k,v in pairs(t)do
+local key=k
+if type(key)=="string"and key:find(" ",1,true)then
+key='"'..key..'"'
+else
+key=tostring(key)
+end
+if type(v)=="table"and next(v)~=nil then
+if not noprint then
+env.info(string.rep("  ",indent)..key.." = {")
+end
+text=text..string.rep("  ",indent)..key.." = {\n"
+text=text..UTILS.PrintTableToLog(v,indent+1,noprint,maxDepth,seen)
+text=text..string.rep("  ",indent).."},\n"
 if not noprint then
 env.info(string.rep("  ",indent).."},")
 end
-text=text..string.rep("  ",indent).."},\n"
 elseif type(v)=="function"then
 else
 local value
-if tostring(v)=="true"or tostring(v)=="false"or tonumber(v)~=nil then
-value=v
+if type(v)=="boolean"or type(v)=="number"then
+value=tostring(v)
 else
 value='"'..tostring(v)..'"'
 end
 if not noprint then
-env.info(string.rep("  ",indent)..tostring(k).." = "..tostring(value)..",\n")
+env.info(string.rep("  ",indent)..key.." = "..value..",")
 end
-text=text..string.rep("  ",indent)..tostring(k).." = "..tostring(value)..",\n"
+text=text..string.rep("  ",indent)..key.." = "..value..",\n"
 end
 end
 return text
