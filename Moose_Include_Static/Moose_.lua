@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-04T12:01:48+01:00-64199acefe51bf36d436f8e8805e83b65b5236d5 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-04T14:12:14+01:00-e8176eee4f3ff0f7badae61bc5b83fb1ee9a1089 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -19718,6 +19718,24 @@ end
 function MESSAGE:ToClient(Client,Settings)
 self:F(Client)
 self:ToUnit(Client,Settings)
+return self
+end
+function MESSAGE:ToSet(Set,Settings)
+for _,_obj in pairs(Set:GetSetObjects()or{})do
+if _obj and _obj:IsAlive()then
+if _obj:IsInstanceOf("SET_GROUP")then
+self:ToGroup(_obj,Settings)
+elseif _obj:IsInstanceOf("SET_CLIENT")or _obj:IsInstanceOf("SET_UNIT")then
+self:ToUnit(_obj,Settings)
+end
+end
+end
+return self
+end
+function MESSAGE:ToSetIf(Set,Condition,Settings)
+if Set and Condition==true then
+self:ToSet(Set,Settings)
+end
 return self
 end
 function MESSAGE:ToGroup(Group,Settings)
@@ -40897,7 +40915,7 @@ do
 DESIGNATE={
 ClassName="DESIGNATE",
 }
-function DESIGNATE:New(CC,Detection,AttackSet,Mission)
+function DESIGNATE:New(CC,Detection,AttackSet)
 local self=BASE:Inherit(self,FSM:New())
 self:F({Detection})
 self:SetStartState("Designating")
@@ -40910,7 +40928,6 @@ self:AddTransition("*","Illuminate","*")
 self:AddTransition("*","DoneSmoking","*")
 self:AddTransition("*","DoneIlluminating","*")
 self:AddTransition("*","Status","*")
-self.CC=CC
 self.Detection=Detection
 self.AttackSet=AttackSet
 self.RecceSet=Detection:GetDetectionSet()
@@ -40920,7 +40937,6 @@ self:SetDesignateName()
 self:SetLaseDuration()
 self:SetFlashStatusMenu(false)
 self:SetFlashDetectionMessages(true)
-self:SetMission(Mission)
 self:SetLaserCodes({1688,1130,4785,6547,1465,4578})
 self:SetAutoLase(false,false)
 self:SetThreatLevelPrioritization(false)
@@ -41033,10 +41049,7 @@ function DESIGNATE:SetAutoLase(AutoLase,Message)
 self.AutoLase=AutoLase or false
 if Message then
 local AutoLaseOnOff=(self.AutoLase==true)and"On"or"Off"
-local CC=self.CC:GetPositionable()
-if CC then
-CC:MessageToSetGroup(self.DesignateName..": Auto Lase "..AutoLaseOnOff..".",15,self.AttackSet)
-end
+MESSAGE:New(self.DesignateName..": Auto Lase "..AutoLaseOnOff..".",15):ToSet(self.AttackSet)
 end
 self:CoordinateLase()
 self:SetDesignateMenu()
@@ -41047,7 +41060,6 @@ self.ThreatLevelPrioritization=Prioritize
 return self
 end
 function DESIGNATE:SetMission(Mission)
-self.Mission=Mission
 return self
 end
 function DESIGNATE:onafterDetect()
@@ -41073,7 +41085,7 @@ self.AttackSet:ForEachGroupAlive(
 function(AttackGroup)
 if AttackGroup:IsAlive()==true then
 local DetectionText=self.Detection:DetectedItemReportSummary(DetectedItem,AttackGroup):Text(", ")
-self.CC:GetPositionable():MessageToGroup("Targets out of LOS\n"..DetectionText,10,AttackGroup,self.DesignateName)
+MESSAGE:New("Targets out of LOS\n"..DetectionText,10,self.DesignateName):ToGroup(AttackGroup)
 end
 end
 )
@@ -41095,7 +41107,7 @@ self.AttackSet:ForEachGroupAlive(
 function(AttackGroup)
 if self.FlashDetectionMessage[AttackGroup]==true then
 local DetectionText=self.Detection:DetectedItemReportSummary(DetectedItem,AttackGroup):Text(", ")
-self.CC:GetPositionable():MessageToGroup("Targets detected at \n"..DetectionText,10,AttackGroup,self.DesignateName)
+MESSAGE:New("Targets detected at \n"..DetectionText,10,self.DesignateName):ToGroup(AttackGroup)
 end
 end
 )
@@ -41143,8 +41155,7 @@ DetectedReport:Add(" - ".."Illuminating Area")
 end
 end
 end
-local CC=self.CC:GetPositionable()
-CC:MessageTypeToGroup(DetectedReport:Text("\n"),MESSAGE.Type.Information,AttackGroup,self.DesignateName)
+MESSAGE:New(DetectedReport:Text("\n"),15,self.DesignateName):ToGroup(AttackGroup)
 local DesignationReport=REPORT:New("Marking Targets:")
 self.RecceSet:ForEachGroupAlive(
 function(RecceGroup)
@@ -41166,9 +41177,6 @@ end
 function DESIGNATE:SetMenu(AttackGroup)
 self.MenuDesignate=self.MenuDesignate or{}
 local MissionMenu=nil
-if self.Mission then
-MissionMenu=self.Mission:GetMenu(AttackGroup)
-end
 local MenuTime=timer.getTime()
 self.MenuDesignate[AttackGroup]=MENU_GROUP_DELAYED:New(AttackGroup,self.DesignateName,MissionMenu):SetTime(MenuTime):SetTag(self.DesignateName)
 local MenuDesignate=self.MenuDesignate[AttackGroup]
@@ -41402,10 +41410,7 @@ self:LaseOff(Index)
 end
 end
 function DESIGNATE:onafterLaseOff(From,Event,To,Index)
-local CC=self.CC:GetPositionable()
-if CC then
-CC:MessageToSetGroup("Stopped lasing.",5,self.AttackSet,self.DesignateName)
-end
+MESSAGE:New("Stopped lasing.",5,self.DesignateName):ToSet(self.AttackSet)
 local DetectedItem=self.Detection:GetDetectedItemByIndex(Index)
 local TargetSetUnit=self.Detection:GetDetectedItemSet(DetectedItem)
 local Recces=self.Recces

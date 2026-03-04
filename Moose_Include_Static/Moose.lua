@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-03-04T12:01:48+01:00-64199acefe51bf36d436f8e8805e83b65b5236d5 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-03-04T14:12:14+01:00-e8176eee4f3ff0f7badae61bc5b83fb1ee9a1089 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -37340,6 +37340,37 @@ function MESSAGE:ToClient( Client, Settings )
   self:F( Client )
   self:ToUnit(Client,Settings)
   return self
+end
+
+--- Sends a MESSAGE to a SET_GROUP, SET_UNIT, or SET_CLIENT.
+-- @param #MESSAGE self
+-- @param Core.Set#SET_GROUP Set The set to send to.
+-- @param Core.Settings#SETTINGS Settings (Optional) Settings for message display.
+-- @return self
+function MESSAGE:ToSet(Set, Settings)
+ for _,_obj in pairs (Set:GetSetObjects() or {}) do
+    if _obj and _obj:IsAlive() then
+        if _obj:IsInstanceOf("SET_GROUP") then
+         self:ToGroup(_obj, Settings)
+        elseif _obj:IsInstanceOf("SET_CLIENT") or _obj:IsInstanceOf("SET_UNIT") then
+         self:ToUnit(_obj, Settings)
+        end
+    end
+ end
+ return self
+end
+
+--- Sends a MESSAGE to a SET_GROUP, SET_UNIT, or SET_CLIENT if a condition is true.
+-- @param #MESSAGE self
+-- @param Core.Set#SET_GROUP Set The set to send to.
+-- @param #boolean Condition The condition which needs to be true.
+-- @param Core.Settings#SETTINGS Settings (Optional) Settings for message display.
+-- @return self
+function MESSAGE:ToSetIf(Set, Condition, Settings)
+    if Set and Condition == true then
+        self:ToSet(Set, Settings)
+    end
+ return self
 end
 
 --- Sends a MESSAGE to a Group.
@@ -81519,12 +81550,11 @@ do -- DESIGNATE
 
   --- DESIGNATE Constructor. This class is an abstract class and should not be instantiated.
   -- @param #DESIGNATE self
-  -- @param Tasking.CommandCenter#COMMANDCENTER CC
+  -- @param Wrapper.Group#GROUP CC Group as Commandcenter standin. Currently unused (03/2026)
   -- @param Functional.Detection#DETECTION_BASE Detection
   -- @param Core.Set#SET_GROUP AttackSet The Attack collection of GROUP objects to designate and report for.
-  -- @param Tasking.Mission#MISSION Mission (Optional) The Mission where the menu needs to be attached.
   -- @return #DESIGNATE
-  function DESIGNATE:New( CC, Detection, AttackSet, Mission )
+  function DESIGNATE:New( CC, Detection, AttackSet )
   
     local self = BASE:Inherit( self, FSM:New() ) -- #DESIGNATE
     self:F( { Detection } )
@@ -81686,7 +81716,7 @@ do -- DESIGNATE
     -- @param #DESIGNATE  self
     -- @param #number Delay
     
-    self.CC = CC
+    --self.CC = CC
     self.Detection = Detection
     self.AttackSet = AttackSet
     self.RecceSet = Detection:GetDetectionSet()
@@ -81698,7 +81728,7 @@ do -- DESIGNATE
     
     self:SetFlashStatusMenu( false )
     self:SetFlashDetectionMessages( true )
-    self:SetMission( Mission )
+    --self:SetMission( Mission )
     
     self:SetLaserCodes( { 1688, 1130, 4785, 6547, 1465, 4578 } ) -- set self.LaserCodes
     self:SetAutoLase( false, false ) -- set self.Autolase and don't send message.
@@ -81972,10 +82002,12 @@ do -- DESIGNATE
     
     if Message then
       local AutoLaseOnOff = ( self.AutoLase == true ) and "On" or "Off"
-      local CC = self.CC:GetPositionable()
-      if CC then
-        CC:MessageToSetGroup( self.DesignateName .. ": Auto Lase " .. AutoLaseOnOff .. ".", 15, self.AttackSet )
-      end
+
+      MESSAGE:New(self.DesignateName .. ": Auto Lase " .. AutoLaseOnOff .. ".",15):ToSet(self.AttackSet)
+      --local CC = self.CC:GetPositionable()
+      --if CC then
+        --CC:MessageToSetGroup( self.DesignateName .. ": Auto Lase " .. AutoLaseOnOff .. ".", 15, self.AttackSet )
+      --end
     end
 
     self:CoordinateLase()
@@ -81995,14 +82027,14 @@ do -- DESIGNATE
     return self
   end
   
-  --- Set the MISSION object for which designate will function.
+  --- [DEPRECATED DO NOT USE] Set the MISSION object for which designate will function.
   -- When a MISSION object is assigned, the menu for the designation will be located at the Mission Menu.
   -- @param #DESIGNATE self
   -- @param Tasking.Mission#MISSION Mission The MISSION object.
   -- @return #DESIGNATE
   function DESIGNATE:SetMission( Mission ) --R2.2
 
-    self.Mission = Mission
+    --self.Mission = Mission
 
     return self
   end
@@ -82048,7 +82080,8 @@ do -- DESIGNATE
             function( AttackGroup )
               if AttackGroup:IsAlive() == true then
                 local DetectionText = self.Detection:DetectedItemReportSummary( DetectedItem, AttackGroup ):Text( ", " )
-                self.CC:GetPositionable():MessageToGroup( "Targets out of LOS\n" .. DetectionText, 10, AttackGroup, self.DesignateName )
+                --self.CC:GetPositionable():MessageToGroup( "Targets out of LOS\n" .. DetectionText, 10, AttackGroup, self.DesignateName )
+                MESSAGE:New("Targets out of LOS\n" .. DetectionText,10,self.DesignateName):ToGroup(AttackGroup)
               end
             end
           )
@@ -82073,7 +82106,8 @@ do -- DESIGNATE
                 function( AttackGroup )
                   if self.FlashDetectionMessage[AttackGroup] == true then
                     local DetectionText = self.Detection:DetectedItemReportSummary( DetectedItem, AttackGroup ):Text( ", " )
-                    self.CC:GetPositionable():MessageToGroup( "Targets detected at \n" .. DetectionText, 10, AttackGroup, self.DesignateName )
+                    --self.CC:GetPositionable():MessageToGroup( "Targets detected at \n" .. DetectionText, 10, AttackGroup, self.DesignateName )
+                    MESSAGE:New( "Targets detected at \n" .. DetectionText,10,self.DesignateName):ToGroup(AttackGroup)
                   end
                 end
               )
@@ -82147,9 +82181,10 @@ do -- DESIGNATE
             end
           end
           
-          local CC = self.CC:GetPositionable()
+         -- local CC = self.CC:GetPositionable()
       
-          CC:MessageTypeToGroup( DetectedReport:Text( "\n" ), MESSAGE.Type.Information, AttackGroup, self.DesignateName )
+          --CC:MessageTypeToGroup( DetectedReport:Text( "\n" ), MESSAGE.Type.Information, AttackGroup, self.DesignateName )
+          MESSAGE:New( DetectedReport:Text( "\n" ),15,self.DesignateName):ToGroup(AttackGroup)
           
           local DesignationReport = REPORT:New( "Marking Targets:" )
       
@@ -82183,10 +82218,10 @@ do -- DESIGNATE
     
     local MissionMenu = nil
     
-    if self.Mission then
+    --if self.Mission then
       --MissionMenu = self.Mission:GetRootMenu( AttackGroup )
-      MissionMenu = self.Mission:GetMenu( AttackGroup )
-    end
+      --MissionMenu = self.Mission:GetMenu( AttackGroup )
+    --end
     
     local MenuTime = timer.getTime()
     
@@ -82574,12 +82609,13 @@ do -- DESIGNATE
   -- @param #DESIGNATE self
   -- @return #DESIGNATE
   function DESIGNATE:onafterLaseOff( From, Event, To, Index )
-  
-    local CC = self.CC:GetPositionable()
+
+    MESSAGE:New("Stopped lasing.",5,self.DesignateName):ToSet(self.AttackSet)
+    --local CC = self.CC:GetPositionable()
     
-    if CC then 
-      CC:MessageToSetGroup( "Stopped lasing.", 5, self.AttackSet, self.DesignateName )
-    end
+    --if CC then 
+      --CC:MessageToSetGroup( "Stopped lasing.", 5, self.AttackSet, self.DesignateName )
+    --end
     
     local DetectedItem = self.Detection:GetDetectedItemByIndex( Index )
     local TargetSetUnit = self.Detection:GetDetectedItemSet( DetectedItem )
