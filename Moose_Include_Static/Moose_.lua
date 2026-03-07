@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-06T20:27:14+01:00-b99894768b7324aaebae3575898aaead57819e69 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-07T09:57:00+01:00-5f7975b91046505e260b5fe99e077981e24abe93 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -84303,15 +84303,17 @@ self.msrs=MSRS:New(path,channel,modulation)
 self.msrs:SetPort(self.SRSport)
 self.msrs:SetLabel("CSAR")
 self.msrs:SetBackend(self.SRSBackend)
-self.msrs:SetProvider(self.SRSProvider)
 self.msrs.speed=self.SRSSpeed
 self.msrs:SetCulture(self.SRSCulture)
 self.msrs:SetCoalition(self.coalition)
 self.msrs:SetVoice(self.SRSVoice)
 self.msrs:SetGender(self.SRSGender)
-if self.SRSGPathToCredentials then
+if self.SRSGPathToCredentials and(not self.SRSProvider)then
 self.msrs:SetProviderOptionsGoogle(self.SRSGPathToCredentials,self.SRSGPathToCredentials)
 self.msrs:SetProvider(MSRS.Provider.GOOGLE)
+end
+if self.SRSProvider then
+self.msrs:SetProvider(self.SRSProvider)
 end
 self.msrs:SetVolume(self.SRSVolume)
 self.msrs:SetLabel("CSAR")
