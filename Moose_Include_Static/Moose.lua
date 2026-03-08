@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-03-08T15:38:38+01:00-a8b6607c897136fb9dea7ac732e75aa7b84b8864 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-03-08T23:06:42+01:00-2e00c3ad56d0394f5bf54b10589394f8888328b7 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -172576,10 +172576,10 @@ function AUFTRAG:NewAWACS(Coordinate, Altitude, Speed, Heading, Leg)
   -- Create ORBIT first.
   local mission=nil --Ops.Auftrag#AUFTRAG
   
-  if BASE:IsInstanceOf("COORDINATE") then
+  if Coordinate:IsInstanceOf("COORDINATE") then
     -- Racetrack at a given coordinate
     mission=AUFTRAG:NewORBIT_RACETRACK(Coordinate, Altitude, Speed, Heading, Leg)
-  elseif BASE:IsInstanceOf("UNIT") then
+  elseif Coordinate:IsInstanceOf("UNIT") then
     -- Racetrack wrt a given (moving) unit (e.g. a carrier)
     local OffsetVec2={r=6, phi=180}
     mission=AUFTRAG:NewORBIT_GROUP(Coordinate, Altitude, Speed, Leg, Heading, OffsetVec2)
