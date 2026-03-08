@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-08T14:14:36+01:00-227b6337bc44144768fb807550598ed1e68132d0 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-08T15:12:23+01:00-4dee60b0fdbc63bde4fab9b015052e3c10c1e349 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -121085,7 +121085,7 @@ FuelCriticalThreshold=10,
 showpatrolpointmarks=false,
 EngageTargetTypes={"Air"},
 }
-EASYGCICAP.version="0.1.34"
+EASYGCICAP.version="0.1.35"
 function EASYGCICAP:New(Alias,AirbaseName,Coalition,EWRName)
 local self=BASE:Inherit(self,FSM:New())
 self.alias=Alias or AirbaseName.." CAP Wing"
@@ -121125,6 +121125,7 @@ self.EngageTargetTypes={"Air"}
 self:SetDefaultTurnoverTime()
 self:SetStartState("Stopped")
 self:AddTransition("Stopped","Start","Running")
+self:AddTransition("Stopped","Restart","Running")
 self:AddTransition("Running","Stop","Stopped")
 self:AddTransition("*","Status","*")
 self:AddAirwing(self.airbasename,self.alias,self.CapZoneName)
@@ -121659,7 +121660,7 @@ Squadron_One:SetSkill(Skill or AI.Skill.AVERAGE)
 Squadron_One:SetMissionRange(self.missionrange)
 local wing=self.wings[AirbaseName][1]
 wing:AddSquadron(Squadron_One)
-wing:NewPayload(TemplateName,-1,{AUFTRAG.Type.CAP,AUFTRAG.Type.GCICAP,AUFTRAG.Type.INTERCEPT,AUFTRAG.Type.PATROLRACETRACK,AUFTRAG.Type.ALERT5},75)
+wing:NewPayload(TemplateName,-1,{AUFTRAG.Type.CAP,AUFTRAG.Type.GCICAP,AUFTRAG.Type.INTERCEPT,AUFTRAG.Type.PATROLRACETRACK,AUFTRAG.Type.ALERT5},100)
 return self
 end
 function EASYGCICAP:_AddReconSquadron(TemplateName,SquadName,AirbaseName,AirFrames,Skill,Modex,Livery)
@@ -122039,7 +122040,21 @@ function EASYGCICAP:onafterStop(From,Event,To)
 self:T({From,Event,To})
 self.Intel:Stop()
 for _,_wing in pairs(self.wings or{})do
-_wing:Stop()
+for _,_aw in pairs(_wing)do
+_wing[1]:Stop()
+end
+end
+return self
+end
+function EASYGCICAP:onafterRestart(From,Event,To)
+self:T({From,Event,To})
+if self:Is("Stopped")then
+self.Intel:Start()
+for _,_wing in pairs(self.wings or{})do
+for _,_aw in pairs(_wing)do
+_wing[1]:Start()
+end
+end
 end
 return self
 end
