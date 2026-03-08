@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-08T13:14:14+01:00-9850b50f1e1eac25a9a802f8599dd80e7994f413 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-08T14:14:36+01:00-227b6337bc44144768fb807550598ed1e68132d0 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -86482,7 +86482,7 @@ HELICOPTER="Helicopter",
 GROUND="Ground",
 NAVAL="Naval",
 }
-AUFTRAG.version="1.4.1"
+AUFTRAG.version="1.4.2"
 function AUFTRAG:New(Type)
 local self=BASE:Inherit(self,FSM:New())
 _AUFTRAGSNR=_AUFTRAGSNR+1
@@ -86688,13 +86688,40 @@ mission.DCStask=mission:GetDCSMissionTask()
 return mission
 end
 function AUFTRAG:NewAWACS(Coordinate,Altitude,Speed,Heading,Leg)
-local mission=AUFTRAG:NewORBIT_RACETRACK(Coordinate,Altitude,Speed,Heading,Leg)
+local mission=nil
+if BASE:IsInstanceOf("COORDINATE")then
+mission=AUFTRAG:NewORBIT_RACETRACK(Coordinate,Altitude,Speed,Heading,Leg)
+elseif BASE:IsInstanceOf("UNIT")then
+local OffsetVec2={r=6,phi=180}
+mission=AUFTRAG:NewORBIT_GROUP(Coordinate,Altitude,Speed,Leg,Heading,OffsetVec2)
+else
+BASE:E("ERROR in AUFTRAG:NewAWACS: You must pass a COORDINATE or UNIT object!")
+return nil
+end
 mission.type=AUFTRAG.Type.AWACS
 mission:_SetLogID()
 mission.missionTask=ENUMS.MissionTask.AWACS
 mission.optionROE=ENUMS.ROE.WeaponHold
 mission.optionROT=ENUMS.ROT.PassiveDefense
 mission.categories={AUFTRAG.Category.AIRCRAFT}
+mission.DCStask=mission:GetDCSMissionTask()
+return mission
+end
+function AUFTRAG:NewRECOVERYTANKER(Carrier,Altitude,Speed,Leg,RelHeading,OffsetDist,OffsetAngle,UpdateDistance)
+local OffsetVec2={r=OffsetDist or 6,phi=OffsetAngle or 180}
+Leg=Leg or 14
+Speed=Speed or 250
+local Heading=nil
+if RelHeading then
+Heading=-math.abs(RelHeading)
+end
+local mission=AUFTRAG:NewORBIT_GROUP(Carrier,Altitude,Speed,Leg,Heading,OffsetVec2,UpdateDistance)
+mission.type=AUFTRAG.Type.RECOVERYTANKER
+mission.missionTask=ENUMS.MissionTask.REFUELING
+mission.missionFraction=0.9
+mission.optionROE=ENUMS.ROE.WeaponHold
+mission.optionROT=ENUMS.ROT.NoReaction
+mission.categories={AUFTRAG.Category.AIRPLANE}
 mission.DCStask=mission:GetDCSMissionTask()
 return mission
 end
@@ -86995,24 +87022,6 @@ mission.missionFraction=0.9
 mission.optionROE=ENUMS.ROE.WeaponHold
 mission.optionROT=ENUMS.ROT.NoReaction
 mission.categories={AUFTRAG.Category.HELICOPTER}
-mission.DCStask=mission:GetDCSMissionTask()
-return mission
-end
-function AUFTRAG:NewRECOVERYTANKER(Carrier,Altitude,Speed,Leg,RelHeading,OffsetDist,OffsetAngle,UpdateDistance)
-local OffsetVec2={r=OffsetDist or 6,phi=OffsetAngle or 180}
-Leg=Leg or 14
-Speed=Speed or 250
-local Heading=nil
-if RelHeading then
-Heading=-math.abs(RelHeading)
-end
-local mission=AUFTRAG:NewORBIT_GROUP(Carrier,Altitude,Speed,Leg,Heading,OffsetVec2,UpdateDistance)
-mission.type=AUFTRAG.Type.RECOVERYTANKER
-mission.missionTask=ENUMS.MissionTask.REFUELING
-mission.missionFraction=0.9
-mission.optionROE=ENUMS.ROE.WeaponHold
-mission.optionROT=ENUMS.ROT.NoReaction
-mission.categories={AUFTRAG.Category.AIRPLANE}
 mission.DCStask=mission:GetDCSMissionTask()
 return mission
 end
@@ -99763,7 +99772,7 @@ GRADUATE="Graduate",
 INSTRUCTOR="Instructor",
 }
 FLIGHTGROUP.Players={}
-FLIGHTGROUP.version="1.0.3"
+FLIGHTGROUP.version="1.0.4"
 function FLIGHTGROUP:New(group)
 local og=_DATABASE:GetOpsGroup(group)
 if og then
@@ -100190,7 +100199,8 @@ self.isHoldingAtHoldingPoint=false
 end
 end
 if mission and mission.updateDCSTask then
-if(mission:GetType()==AUFTRAG.Type.ORBIT or mission:GetType()==AUFTRAG.Type.RECOVERYTANKER or mission:GetType()==AUFTRAG.Type.CAP)and mission.orbitVec2 then
+local mtype=mission:GetType()
+if(mtype==AUFTRAG.Type.ORBIT or mtype==AUFTRAG.Type.RECOVERYTANKER or mtype==AUFTRAG.Type.CAP or mtype==AUFTRAG.Type.AWACS)and mission.orbitVec2 then
 local vec2=mission:GetTargetVec2()
 local hdg=mission:GetTargetHeading()
 local hdgchange=false
