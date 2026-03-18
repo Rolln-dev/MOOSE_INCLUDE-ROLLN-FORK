@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-03-15T15:14:35+01:00-b5ba31a94dc0d8d67510901549c6a08d25d6b73c ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-03-18T11:10:50+01:00-67297aa5741b81a69ac1917944d6f185c7c86bc6 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -100856,7 +100856,7 @@ function SUPPRESSION:StatusReport(message)
   self:GetState(), nunits, self.IniGroupStrength, self.CurrentROE, self.CurrentAlarmState, self.Nhit, life_min, life_max, life_ave, life_ave0, ammotot, detectedG, detectedU)
   
   MESSAGE:New(text, 10):ToAllIf(message or self.Debug)
-  self:I(self.lid..text)
+  self:T(self.lid..text)
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -101141,7 +101141,7 @@ function SUPPRESSION:onafterFightBack(Controllable, From, Event, To)
   local Waypoints = group:GetTemplateRoutePoints()
   
 --  env.info("FF waypoints",showMessageBox)
---  self:I(Waypoints)
+    self:T2({Waypoints})
   
   group:Route(Waypoints, 5)
   
@@ -101284,7 +101284,7 @@ function SUPPRESSION:onafterOutOfAmmo(Controllable, From, Event, To)
   self:_EventFromTo("onafterOutOfAmmo", Event, From, To)
 
   -- Info to log.
-  self:I(self.lid..string.format("Out of ammo!"))
+  sefl:T(self.lid..string.format("Out of ammo!"))
     
   -- Order retreat if retreat zone was specified.
   if self.RetreatZone then
@@ -101432,7 +101432,7 @@ function SUPPRESSION:onafterStop(Controllable, From, Event, To)
       
   local text=string.format("Stopping SUPPRESSION for group %s", self.Controllable:GetName())
   MESSAGE:New(text, 10):ToAllIf(self.Debug)
-  self:I(self.lid..text)
+  sefl:T(self.lid..text)
       
   -- Clear all pending schedules
   self.CallScheduler:Clear()
