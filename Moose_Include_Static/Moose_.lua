@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-19T12:26:19+01:00-a8bc62608c06786d72a74662cb1b1561ef4c9f01 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-21T12:35:07+01:00-117a1e8811141793aab2dfb59a97f99992733cb4 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -17883,6 +17883,76 @@ local x=Coordinate.x
 local z=Coordinate.z
 return x-Precision<=self.x and x+Precision>=self.x and z-Precision<=self.z and z+Precision>=self.z
 end
+function COORDINATE:ScanObjectsSquare(sideLength,scanunits,scanstatics,scanscenery)
+self:F(string.format("Scanning cube volume (lower-left corner) with side length %.1f m.",sideLength))
+local CornerVec3=self:GetVec3()
+local CenterY=CornerVec3.y
+local MinVec3={
+x=CornerVec3.x,
+y=CenterY-(sideLength/2),
+z=CornerVec3.z
+}
+local MaxVec3={
+x=CornerVec3.x+sideLength,
+y=CenterY+(sideLength/2),
+z=CornerVec3.z+sideLength
+}
+local BoxSearch={
+id=world.VolumeType.BOX,
+params={
+min=MinVec3,
+max=MaxVec3,
+}
+}
+if scanunits==nil then
+scanunits=true
+end
+if scanstatics==nil then
+scanstatics=true
+end
+if scanscenery==nil then
+scanscenery=false
+end
+local scanobjects={}
+if scanunits then
+table.insert(scanobjects,Object.Category.UNIT)
+end
+if scanstatics then
+table.insert(scanobjects,Object.Category.STATIC)
+end
+if scanscenery then
+table.insert(scanobjects,Object.Category.SCENERY)
+end
+local Units={}
+local Statics={}
+local Scenery={}
+local gotstatics=false
+local gotunits=false
+local gotscenery=false
+local function EvaluateZone(ZoneObject)
+if ZoneObject then
+local ObjectCategory=ZoneObject:getCategory()
+if(ObjectCategory==Object.Category.UNIT and ZoneObject:isExist())then
+table.insert(Units,ZoneObject)
+gotunits=true
+elseif(ObjectCategory==Object.Category.STATIC and ZoneObject:isExist())then
+table.insert(Statics,ZoneObject)
+gotstatics=true
+elseif ObjectCategory==Object.Category.SCENERY then
+table.insert(Scenery,ZoneObject)
+gotscenery=true
+end
+end
+return true
+end
+world.searchObjects(scanobjects,BoxSearch,EvaluateZone)
+for _,unit in pairs(Units)do
+if not unit:isExist()then
+gotunits=false
+end
+end
+return gotunits,gotstatics,gotscenery,Units,Statics,Scenery
+end
 function COORDINATE:ScanObjects(radius,scanunits,scanstatics,scanscenery)
 self:F(string.format("Scanning in radius %.1f m.",radius or 100))
 local SphereSearch={
@@ -27820,6 +27890,14 @@ end
 return self
 end
 return nil
+end
+function CONTROLLABLE:SetOptionJettisonEmptyTanks(Switch)
+self:F2({self.ControllableName})
+Switch=Switch or true
+if self:IsAir()then
+self:SetOption(AI.Option.Air.id.JETT_TANKS_IF_EMPTY,Switch)
+end
+return self
 end
 function CONTROLLABLE:SetOptionLandingStraightIn()
 self:F2({self.ControllableName})
@@ -79465,7 +79543,7 @@ beacon.frequency=VHF/1000000
 beacon.modulation=CTLD.RadioModulation.FM
 return beacon
 end
-function CTLD:AddCTLDZone(Name,Type,Color,Active,HasBeacon,Shiplength,Shipwidth)
+function CTLD:AddCTLDZone(Name,Type,Color,Active,HasBeacon,Shiplength,Shipwidth,BeaconFrequencies)
 self:T(self.lid.." AddCTLDZone")
 local zone=ZONE:FindByName(Name)
 if not zone and Type~=CTLD.CargoZoneType.SHIP then
@@ -79498,6 +79576,11 @@ if HasBeacon then
 ctldzone.fmbeacon=self:_GetFMBeacon(Name)
 ctldzone.uhfbeacon=self:_GetUHFBeacon(Name)
 ctldzone.vhfbeacon=self:_GetVHFBeacon(Name)
+if BeaconFrequencies then
+ctldzone.fmbeacon.frequency=BeaconFrequencies.FM or ctldzone.fmbeacon.frequency
+ctldzone.vhfbeacon.frequency=BeaconFrequencies.VHF or ctldzone.vhfbeacon.frequency
+ctldzone.uhfbeacon.frequency=BeaconFrequencies.UHF or ctldzone.uhfbeacon.frequency
+end
 else
 ctldzone.fmbeacon=nil
 ctldzone.uhfbeacon=nil
@@ -102486,6 +102569,12 @@ detectStatics=false,
 DetectAccoustic=false,
 DetectAccousticRadius=1000,
 DetectAccousticUnitTypes={Unit.Category.HELICOPTER},
+DopplerRadar=true,
+DopplerMinAltAGL=500,
+DopplerNotchSin=math.sin(math.rad(15)),
+DopplerMinSpeedMps=50,
+DopplerRCS=true,
+DopplerRadarRangeM=200*1000,
 }
 INTEL.Ctype={
 GROUND="Ground",
@@ -102494,6 +102583,101 @@ AIRCRAFT="Aircraft",
 STRUCTURE="Structure"
 }
 INTEL.version="0.3.10"
+INTEL.RCS_Table={
+["A-10C"]=8.0,
+["A-10C_2"]=8.0,
+["F-14A-135-GR"]=6.0,
+["F-14B"]=6.0,
+["F-15C"]=5.0,
+["F-15E"]=5.0,
+["F-15ESE"]=5.0,
+["F-16A"]=1.2,
+["F-16C bl.50"]=1.2,
+["F-16C bl.52d"]=1.2,
+["F/A-18C"]=1.5,
+["FA-18C_hornet"]=1.5,
+["F/A-18C_hornet"]=1.5,
+["F/A-18F"]=2.0,
+["F-117A"]=0.003,
+["F-22A"]=0.0001,
+["F-35A"]=0.001,
+["B-52H"]=100.0,
+["B-1B"]=0.75,
+["B-2A"]=0.001,
+["AV8BNA"]=2.0,
+["Harrier"]=2.0,
+["A-4E-C"]=3.0,
+["Tornado_IDS"]=5.0,
+["Tornado_GR4"]=5.0,
+["F-111F"]=5.0,
+["F-4E"]=6.0,
+["F-5E"]=1.0,
+["F-5E-3"]=1.0,
+["Mirage-F1CE"]=2.5,
+["Mirage-F1EE"]=2.5,
+["M-2000C"]=2.0,
+["M-2000-5"]=2.0,
+["C-17A"]=50.0,
+["C-130"]=40.0,
+["KC-130"]=40.0,
+["KC-135"]=50.0,
+["IL-76MD"]=45.0,
+["E-3A"]=50.0,
+["MiG-15bis"]=4.0,
+["MiG-19P"]=3.5,
+["MiG-21Bis"]=2.5,
+["MiG-23MLD"]=7.0,
+["MiG-25PD"]=14.0,
+["MiG-25RBT"]=14.0,
+["MiG-29A"]=5.0,
+["MiG-29S"]=5.0,
+["MiG-29G"]=5.0,
+["MiG-29K"]=4.0,
+["MiG-31"]=14.0,
+["Su-7B"]=6.0,
+["Su-17M4"]=7.0,
+["Su-24M"]=6.0,
+["Su-24MR"]=6.0,
+["Su-25"]=10.0,
+["Su-25T"]=10.0,
+["Su-25TM"]=10.0,
+["Su-27"]=15.0,
+["Su-30"]=15.0,
+["Su-33"]=15.0,
+["Su-34"]=10.0,
+["Su-57"]=0.01,
+["Tu-22M3"]=20.0,
+["Tu-95MS"]=80.0,
+["Tu-142"]=80.0,
+["Tu-160"]=12.0,
+["An-26B"]=30.0,
+["An-30M"]=30.0,
+["IL-78M"]=45.0,
+["A-50"]=50.0,
+["Mi-8MT"]=5.0,
+["Mi-8MSB"]=5.0,
+["Mi-8MSB-V"]=5.0,
+["Mi-8AMTSh"]=5.0,
+["Mi-24V"]=3.5,
+["Mi-24P"]=3.5,
+["Mi-28N"]=2.5,
+["Ka-50"]=2.0,
+["Ka-52"]=2.0,
+["AH-64D"]=3.5,
+["AH-64D_BLK_II"]=3.5,
+["UH-1H"]=3.0,
+["UH-60L"]=3.0,
+["CH-47D"]=8.0,
+["OH-58D"]=0.8,
+["SA342M"]=0.8,
+["SA342L"]=0.8,
+}
+INTEL.RCS_CategoryDefault={
+[Group.Category.AIRPLANE]=5.0,
+[Group.Category.HELICOPTER]=2.5,
+}
+INTEL.RCS_Reference=5.0
+INTEL.RCS_NoseOnFraction=0.15
 function INTEL:New(DetectionSet,Coalition,Alias)
 local self=BASE:Inherit(self,FSM:New())
 self.detectionset=DetectionSet or SET_GROUP:New()
@@ -102784,7 +102968,11 @@ local group=_group
 if group and group:IsAlive()then
 for _,_recce in pairs(group:GetUnits())do
 local recce=_recce
+if self.DopplerRadar then
+self:GetDetectedUnitsDoppler(recce,DetectedUnits,RecceDetecting,self.DetectVisual,self.DetectOptical,self.DetectRadar,self.DetectIRST,self.DetectRWR,self.DetectDLINK)
+else
 self:GetDetectedUnits(recce,DetectedUnits,RecceDetecting,self.DetectVisual,self.DetectOptical,self.DetectRadar,self.DetectIRST,self.DetectRWR,self.DetectDLINK)
+end
 end
 if self.DetectAccoustic then
 local recce=group:GetFirstUnitAlive()
@@ -103630,6 +103818,111 @@ rcontact=contact
 end
 end
 return rcontact
+end
+function INTEL:SetDopplerRadar(MinAltAGL,NotchHalfDeg,MinSpeedMps,RadarRangeKm,RCS)
+self.DopplerRadar=true
+self.DopplerMinAltAGL=MinAltAGL or 500
+self.DopplerNotchSin=math.sin(math.rad(NotchHalfDeg or 15))
+self.DopplerMinSpeedMps=MinSpeedMps or 50
+self.DopplerRCS=(RCS~=false)
+self.DopplerRadarRangeM=(RadarRangeKm or 200)*1000
+return self
+end
+function INTEL:SetDopplerRadarOff()
+self.DopplerRadar=false
+return self
+end
+function INTEL:SetTypeRCS(TypeName,RCS_m2)
+INTEL.RCS_Table[TypeName]=RCS_m2
+return self
+end
+function INTEL:_GetAspectRCS(TargetUnit,rpos,spd,tvel)
+local typename=TargetUnit:GetTypeName()
+local base_rcs=INTEL.RCS_Table[typename]
+if not base_rcs then
+local cat=TargetUnit:GetGroup()and TargetUnit:GetGroup():GetCategory()
+base_rcs=(cat and INTEL.RCS_CategoryDefault[cat])or INTEL.RCS_Reference
+end
+if spd<1 then return base_rcs end
+local tpos=TargetUnit:GetVec3()
+local dx=rpos.x-tpos.x
+local dz=rpos.z-tpos.z
+local d=math.sqrt(dx*dx+dz*dz)
+if d<1 then return base_rcs end
+local cos_a=(tvel.x*dx+tvel.z*dz)/(spd*d)
+local sin2_a=1.0-cos_a*cos_a
+local f=INTEL.RCS_NoseOnFraction
+return base_rcs*(f+(1.0-f)*sin2_a)
+end
+function INTEL:_CheckDopplerDetection(TargetUnit,RadarUnit)
+local spd=TargetUnit:GetVelocityMPS()
+local rpos=RadarUnit:GetVec3()
+local tpos=TargetUnit:GetVec3()
+local tvel=TargetUnit:GetVelocity()
+local dx=tpos.x-rpos.x
+local dz=tpos.z-rpos.z
+local slant=math.sqrt(dx*dx+dz*dz)
+if spd<self.DopplerMinSpeedMps then
+return false,"speed"
+end
+local agl=TargetUnit:GetAltitude(true)
+if agl<self.DopplerMinAltAGL then
+if math.random()>(agl/self.DopplerMinAltAGL)then
+return false,"clutter"
+end
+end
+if slant>1 then
+local nx=dx/slant
+local nz=dz/slant
+local vr=tvel.x*nx+tvel.z*nz
+local vr_frac=math.abs(vr)/math.max(spd,1)
+if vr_frac<self.DopplerNotchSin then
+return false,"notch"
+end
+end
+if self.DopplerRCS and slant>1 then
+local sigma=self:_GetAspectRCS(TargetUnit,rpos,spd,tvel)
+local scale=(sigma/INTEL.RCS_Reference)^0.25
+local R_max=self.DopplerRadarRangeM*scale
+if slant>R_max then
+return false,"rcs"
+end
+local fade_start=R_max*0.80
+if slant>fade_start then
+local p=(R_max-slant)/(R_max-fade_start)
+if math.random()>p then
+return false,"rcs"
+end
+end
+end
+return true
+end
+function INTEL:GetDetectedUnitsDoppler(Unit,DetectedUnits,RecceDetecting,
+DetectVisual,DetectOptical,DetectRadar,
+DetectIRST,DetectRWR,DetectDLINK)
+self:GetDetectedUnits(Unit,DetectedUnits,RecceDetecting,DetectVisual,DetectOptical,DetectRadar,DetectIRST,DetectRWR,DetectDLINK)(self,Unit,DetectedUnits,RecceDetecting,
+DetectVisual,DetectOptical,DetectRadar,
+DetectIRST,DetectRWR,DetectDLINK)
+if not self.DopplerRadar then return end
+if DetectRadar==false then return end
+local remove={}
+for name,unit in pairs(DetectedUnits)do
+if unit:IsInstanceOf("UNIT")and unit:IsAir()then
+local ok,reason=self:_CheckDopplerDetection(unit,Unit)
+if not ok then
+table.insert(remove,name)
+if self.verbose and self.verbose>=2 then
+self:T(string.format(
+"%sDoppler: suppressed %s [%s] by %s",
+self.lid,name,reason,Unit:GetName()))
+end
+end
+end
+end
+for _,name in ipairs(remove)do
+DetectedUnits[name]=nil
+RecceDetecting[name]=nil
+end
 end
 INTEL_DLINK={
 ClassName="INTEL_DLINK",
