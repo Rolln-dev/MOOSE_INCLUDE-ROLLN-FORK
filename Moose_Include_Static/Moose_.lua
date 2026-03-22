@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-21T12:35:07+01:00-117a1e8811141793aab2dfb59a97f99992733cb4 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-22T09:18:00+01:00-16583ee35fe32b6d89eecbb038bc04f2d49caeec ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -21411,6 +21411,7 @@ else
 PointVec3.y=PointVec3:GetLandHeight()+math.random(500,2500)
 end
 Takeoff=GROUP.Takeoff.Air
+spawnonground=false
 else
 self:E(string.format("WARNING: Group %s has no parking spots at %s ==> No emergency air start or uncontrolled spawning ==> No spawn!",self.SpawnTemplatePrefix,SpawnAirbase:GetName()))
 return nil
