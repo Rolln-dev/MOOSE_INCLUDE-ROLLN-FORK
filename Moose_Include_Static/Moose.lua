@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-03-22T16:50:03+01:00-b47528028cffa97d888308f9358c0c508674a130 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-03-22T17:59:03+01:00-40d9cd2c2bae7972616d61a7b5442703074d4e85 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -84973,6 +84973,8 @@ function RAT:_InitAircraft(DCSgroup)
   local DCSdesc=DCSunit:getDesc()
   local DCScategory=DCSgroup:getCategory()
   local DCStype=DCSunit:getTypeName()
+  self:I({typename=DCStype})
+  UTILS.PrintTableToLog(DCSdesc.box,1,noprint,3,seen)
 
   -- set category
   if DCScategory==Group.Category.AIRPLANE then
@@ -85007,7 +85009,12 @@ function RAT:_InitAircraft(DCSgroup)
 
   -- Store all descriptors.
   --self.aircraft.descriptors=DCSdesc
-
+  
+    -- Tomcat sizing as default
+  self.aircraft.length=12          
+  self.aircraft.height=4
+  self.aircraft.width=10.3
+  
   -- aircraft dimensions
   if DCSdesc.box then
     self.aircraft.length=DCSdesc.box.max.x
@@ -85029,12 +85036,10 @@ function RAT:_InitAircraft(DCSgroup)
     self.aircraft.length=11.48          
     self.aircraft.height=4.11
     self.aircraft.width=13.41
-  end
-  if not DCSdesc.box then
-    -- Tomcat sizing
-    self.aircraft.length=19.13          
-    self.aircraft.height=4.9
-    self.aircraft.width=11.65
+  elseif DCStype == "F-14A-135-GR" then
+    self.aircraft.length=12          
+    self.aircraft.height=4
+    self.aircraft.width=10.3
   end
 
   self.aircraft.box=math.max(self.aircraft.length,self.aircraft.width)
