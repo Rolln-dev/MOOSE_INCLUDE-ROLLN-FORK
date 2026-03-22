@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-22T16:32:36+01:00-786ddda4adcceba63c59fb06010f8502a10bdf6c ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-22T16:50:03+01:00-b47528028cffa97d888308f9358c0c508674a130 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -42633,6 +42633,11 @@ elseif DCStype=="uh2b"then
 self.aircraft.length=11.48
 self.aircraft.height=4.11
 self.aircraft.width=13.41
+end
+if not DCSdesc.box then
+self.aircraft.length=19.13
+self.aircraft.height=4.9
+self.aircraft.width=11.65
 end
 self.aircraft.box=math.max(self.aircraft.length,self.aircraft.width)
 local text=string.format("\n******************************************************\n")
