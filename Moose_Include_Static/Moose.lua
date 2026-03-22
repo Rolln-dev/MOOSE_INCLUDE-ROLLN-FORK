@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-03-22T09:18:00+01:00-16583ee35fe32b6d89eecbb038bc04f2d49caeec ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-03-22T16:32:36+01:00-786ddda4adcceba63c59fb06010f8502a10bdf6c ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -250870,7 +250870,7 @@ MSRS = {
 
 --- MSRS class version.
 -- @field #string version
-MSRS.version="0.3.4"
+MSRS.version="0.3.5"
 
 --- Voices
 -- @type MSRS.Voices
@@ -251321,12 +251321,14 @@ MSRS.Backend = {
 -- @field #string AZURE Microsoft Azure (`azure`). Only possible with DCS-gRPC backend.
 -- @field #string AMAZON Amazon Web Service (`aws`). Only possible with DCS-gRPC backend.
 -- @field #string PIPER Piper local voice service. Only possible with Hound-TTS backend.
+-- @field #string KITTEN Kitten voice server. Only possible with Hound-TTS backend.
 MSRS.Provider = {
   WINDOWS = "win",
   GOOGLE  = "gcloud",
   AZURE   = "azure",
   AMAZON  = "aws",
   PIPER   = "piper",
+  KITTEN  = "kitten",
 }
 
 --- Function for UUID.
@@ -252050,6 +252052,14 @@ function MSRS:SetTTSProviderPiper()
   return self
 end
 
+--- Use Kitten to provide text-to-speech. Only supported if used in combination with Hound-TTS as backend.
+-- @param #MSRS self
+-- @return #MSRS self
+function MSRS:SetTTSProviderKitten()
+  self:F()
+  self:SetProvider(MSRS.Provider.KITTEN)
+  return self
+end
 
 --- Print SRS help to DCS log file.
 -- @param #MSRS self
@@ -252077,6 +252087,19 @@ function MSRS:Help()
   env.info(data)
   env.info("======================================================================")
 
+  return self
+end
+
+--- Auto-translate messages on-the-fly with Hound Translate services. Tested with google cloud.
+-- @param #MSRS self
+-- @param #string Provider Provider to be used. Defaults to MSRS.Provider.GOOGLE. Options see [Hound Github](https://github.com/uriba107/HoundTTS?tab=readme-ov-file)
+-- @param #string Language Language to translate to, defaults to "de" (German). Takes [ISO 639-1](https://en.wikipedia.org/wiki/ISO_639-1) language codes.
+-- @return #MSRS self
+function MSRS:SetAutoTranslate(Provider, Language)
+  self:T(self.lid.."SetAutoTranslate")
+  self.SRSTranslate = true
+  self.SRSTranslateProvider = Provider or MSRS.Provider.GOOGLE
+  self.SRSTranslateLanguage = Language or "de"
   return self
 end
 
@@ -252636,10 +252659,24 @@ end
 -- @param #string Culture (Optional) Culture to use.
 -- @param #string Voice (Optional) Voice to use.
 -- @param #boolean UseGoogle (Optional) If to use Google TTS.
--- @param #string Speaker Speaker (Sub-Voice) for PIPER only
+-- @param #string Speaker Speaker (Sub-Voice) for PIPER only.
+-- @param #boolean Translated (INTERNAL, do not use!) Setting for the callback post translation.
 -- @return SpeechTime Speech time in seconds.
-function MSRS:_HoundTextToSpeech(Message,Frequencies,Modulations,Volume,Label,Coalition,Point,Speed,Gender,Culture,Voice,UseGoogle,Speaker)
+function MSRS:_HoundTextToSpeech(Message,Frequencies,Modulations,Volume,Label,Coalition,Point,Speed,Gender,Culture,Voice,UseGoogle,Speaker,Translated)
   self:T(self.lid.."_HoundTextToSpeech")
+  
+  if self.SRSTranslate == true and Translated ~= true then
+    MSRS._HoundTranslate(Message,{provider=self.SRSTranslateProvider, language=self.SRSTranslateLanguage},
+      function(translated,err)
+         if translated then
+            return MSRS._HoundTextToSpeech(self,translated,Frequencies,Modulations,Volume,Label,Coalition,Point,Speed,Gender,Culture,Voice,UseGoogle,Speaker,true)
+         else
+             env.error("Translation failed: " .. tostring(err))
+         end
+      end      
+      )
+    return
+  end
   
   Frequencies = UTILS.EnsureTable(Frequencies)
   Modulations = UTILS.EnsureTable(Modulations)
@@ -252743,7 +252780,7 @@ end
 
 --- Hound Test Tone function, sends a 2-second 440 Hz sine wave tone directly over SRS, bypassing the TTS engine entirely. 
 -- Use this to verify the SRS connection is working before debugging TTS issues.
---  @param MSRS self
+--  @param #MSRS self
 --  @param #table Frequencies The table of frequencies to use.
 --  @param #table Modulations The table of modulations to use.
 --  @param #number Coalition The coalition to use.
@@ -252769,7 +252806,7 @@ function MSRS:_HoundTestTone(Frequencies, Modulations, Coalition)
 end
 
 --- Hound speech time calculator. Use to determine how long it takes to speak something out.
---  @param MSRS self
+--  @param #MSRS self
 --  @param #string Message The message to measure. Can also be handed as string lenght.
 --  @param #number Speed (Optional) The speed to use, defaults to 1.0.
 --  @param #boolean UseGoogle (Optional) If to use google. Default: no.
@@ -252778,6 +252815,37 @@ function MSRS:_HoundSpeechTime(Message,Speed,UseGoogle)
   local speed = Speed or 1.0
   local speechtime = HoundTTS.getSpeechTime(Message, speed, UseGoogle)
   return speechtime
+end
+
+--- Hound text translator. Use to translate a message into another language and hand the translation to a function.
+-- @param #string Message The Message to be translated.
+-- @param #table Parameters Parameter table. Optional. Defaults to provider google and language "de". Takes ISO 639-1 language codes.
+-- @param #function CallbackFunction The function we hand the translated text to.
+-- @usage
+-- 
+--          MSRS._HoundTranslate("Two contacts, BULLSEYE 270 for 40",
+--            { provider = MSRS.Provider.GOOGLE, language = "de" },
+--              function(translated, err)
+--                  if translated then
+--                      MESSAGE:New(translated,10):ToAll()
+--                  else
+--                      env.error("Translation failed: " .. tostring(err))
+--                  end
+--              end)
+--
+function MSRS._HoundTranslate(Message,Parameters,CallbackFunction)
+  local text = Message
+  local parameters = Parameters or {}
+  local callback = CallbackFunction
+  if not callback then
+    env.error("_HoundTranslate - not callback function provided!",true)
+    return
+  end
+  if not parameters.provider then parameters.provider = MSRS.Provider.GOOGLE end
+  parameters.provider = string.gsub(parameters.provider,"gcloud","google")
+  if not parameters.language then parameters.language = "de" end
+  HoundTTS.Translate(text,parameters,callback)
+  return
 end
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -253109,6 +253177,7 @@ end
 -- @return #MSRSQUEUE.Transmission Radio transmission table.
 function MSRSQUEUE:NewTransmission(text, duration, msrs, tstart, interval, subgroups, subtitle, subduration, frequency, modulation, gender, culture, voice, volume, label,coordinate,speed,speaker)
   self:T({Text=text, Dur=duration, start=tstart, int=interval, sub=subgroups, subt=subtitle, sudb=subduration, F=frequency, M=modulation, G=gender, C=culture, V=voice, Vol=volume, L=label, S=speed})
+  self:T({provider=msrs.provider})
   if self.TransmitOnlyWithPlayers then
     if self.PlayerSet and self.PlayerSet:CountAlive() == 0 then
       return self
@@ -253177,7 +253246,7 @@ function MSRSQUEUE:Broadcast(transmission)
     trigger.action.outTextForGroup(gid, transmission.subtitle, transmission.subduration, true)
   end
 
-  if transmission.subgroups and #transmission.subgroups>0 then
+  if transmission.subgroups and #transmission.subgroups>0 and transmission.subtitle then
 
     for _,_group in pairs(transmission.subgroups) do
       local group=_group --Wrapper.Group#GROUP
