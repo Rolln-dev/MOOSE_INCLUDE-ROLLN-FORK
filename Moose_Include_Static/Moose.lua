@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-03-24T11:33:56+01:00-5819c31b5e047b3f96b9a47465f6352a4709c1cb ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-03-24T12:37:14+01:00-3608386bd0e92b43d41ad2805003b4f9fda17cc4 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -25486,30 +25486,6 @@ do
   --          --self:F({ GroupObject = GroupObject:GetName() })
   --        end
   --
-  -- While this is a good example, there is a catch.
-  -- Imagine you want to execute the code above, the the self would need to be from the object declared outside (above) the OnAfterDead method.
-  -- So, the self would need to contain another object. Fortunately, this can be done, but you must use then the **`.`** notation for the method.
-  -- See the modified example:
-  --
-  --        -- Now we have a constructor of the class AI_CARGO_DISPATCHER, that receives the SetHelicopter as a parameter.
-  --        -- Within that constructor, we want to set an enclosed event handler OnAfterDead for SetHelicopter.
-  --        -- But within the OnAfterDead method, we want to refer to the self variable of the AI_CARGO_DISPATCHER.
-  --
-  --        function AI_CARGO_DISPATCHER:New(SetCarrier, SetCargo, SetDeployZones)
-  --
-  --          local self = BASE:Inherit(self, FSM:New()) -- #AI_CARGO_DISPATCHER
-  --
-  --          -- Put a Dead event handler on SetCarrier, to ensure that when a carrier is destroyed, that all internal parameters are reset.
-  --          -- Note the "." notation, and the explicit declaration of SetHelicopter, which would be using the ":" notation the implicit self variable declaration.
-  --
-  --          function SetHelicopter.OnAfterDead(SetHelicopter, From, Event, To, GroupObject)
-  --            SetHelicopter:F({ GroupObject = GroupObject:GetName() })
-  --            self.PickupCargo[GroupObject] = nil  -- So here I clear the PickupCargo table entry of the self object AI_CARGO_DISPATCHER.
-  --            self.CarrierHome[GroupObject] = nil
-  --          end
-  --
-  --        end
-  --
   -- ===
   -- @field #SET_GROUP SET_GROUP
   SET_GROUP = {
@@ -26645,28 +26621,6 @@ do -- SET_UNIT
   --          --self:F({ UnitObject = UnitObject:GetName() })
   --        end
   --
-  -- While this is a good example, there is a catch.
-  -- Imagine you want to execute the code above, the the self would need to be from the object declared outside (above) the OnAfterDead method.
-  -- So, the self would need to contain another object. Fortunately, this can be done, but you must use then the **`.`** notation for the method.
-  -- See the modified example:
-  --
-  --        -- Now we have a constructor of the class AI_CARGO_DISPATCHER, that receives the SetHelicopter as a parameter.
-  --        -- Within that constructor, we want to set an enclosed event handler OnAfterDead for SetHelicopter.
-  --        -- But within the OnAfterDead method, we want to refer to the self variable of the AI_CARGO_DISPATCHER.
-  --
-  --        function ACLASS:New(SetCarrier, SetCargo, SetDeployZones)
-  --
-  --          local self = BASE:Inherit(self, FSM:New()) -- #AI_CARGO_DISPATCHER
-  --
-  --          -- Put a Dead event handler on SetCarrier, to ensure that when a carrier is destroyed, that all internal parameters are reset.
-  --          -- Note the "." notation, and the explicit declaration of SetHelicopter, which would be using the ":" notation the implicit self variable declaration.
-  --
-  --          function SetHelicopter.OnAfterDead(SetHelicopter, From, Event, To, UnitObject)
-  --            SetHelicopter:F({ UnitObject = UnitObject:GetName() })
-  --            self.array[UnitObject] = nil  -- So here I clear the array table entry of the self object ACLASS.
-  --          end
-  --
-  --        end
   -- ===
   -- @field #SET_UNIT SET_UNIT
   SET_UNIT = {
@@ -30151,6 +30105,7 @@ do -- SET_AIRBASE
 
 end
 
+
 do -- SET_ZONE
   
   ---
@@ -32242,7 +32197,7 @@ do -- SET_SCENERY
 
     local AddSceneryNamesArray = (type(AddSceneryNames) == "table") and AddSceneryNames or { AddSceneryNames }
 
-    --self:T((AddSceneryNamesArray)
+    --UTILS.PrintTableToLog(AddSceneryNamesArray)
     for AddSceneryID, AddSceneryName in pairs(AddSceneryNamesArray) do
       self:Add(AddSceneryName, SCENERY:FindByZoneName(AddSceneryName))
     end
@@ -37963,12 +37918,6 @@ end
 -- By efficiently utilizing the FSM class and derived classes, MOOSE allows mission designers to quickly build processes.
 -- **Ready made FSM-based implementations classes** exist within the MOOSE framework that **can easily be re-used,
 -- and tailored** by mission designers through **the implementation of Transition Handlers**.
--- Each of these FSM implementation classes start either with:
---
---   * an acronym **AI\_**, which indicates a FSM implementation directing **AI controlled** @{Wrapper.Group#GROUP} and/or @{Wrapper.Unit#UNIT}. These AI\_ classes derive the @{#FSM_CONTROLLABLE} class.
---   * an acronym **TASK\_**, which indicates a FSM implementation executing a @{Tasking.Task#TASK} executed by Groups of players. These TASK\_ classes derive the @{#FSM_TASK} class.
---   * an acronym **ACT\_**, which indicates an Sub-FSM implementation, directing **Humans actions** that need to be done in a @{Tasking.Task#TASK}, seated in a @{Wrapper.Client#CLIENT} (slot) or a @{Wrapper.Unit#UNIT} (CA join). These ACT\_ classes derive the @{#FSM_PROCESS} class.
---
 -- Detailed explanations and API specifics are further below clarified and FSM derived class specifics are described in those class documentation sections.
 --
 -- ##__Disclaimer:__
@@ -37979,7 +37928,6 @@ end
 --
 -- The following derived classes are available in the MOOSE framework, that implement a specialized form of a FSM:
 --
---   * @{#FSM_TASK}: Models Finite State Machines for @{Tasking.Task}s.
 --   * @{#FSM_PROCESS}: Models Finite State Machines for @{Tasking.Task} actions, which control @{Wrapper.Client}s.
 --   * @{#FSM_CONTROLLABLE}: Models Finite State Machines for @{Wrapper.Controllable}s, which are @{Wrapper.Group}s, @{Wrapper.Unit}s, @{Wrapper.Client}s.
 --   * @{#FSM_SET}: Models Finite State Machines for @{Core.Set}s. Note that these FSMs control multiple objects!!! So State concerns here
@@ -38036,11 +37984,6 @@ do -- FSM
   -- By efficiently utilizing the FSM class and derived classes, MOOSE allows mission designers to quickly build processes.
   -- **Ready made FSM-based implementations classes** exist within the MOOSE framework that **can easily be re-used,
   -- and tailored** by mission designers through **the implementation of Transition Handlers**.
-  -- Each of these FSM implementation classes start either with:
-  --
-  --   * an acronym **AI\_**, which indicates an FSM implementation directing **AI controlled** @{Wrapper.Group#GROUP} and/or @{Wrapper.Unit#UNIT}. These AI\_ classes derive the @{#FSM_CONTROLLABLE} class.
-  --   * an acronym **TASK\_**, which indicates an FSM implementation executing a @{Tasking.Task#TASK} executed by Groups of players. These TASK\_ classes derive the @{#FSM_TASK} class.
-  --   * an acronym **ACT\_**, which indicates an Sub-FSM implementation, directing **Humans actions** that need to be done in a @{Tasking.Task#TASK}, seated in a @{Wrapper.Client#CLIENT} (slot) or a @{Wrapper.Unit#UNIT} (CA join). These ACT\_ classes derive the @{#FSM_PROCESS} class.
   --
   -- ![Transition Rules and Transition Handlers and Event Triggers](..\Presentations\FSM\Dia3.JPG)
   --
@@ -95157,14 +95100,6 @@ end
 --      arty set, battery "Mortar Bravo", rearming group "Ammo Truck M939"
 -- Note that the name of the rearming group has to be given in quotation marks and spelt exactly as the group name defined in the mission editor.
 --
--- ## Transporting
---
--- ARTY groups can be transported to another location as @{Cargo.Cargo} by means of classes such as @{AI.AI_Cargo_APC}, @{AI.AI_Cargo_Dispatcher_APC},
--- @{AI.AI_Cargo_Helicopter}, @{AI.AI_Cargo_Dispatcher_Helicopter} or @{AI.AI_Cargo_Airplane}.
---
--- In order to do this, one needs to define an ARTY object via the @{#ARTY.NewFromCargoGroup}(*cargogroup*, *alias*) function.
--- The first argument *cargogroup* has to be a @{Cargo.CargoGroup#CARGO_GROUP} object. The second argument *alias* is a string which can be freely chosen by the user.
---
 -- ## Fine Tuning
 --
 -- The mission designer has a few options to tailor the ARTY object according to his needs.
@@ -100395,7 +100330,7 @@ SUPPRESSION.version="0.9.4"
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
---- Creates a new AI_suppression object.
+--- Creates a new suppression object.
 -- @param #SUPPRESSION self
 -- @param Wrapper.Group#GROUP group The GROUP object for which suppression should be applied.
 -- @return #SUPPRESSION self
@@ -128361,7 +128296,10 @@ function AIRBOSS:EnableSRS(PathToSRS,Port,Culture,Gender,Voice,GoogleCreds,Volum
     self.SRS:SetVoice(Voice)
   end
   if (not Voice) and self.SRS and self.SRS:GetProvider() == MSRS.Provider.GOOGLE then
-    self.SRS.voice = MSRS.poptions["gcloud"].voice or MSRS.Voices.Google.Standard.en_US_Standard_B
+    self.SRS.voice = MSRS.Voices.Google.Standard.en_US_Standard_B
+    if MSRS.poptions and MSRS.poptions["gcloud"] and MSRS.poptions["gcloud"].voice then
+      self.SRS.voice = MSRS.poptions["gcloud"].voice
+    end
   end
   --self.SRS:SetVolume(Volume or 1.0)
   -- SRSQUEUE
@@ -166809,7 +166747,7 @@ function CSAR:onafterStart(From, Event, To)
     self.msrs:SetCoalition(self.coalition)
     self.msrs:SetVoice(self.SRSVoice)
     self.msrs:SetGender(self.SRSGender)
-    if self.SRSGPathToCredentials then
+    if self.SRSGPathToCredentials and (not self.SRSProvider) then
       self.msrs:SetProviderOptionsGoogle(self.SRSGPathToCredentials,self.SRSGPathToCredentials)
       self.msrs:SetProvider(MSRS.Provider.GOOGLE)
     end
@@ -187177,7 +187115,7 @@ CHIEF.Strategy = {
 
 --- CHIEF class version.
 -- @field #string version
-CHIEF.version="0.7.0"
+CHIEF.version="0.7.1"
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- TODO list
@@ -187233,6 +187171,8 @@ function CHIEF:New(Coalition, AgentSet, Alias)
   self:SetBorderZones()
   self:SetConflictZones()
   self:SetAttackZones()
+  self:SetCorridorZones()
+  self:SetRejectZones()
   self:SetThreatLevelRange()
   
   -- Init stuff.
@@ -191691,7 +191631,7 @@ function COHORT:_CheckAmmo()
         
         -- Descriptors.
         local Desc=weapon["desc"]
-        
+
         -- Warhead.
         local Warhead=Desc["warhead"]
   
@@ -205006,7 +204946,7 @@ INTEL = {
   DopplerNotchSin     = math.sin(math.rad(15)),
   DopplerMinSpeedMps  = 50,
   DopplerRCS          = true,
-  DopplerRadarRangeM  = 200 * 1000,
+  RangeM  = 200 * 1000,
 }
 
 --- Detected item info.
@@ -207520,6 +207460,7 @@ end
 --                              Default true.
 -- @return #INTEL self
 function INTEL:SetDopplerRadar(MinAltAGL, NotchHalfDeg, MinSpeedMps, RadarRangeKm, RCS)
+  self:T(self.lid .. "SetDopplerRadar")
     self.DopplerRadar        = true
     self.DopplerMinAltAGL    = MinAltAGL    or 500
     self.DopplerNotchSin     = math.sin(math.rad(NotchHalfDeg or 15))
@@ -207533,6 +207474,7 @@ end
 -- @param #INTEL self
 -- @return #INTEL self
 function INTEL:SetDopplerRadarOff()
+  self:T(self.lid .. "SetDopplerRadarOff")
     self.DopplerRadar = false
     return self
 end
@@ -207544,6 +207486,7 @@ end
 -- @param #number RCS_m2    Side-on RCS in m²
 -- @return #INTEL self
 function INTEL:SetTypeRCS(TypeName, RCS_m2)
+  self:T(self.lid .. "SetTypeRCS")
     INTEL.RCS_Table[TypeName] = RCS_m2
     return self
 end
@@ -207566,6 +207509,7 @@ end
 -- @param DCS#Vec3 tvel  Target velocity vector (pre-computed)
 -- @return #number Effective RCS in m²
 function INTEL:_GetAspectRCS(TargetUnit, rpos, spd, tvel)
+  self:T(self.lid .. "_GetAspectRCS")
     -- Look up base (side-on) RCS
     local typename = TargetUnit:GetTypeName()
     local base_rcs = INTEL.RCS_Table[typename]
@@ -207603,12 +207547,12 @@ end
 -- @return #boolean  true = detected
 -- @return #string   rejection reason: "speed" | "clutter" | "notch" | "rcs"
 function INTEL:_CheckDopplerDetection(TargetUnit, RadarUnit)
-
+  self:T(self.lid .. "_CheckDopplerDetection")
     -- Pre-compute common geometry (shared by notch + RCS checks)
     local spd  = TargetUnit:GetVelocityMPS()
     local rpos = RadarUnit:GetVec3()
     local tpos = TargetUnit:GetVec3()
-    local tvel = TargetUnit:GetVelocity()
+    local tvel = TargetUnit:GetVelocityVec3()
 
     local dx    = tpos.x - rpos.x
     local dz    = tpos.z - rpos.z
@@ -207685,18 +207629,14 @@ end
 -- @param #boolean DetectIRST (Optional) If *false*, do not include targets detected by IRST.
 -- @param #boolean DetectRWR (Optional) If *false*, do not include targets detected by RWR.
 -- @param #boolean DetectDLINK (Optional) If *false*, do not include targets detected by data link.
-function INTEL:GetDetectedUnitsDoppler(Unit, DetectedUnits, RecceDetecting,
-                                  DetectVisual, DetectOptical, DetectRadar,
-                                  DetectIRST, DetectRWR, DetectDLINK)
-
+function INTEL:GetDetectedUnitsDoppler(Unit, DetectedUnits, RecceDetecting,DetectVisual, DetectOptical, DetectRadar,DetectIRST, DetectRWR, DetectDLINK)
+  self:T(self.lid .. "GetDetectedUnitsDoppler")
     -- Run the original detection
-    self:GetDetectedUnits(Unit,DetectedUnits,RecceDetecting,DetectVisual,DetectOptical,DetectRadar,DetectIRST,DetectRWR,DetectDLINK)(self, Unit, DetectedUnits, RecceDetecting,
-                                   DetectVisual, DetectOptical, DetectRadar,
-                                   DetectIRST, DetectRWR, DetectDLINK)
+    self:GetDetectedUnits(Unit,DetectedUnits,RecceDetecting,DetectVisual,DetectOptical,DetectRadar,DetectIRST,DetectRWR,DetectDLINK)
 
     -- Apply Doppler post-filter only when radar channel is active
-    if not self.DopplerRadar then return end
-    if DetectRadar == false   then return end
+    if self.DopplerRadar == false then return end
+    if DetectRadar == false then return end
 
     local remove = {}
     for name, unit in pairs(DetectedUnits) do
@@ -207705,11 +207645,9 @@ function INTEL:GetDetectedUnitsDoppler(Unit, DetectedUnits, RecceDetecting,
             local ok, reason = self:_CheckDopplerDetection(unit, Unit)
             if not ok then
                 table.insert(remove, name)
-                if self.verbose and self.verbose >= 2 then
-                    self:T(string.format(
-                        "%sDoppler: suppressed %s [%s] by %s",
-                        self.lid, name, reason, Unit:GetName()))
-                end
+                --if self.verbose and self.verbose >= 2 then
+                    self:T(string.format("%sDoppler: suppressed %s [%s] by %s",self.lid, name, reason, Unit:GetName()))
+                --end
             end
         end
     end
@@ -207920,7 +207858,7 @@ end
   -- @return #INTEL_DLINK self
   function INTEL_DLINK:SetDLinkCacheTime(seconds)
     self.cachetime = math.abs(seconds or 120)
-    self:I(self.lid.."Caching for "..self.cachetime.." seconds.")
+    self:T(self.lid.."Caching for "..self.cachetime.." seconds.")
     return self
   end
 
@@ -208010,7 +207948,7 @@ end
 function INTEL_DLINK:onafterStop(From, Event, To)
   self:T({From, Event, To})
   local text = string.format("Version %s stopped.", self.version)
-  self:I(self.lid .. text)
+  self:T(self.lid .. text)
   return self
 end
 
@@ -249930,7 +249868,6 @@ end
 -- @param #RADIOQUEUE self
 -- @param #RADIOQUEUE.Transmission transmission The transmission.
 function RADIOQUEUE:Broadcast(transmission)
-  self:T("Broadcast")
 
   if ((transmission.soundfile and transmission.soundfile.useSRS) or transmission.soundtext) and self.msrs then
     self:_BroadcastSRS(transmission)
@@ -249946,6 +249883,9 @@ function RADIOQUEUE:Broadcast(transmission)
   if sender then
     
     -- Broadcasting from aircraft. Only players tuned in to the right frequency will see the message.
+    self:T(self.lid..string.format("Broadcasting from aircraft %s | sender init: %s", sender:GetName(),tostring(self.senderinit)))
+    
+    
     self:T(self.lid..string.format("Broadcasting from aircraft %s", sender:GetName()))
     
     
@@ -249990,7 +249930,7 @@ function RADIOQUEUE:Broadcast(transmission)
     -- Debug message.
     if self.Debugmode then
       local text=string.format("file=%s, freq=%.2f MHz, duration=%.2f sec, subtitle=%s", filename, self.frequency/1000000, transmission.duration, transmission.subtitle or "")
-      MESSAGE:New(text, 2, "RADIOQUEUE "..self.alias):ToAll()
+      MESSAGE:New(text, 2, "RADIOQUEUE "..self.alias):ToAll():ToLog()
     end
       
   else
@@ -250022,7 +249962,7 @@ function RADIOQUEUE:Broadcast(transmission)
       -- Debug message.
       if self.Debugmode then
         local text=string.format("file=%s, freq=%.2f MHz, duration=%.2f sec, subtitle=%s", filename, self.frequency/1000000, transmission.duration, transmission.subtitle or "")
-        MESSAGE:New(string.format(text, filename, transmission.duration, transmission.subtitle or ""), 5, "RADIOQUEUE "..self.alias):ToAll()
+        MESSAGE:New(string.format(text, filename, transmission.duration, transmission.subtitle or ""), 5, "RADIOQUEUE "..self.alias):ToAll():ToLog()
       end
     else
       self:E("ERROR: Could not get vec3 to determine transmission origin! Did you specify a sender and is it still alive?")
@@ -250055,7 +249995,7 @@ end
 --- Check radio queue for transmissions to be broadcasted.
 -- @param #RADIOQUEUE self
 function RADIOQUEUE:_CheckRadioQueue()
-
+  self:T("_CheckRadioQueue")
   -- Check if queue is empty.
   if #self.queue==0 then
     -- Queue is now empty. Nothing to else to do.
@@ -252740,8 +252680,8 @@ function MSRS:_HoundTextToSpeech(Message,Frequencies,Modulations,Volume,Label,Co
   --end
   
   local provider = self.provider
-  provider=provider:gsub("gcloud", "google")
-  provider=provider:gsub("win", "sapi")
+  --provider=provider:gsub("gcloud", "google")
+  --provider=provider:gsub("win", "sapi")
   
   local TransmissionP = {
     freqs = freqs,
@@ -253203,7 +253143,7 @@ end
 -- @return #MSRSQUEUE.Transmission Radio transmission table.
 function MSRSQUEUE:NewTransmission(text, duration, msrs, tstart, interval, subgroups, subtitle, subduration, frequency, modulation, gender, culture, voice, volume, label,coordinate,speed,speaker)
   self:T({Text=text, Dur=duration, start=tstart, int=interval, sub=subgroups, subt=subtitle, sudb=subduration, F=frequency, M=modulation, G=gender, C=culture, V=voice, Vol=volume, L=label, S=speed})
-  self:T({provider=msrs.provider})
+  self:I({provider=msrs.provider})
   if self.TransmitOnlyWithPlayers then
     if self.PlayerSet and self.PlayerSet:CountAlive() == 0 then
       return self

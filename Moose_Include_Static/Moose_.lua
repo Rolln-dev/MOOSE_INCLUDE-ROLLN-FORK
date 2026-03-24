@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-24T11:33:56+01:00-5819c31b5e047b3f96b9a47465f6352a4709c1cb ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-24T12:37:14+01:00-3608386bd0e92b43d41ad2805003b4f9fda17cc4 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -62709,7 +62709,10 @@ if Voice then
 self.SRS:SetVoice(Voice)
 end
 if(not Voice)and self.SRS and self.SRS:GetProvider()==MSRS.Provider.GOOGLE then
-self.SRS.voice=MSRS.poptions["gcloud"].voice or MSRS.Voices.Google.Standard.en_US_Standard_B
+self.SRS.voice=MSRS.Voices.Google.Standard.en_US_Standard_B
+if MSRS.poptions and MSRS.poptions["gcloud"]and MSRS.poptions["gcloud"].voice then
+self.SRS.voice=MSRS.poptions["gcloud"].voice
+end
 end
 self.SRSQ=MSRSQUEUE:New("AIRBOSS")
 self.SRSQ:SetTransmitOnlyWithPlayers(true)
@@ -84648,7 +84651,7 @@ self.msrs:SetCulture(self.SRSCulture)
 self.msrs:SetCoalition(self.coalition)
 self.msrs:SetVoice(self.SRSVoice)
 self.msrs:SetGender(self.SRSGender)
-if self.SRSGPathToCredentials then
+if self.SRSGPathToCredentials and(not self.SRSProvider)then
 self.msrs:SetProviderOptionsGoogle(self.SRSGPathToCredentials,self.SRSGPathToCredentials)
 self.msrs:SetProvider(MSRS.Provider.GOOGLE)
 end
@@ -94889,7 +94892,7 @@ OFFENSIVE="Offensive",
 AGGRESSIVE="Aggressive",
 TOTALWAR="Total War"
 }
-CHIEF.version="0.7.0"
+CHIEF.version="0.7.1"
 function CHIEF:New(Coalition,AgentSet,Alias)
 Alias=Alias or"CHIEF"
 if type(Coalition)=="string"then
@@ -94905,6 +94908,8 @@ local self=BASE:Inherit(self,INTEL:New(AgentSet,Coalition,Alias))
 self:SetBorderZones()
 self:SetConflictZones()
 self:SetAttackZones()
+self:SetCorridorZones()
+self:SetRejectZones()
 self:SetThreatLevelRange()
 self.Defcon=CHIEF.DEFCON.GREEN
 self.strategy=CHIEF.Strategy.DEFENSIVE
@@ -102598,7 +102603,7 @@ DopplerMinAltAGL=500,
 DopplerNotchSin=math.sin(math.rad(15)),
 DopplerMinSpeedMps=50,
 DopplerRCS=true,
-DopplerRadarRangeM=200*1000,
+RangeM=200*1000,
 }
 INTEL.Ctype={
 GROUND="Ground",
@@ -103845,6 +103850,7 @@ end
 return rcontact
 end
 function INTEL:SetDopplerRadar(MinAltAGL,NotchHalfDeg,MinSpeedMps,RadarRangeKm,RCS)
+self:T(self.lid.."SetDopplerRadar")
 self.DopplerRadar=true
 self.DopplerMinAltAGL=MinAltAGL or 500
 self.DopplerNotchSin=math.sin(math.rad(NotchHalfDeg or 15))
@@ -103854,14 +103860,17 @@ self.DopplerRadarRangeM=(RadarRangeKm or 200)*1000
 return self
 end
 function INTEL:SetDopplerRadarOff()
+self:T(self.lid.."SetDopplerRadarOff")
 self.DopplerRadar=false
 return self
 end
 function INTEL:SetTypeRCS(TypeName,RCS_m2)
+self:T(self.lid.."SetTypeRCS")
 INTEL.RCS_Table[TypeName]=RCS_m2
 return self
 end
 function INTEL:_GetAspectRCS(TargetUnit,rpos,spd,tvel)
+self:T(self.lid.."_GetAspectRCS")
 local typename=TargetUnit:GetTypeName()
 local base_rcs=INTEL.RCS_Table[typename]
 if not base_rcs then
@@ -103880,10 +103889,11 @@ local f=INTEL.RCS_NoseOnFraction
 return base_rcs*(f+(1.0-f)*sin2_a)
 end
 function INTEL:_CheckDopplerDetection(TargetUnit,RadarUnit)
+self:T(self.lid.."_CheckDopplerDetection")
 local spd=TargetUnit:GetVelocityMPS()
 local rpos=RadarUnit:GetVec3()
 local tpos=TargetUnit:GetVec3()
-local tvel=TargetUnit:GetVelocity()
+local tvel=TargetUnit:GetVelocityVec3()
 local dx=tpos.x-rpos.x
 local dz=tpos.z-rpos.z
 local slant=math.sqrt(dx*dx+dz*dz)
@@ -103922,13 +103932,10 @@ end
 end
 return true
 end
-function INTEL:GetDetectedUnitsDoppler(Unit,DetectedUnits,RecceDetecting,
-DetectVisual,DetectOptical,DetectRadar,
-DetectIRST,DetectRWR,DetectDLINK)
-self:GetDetectedUnits(Unit,DetectedUnits,RecceDetecting,DetectVisual,DetectOptical,DetectRadar,DetectIRST,DetectRWR,DetectDLINK)(self,Unit,DetectedUnits,RecceDetecting,
-DetectVisual,DetectOptical,DetectRadar,
-DetectIRST,DetectRWR,DetectDLINK)
-if not self.DopplerRadar then return end
+function INTEL:GetDetectedUnitsDoppler(Unit,DetectedUnits,RecceDetecting,DetectVisual,DetectOptical,DetectRadar,DetectIRST,DetectRWR,DetectDLINK)
+self:T(self.lid.."GetDetectedUnitsDoppler")
+self:GetDetectedUnits(Unit,DetectedUnits,RecceDetecting,DetectVisual,DetectOptical,DetectRadar,DetectIRST,DetectRWR,DetectDLINK)
+if self.DopplerRadar==false then return end
 if DetectRadar==false then return end
 local remove={}
 for name,unit in pairs(DetectedUnits)do
@@ -103936,11 +103943,7 @@ if unit:IsInstanceOf("UNIT")and unit:IsAir()then
 local ok,reason=self:_CheckDopplerDetection(unit,Unit)
 if not ok then
 table.insert(remove,name)
-if self.verbose and self.verbose>=2 then
-self:T(string.format(
-"%sDoppler: suppressed %s [%s] by %s",
-self.lid,name,reason,Unit:GetName()))
-end
+self:T(string.format("%sDoppler: suppressed %s [%s] by %s",self.lid,name,reason,Unit:GetName()))
 end
 end
 end
@@ -103998,7 +104001,7 @@ return self
 end
 function INTEL_DLINK:SetDLinkCacheTime(seconds)
 self.cachetime=math.abs(seconds or 120)
-self:I(self.lid.."Caching for "..self.cachetime.." seconds.")
+self:T(self.lid.."Caching for "..self.cachetime.." seconds.")
 return self
 end
 function INTEL_DLINK:onbeforeCollect(From,Event,To)
@@ -104060,7 +104063,7 @@ end
 function INTEL_DLINK:onafterStop(From,Event,To)
 self:T({From,Event,To})
 local text=string.format("Version %s stopped.",self.version)
-self:I(self.lid..text)
+self:T(self.lid..text)
 return self
 end
 function INTEL_DLINK:GetContactTable()
@@ -124602,7 +124605,6 @@ end
 return wait
 end
 function RADIOQUEUE:Broadcast(transmission)
-self:T("Broadcast")
 if((transmission.soundfile and transmission.soundfile.useSRS)or transmission.soundtext)and self.msrs then
 self:_BroadcastSRS(transmission)
 return
@@ -124610,6 +124612,7 @@ end
 local sender=self:_GetRadioSender()
 local filename=string.format("%s%s",transmission.path,transmission.filename)
 if sender then
+self:T(self.lid..string.format("Broadcasting from aircraft %s | sender init: %s",sender:GetName(),tostring(self.senderinit)))
 self:T(self.lid..string.format("Broadcasting from aircraft %s",sender:GetName()))
 local commandFrequency={
 id="SetFrequency",
@@ -124636,7 +124639,7 @@ loop=false,
 sender:SetCommand(commandTransmit)
 if self.Debugmode then
 local text=string.format("file=%s, freq=%.2f MHz, duration=%.2f sec, subtitle=%s",filename,self.frequency/1000000,transmission.duration,transmission.subtitle or"")
-MESSAGE:New(text,2,"RADIOQUEUE "..self.alias):ToAll()
+MESSAGE:New(text,2,"RADIOQUEUE "..self.alias):ToAll():ToLog()
 end
 else
 self:T(self.lid..string.format("Broadcasting via trigger.action.radioTransmission()"))
@@ -124653,7 +124656,7 @@ self:T({filename=filename,vec3=vec3,modulation=self.modulation,frequency=self.fr
 trigger.action.radioTransmission(filename,vec3,self.modulation,false,self.frequency,self.power)
 if self.Debugmode then
 local text=string.format("file=%s, freq=%.2f MHz, duration=%.2f sec, subtitle=%s",filename,self.frequency/1000000,transmission.duration,transmission.subtitle or"")
-MESSAGE:New(string.format(text,filename,transmission.duration,transmission.subtitle or""),5,"RADIOQUEUE "..self.alias):ToAll()
+MESSAGE:New(string.format(text,filename,transmission.duration,transmission.subtitle or""),5,"RADIOQUEUE "..self.alias):ToAll():ToLog()
 end
 else
 self:E("ERROR: Could not get vec3 to determine transmission origin! Did you specify a sender and is it still alive?")
@@ -124672,6 +124675,7 @@ self.checking=true
 self:ScheduleOnce(delay or self.dt,RADIOQUEUE._CheckRadioQueue,self)
 end
 function RADIOQUEUE:_CheckRadioQueue()
+self:T("_CheckRadioQueue")
 if#self.queue==0 then
 self.checking=false
 return
@@ -126087,8 +126091,6 @@ modus=modus:gsub("0","AM")
 modus=modus:gsub("1","FM")
 self:T({T=Message,F=freqs,M=modus,V=voice,Vx=volume,L=label,C=coal,GGL=tostring(UseGoogle)})
 local provider=self.provider
-provider=provider:gsub("gcloud","google")
-provider=provider:gsub("win","sapi")
 local TransmissionP={
 freqs=freqs,
 modulations=modus,
@@ -126266,7 +126268,7 @@ return self
 end
 function MSRSQUEUE:NewTransmission(text,duration,msrs,tstart,interval,subgroups,subtitle,subduration,frequency,modulation,gender,culture,voice,volume,label,coordinate,speed,speaker)
 self:T({Text=text,Dur=duration,start=tstart,int=interval,sub=subgroups,subt=subtitle,sudb=subduration,F=frequency,M=modulation,G=gender,C=culture,V=voice,Vol=volume,L=label,S=speed})
-self:T({provider=msrs.provider})
+self:I({provider=msrs.provider})
 if self.TransmitOnlyWithPlayers then
 if self.PlayerSet and self.PlayerSet:CountAlive()==0 then
 return self
