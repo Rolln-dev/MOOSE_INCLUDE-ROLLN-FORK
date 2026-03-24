@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-03-23T06:19:08+01:00-1fcc1598b1da6b88e202cb25971415ffe44175e3 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-03-24T10:56:54+01:00-d77886d586e7ed5956c69fad953dad7ebaf9ee54 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -205001,7 +205001,7 @@ INTEL = {
   DetectAccoustic = false,
   DetectAccousticRadius = 1000,
   DetectAccousticUnitTypes =  {Unit.Category.HELICOPTER},
-  DopplerRadar        = true,
+  DopplerRadar        = false,
   DopplerMinAltAGL    = 500,
   DopplerNotchSin     = math.sin(math.rad(15)),
   DopplerMinSpeedMps  = 50,
@@ -205209,7 +205209,7 @@ INTEL.RCS_CategoryDefault = {
 }
 
 ---
--- Reference RCS (m²) for range scaling.  Detection range in SetDopplerRadar
+-- Reference RCS (m²) for range scaling.  Detection range in Set
 -- is the range at which this reference aircraft is reliably detected.
 -- @field INTEL.RCS_Reference
 INTEL.RCS_Reference = 5.0   -- m²
@@ -205329,6 +205329,7 @@ function INTEL:New(DetectionSet, Coalition, Alias)
   self:SetRejectZones()
   self:SetCorridorZones()
   self:SetConflictZones()
+  self.DopplerRadar = false
 
   ------------------------
   --- Pseudo Functions ---
@@ -205972,7 +205973,7 @@ function INTEL:UpdateIntel()
         local recce=_recce --Wrapper.Unit#UNIT
 
         -- Get detected units.
-        if self.DopplerRadar then
+        if self.DopplerRadar == true then
           self:GetDetectedUnitsDoppler(recce, DetectedUnits, RecceDetecting, self.DetectVisual, self.DetectOptical, self.DetectRadar, self.DetectIRST, self.DetectRWR, self.DetectDLINK)
         else
           self:GetDetectedUnits(recce, DetectedUnits, RecceDetecting, self.DetectVisual, self.DetectOptical, self.DetectRadar, self.DetectIRST, self.DetectRWR, self.DetectDLINK)

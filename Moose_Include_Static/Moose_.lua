@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-23T06:19:08+01:00-1fcc1598b1da6b88e202cb25971415ffe44175e3 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-24T10:56:54+01:00-d77886d586e7ed5956c69fad953dad7ebaf9ee54 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -102593,7 +102593,7 @@ detectStatics=false,
 DetectAccoustic=false,
 DetectAccousticRadius=1000,
 DetectAccousticUnitTypes={Unit.Category.HELICOPTER},
-DopplerRadar=true,
+DopplerRadar=false,
 DopplerMinAltAGL=500,
 DopplerNotchSin=math.sin(math.rad(15)),
 DopplerMinSpeedMps=50,
@@ -102756,6 +102756,7 @@ self:SetAcceptZones()
 self:SetRejectZones()
 self:SetCorridorZones()
 self:SetConflictZones()
+self.DopplerRadar=false
 return self
 end
 function INTEL:SetAcceptZones(AcceptZoneSet)
@@ -102992,7 +102993,7 @@ local group=_group
 if group and group:IsAlive()then
 for _,_recce in pairs(group:GetUnits())do
 local recce=_recce
-if self.DopplerRadar then
+if self.DopplerRadar==true then
 self:GetDetectedUnitsDoppler(recce,DetectedUnits,RecceDetecting,self.DetectVisual,self.DetectOptical,self.DetectRadar,self.DetectIRST,self.DetectRWR,self.DetectDLINK)
 else
 self:GetDetectedUnits(recce,DetectedUnits,RecceDetecting,self.DetectVisual,self.DetectOptical,self.DetectRadar,self.DetectIRST,self.DetectRWR,self.DetectDLINK)
