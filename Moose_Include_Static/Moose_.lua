@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-27T17:42:30+01:00-f2063f41f6b638a1793e5cb0b1ba542762db09a4 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-30T08:38:19+02:00-4b27e922101d368385179869b017029cfb7ac8f2 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -76055,7 +76055,7 @@ local alias=string.format("%s-%d",_template,math.random(1,100000))
 if canmove then
 SPAWN:NewWithAlias(_template,alias)
 :InitRandomizeUnits(true,10,2)
-:InitValidateAndRepositionGroundUnits(self.validateAndRepositionUnits)
+:InitValidateAndRepositionGroundUnits(self.validateAndRepositionUnits,70)
 :InitDelayOff()
 :OnSpawnGroup(function(grp,TimeStamp)
 grp.spawntime=TimeStamp or timer.getTime()
@@ -76068,7 +76068,7 @@ else
 SPAWN:NewWithAlias(_template,alias)
 :InitRandomizeUnits(true,10,2)
 :InitDelayOff()
-:InitValidateAndRepositionGroundUnits(self.validateAndRepositionUnits)
+:InitValidateAndRepositionGroundUnits(self.validateAndRepositionUnits,70)
 :OnSpawnGroup(function(grp,TimeStamp)
 grp.spawntime=TimeStamp or timer.getTime()
 self.DroppedTroops[tc]=grp
