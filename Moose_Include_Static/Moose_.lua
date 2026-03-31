@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-30T08:38:19+02:00-4b27e922101d368385179869b017029cfb7ac8f2 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-03-31T19:35:34+02:00-efff22fc1809ce744072b7f85b4097401169a13d ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -79250,7 +79250,7 @@ MENU_GROUP_COMMAND:New(theGroup,label,dropTroopsMenu,self._UnloadSingleTroopByID
 else
 local parentMenu=MENU_GROUP:New(theGroup,label,dropTroopsMenu)
 for q=1,count do
-if q>self.maxUnloadTroopsAllowed then break end
+if q>self.maxUnloadTroopsAllowed and self.maxUnloadTroopsAllowed>-1 then break end
 MENU_GROUP_COMMAND:New(theGroup,string.format(self.gettext:GetEntry("MENU_DROP_N_TROOPS",self.locale),q,tName),parentMenu,self._UnloadSingleTroopByID,self,theGroup,theUnit,chunkID,q)
 end
 end
