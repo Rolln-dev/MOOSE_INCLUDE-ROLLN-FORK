@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-04-07T12:22:27+02:00-b0976d16138ff85993287840e50f7c1c314862ac ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-04-08T15:18:20+02:00-ab77fcbc1fac04b74c3e0bf3cd24edc1d58502bd ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -79749,7 +79749,7 @@ do -- DETECTION_BASE
     return self
   end
 
-  --- Validate if the detected item is locked.
+  --- Validate if the detected item is locked (not in the radar sense, though!).
   -- @param #DETECTION_BASE self
   -- @param #DETECTION_BASE.DetectedItem DetectedItem The DetectedItem.
   -- @return #boolean
@@ -79759,7 +79759,7 @@ do -- DETECTION_BASE
 
   end
 
-  --- Lock a detected item.
+  --- Lock a detected item (not in the radar sense, though!).
   -- @param #DETECTION_BASE self
   -- @param #DETECTION_BASE.DetectedItem DetectedItem The DetectedItem.
   -- @return #DETECTION_BASE
@@ -79770,7 +79770,7 @@ do -- DETECTION_BASE
     return self
   end
 
-  --- Unlock a detected item.
+  --- Unlock a detected item (not in the radar sense, though!).
   -- @param #DETECTION_BASE self
   -- @param #DETECTION_BASE.DetectedItem DetectedItem The DetectedItem.
   -- @return #DETECTION_BASE
@@ -210664,7 +210664,7 @@ end
 -- @return #boolean Returns `true` if given cohort can meet all requirements.
 function LEGION._CohortCan(Cohort, MissionType, Categories, Attributes, Properties, WeaponTypes, TargetVec2, RangeMax, RefuelSystem, CargoWeight, MaxWeight, RangeMin)
 
-  RangeMin = RangeMin or 0
+  RangeMin = RangeMin or -1
 
   --- Function to check category.
   local function CheckCategory(_cohort)
@@ -245938,10 +245938,11 @@ function EASYGCICAP:onafterRestart(From,Event,To)
   -- self.wings[Airbasename] = { CAP_Wing, AIRBASE:FindByName(Airbasename):GetZone(), Airbasename }
     for _,_wing in pairs(self.wings or {}) do
       for _,_aw in pairs(_wing) do
-        _wing[1]:Start()
+        _wing[1]:Restart()
       end
     end
   end
+  self:__Status(5)
   return self
 end
 --- **Ops** - Create your A2G Defenses.
@@ -250822,7 +250823,7 @@ end
 -- For more information on setting up a cloud account, visit: https://cloud.google.com/text-to-speech
 -- Google's supported SSML reference: https://cloud.google.com/text-to-speech/docs/ssml
 --
--- ### Amazon Web Service [Only DCS-gRPC backend]
+-- ### Amazon Web Service [Only HOUDN and DCS-gRPC backend]
 -- 
 -- In order to use Amazon Web Service (AWS) for TTS you need to use @{#MSRS.SetProvider} and @{#MSRS.SetProviderOptionsAmazon} functions:
 -- 
@@ -250833,7 +250834,7 @@ end
 -- 
 -- You can set the voice to use with AWS via @{#MSRS.SetVoiceAmazon}.
 -- 
--- ### Microsoft Azure [Only DCS-gRPC backend]
+-- ### Microsoft Azure [Only HOUND and DCS-gRPC backend]
 -- 
 -- In order to use Microsoft Azure for TTS you need to use @{#MSRS.SetProvider} and @{#MSRS.SetProviderOptionsAzure} functions:
 -- 

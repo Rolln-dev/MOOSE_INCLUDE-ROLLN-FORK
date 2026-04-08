@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-04-07T12:22:27+02:00-b0976d16138ff85993287840e50f7c1c314862ac ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-04-08T15:18:20+02:00-ab77fcbc1fac04b74c3e0bf3cd24edc1d58502bd ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -105231,7 +105231,7 @@ end
 return cohorts
 end
 function LEGION._CohortCan(Cohort,MissionType,Categories,Attributes,Properties,WeaponTypes,TargetVec2,RangeMax,RefuelSystem,CargoWeight,MaxWeight,RangeMin)
-RangeMin=RangeMin or 0
+RangeMin=RangeMin or-1
 local function CheckCategory(_cohort)
 local cohort=_cohort
 if Categories and#Categories>0 then
@@ -122710,10 +122710,11 @@ if self:Is("Stopped")then
 self.Intel:Start()
 for _,_wing in pairs(self.wings or{})do
 for _,_aw in pairs(_wing)do
-_wing[1]:Start()
+_wing[1]:Restart()
 end
 end
 end
+self:__Status(5)
 return self
 end
 EASYA2G={
