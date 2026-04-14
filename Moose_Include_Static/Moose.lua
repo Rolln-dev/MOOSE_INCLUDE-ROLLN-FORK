@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-04-12T13:13:21+02:00-3eb910b47ee95abe8e5b4bea865bb454599e3752 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-04-14T06:29:09+02:00-c48a7d4400161ef6f90967878f2b125ebe7f52ab ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -138106,6 +138106,14 @@ function AIRBOSS:_LSOgrade( playerData )
     -- Circuit edit only take points awary from a 1 wire if there are more than 4 other deviations
   if playerData.wire == 1 and points >= 3 and N > 4 then
     points = points -1
+    -- We also need to change the grade based on the new points.
+    if points == 4 then
+      grade = "OK"
+    elseif points == 3 then
+      grade = "(OK)"
+    elseif points == 2 then 
+      grade = "--"
+    end
   end
 
   env.info("Returning: " .. grade .. "  " .. points .. "  " .. G)
