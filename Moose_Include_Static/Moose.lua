@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-04-14T06:29:09+02:00-c48a7d4400161ef6f90967878f2b125ebe7f52ab ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-04-15T10:29:15+02:00-7c5d5543e007038ecea9d6224e34dea9638b6dcf ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -247096,11 +247096,15 @@ TARS_SESSION.debug = false
 --          TARS.detectUnits      = true      -- capture UNIT objects
 --          TARS.detectStatics    = false     -- capture STATIC objects incl. of FARPs
 -- 
--- ### UNIT Filters
+-- ### Target UNIT Filters
 --  
 --        TARS.units = { air=false, ground=true, ship=true }
+--
+-- ### Target UNIT Name Filters
+--
+--        TARS.targetNameFilter = { enabled = true, keywords = { [coalition.side.BLUE] = { "USA" }, [coalition.side.RED]  = { "USSR" },},}    
 --        
--- ### STATIC Filters
+-- ### Target STATIC Filters
 -- 
 --        TARS.statics = {
 --          farps=true,
