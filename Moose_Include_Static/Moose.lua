@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-04-23T12:41:40+02:00-d38fc4ec8f7260cad9f22acbac3331dc6352a5f6 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-04-25T16:49:58+02:00-801cc105daed8ba9665ee7d3674621cea5662acd ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -107270,7 +107270,7 @@ function WAREHOUSE:_RegisterAsset(group, ngroups, forceattribute, forcecargobay,
   -- Get name of template group.
   local templategroupname=group:GetName()
   local unit = group:GetUnit(1)
-  local Descriptors= (unit and unit:IsAlive()) and unit:GetDesc() or {}
+  local Descriptors= (unit and unit:IsAlive()~=nil) and unit:GetDesc() or {}
   local Category=group:GetCategory()
   local TypeName=group:GetTypeName() or "none"
   local SpeedMax=group:GetSpeedMax()
@@ -107288,7 +107288,7 @@ function WAREHOUSE:_RegisterAsset(group, ngroups, forceattribute, forcecargobay,
   for _i,_unit in pairs(group:GetUnits()) do
     local unit=_unit --Wrapper.Unit#UNIT
     local Desc=unit:GetDesc()
-
+    
     -- Weight. We sum up all units in the group.
     local unitweight=forceweight or Desc.massEmpty
     if unitweight then
@@ -248512,12 +248512,11 @@ function TARS_SESSION:FindTargets()
         local searchzone = self.searchzone  -- Core.Zone#ZONE_BASE
             or ZONE_RADIUS:New("TARS Debug", coordinate:GetVec2(), scan_radius)
 
-        --if searchzone then
-            if searchzone.DrawID then searchzone:UndrawZone() end
-            searchzone:UpdateFromVec2(coordinate:GetVec2(), scan_radius)           
-            searchzone:DrawZone(-1, {0, 0, 1}, 1, {0, 1, 0}, .2, 2, true)
-            self.searchzone = searchzone
-        --end
+        if searchzone.DrawID then searchzone:UndrawZone() end
+        searchzone:UpdateFromVec2(coordinate:GetVec2(), scan_radius)           
+        searchzone:DrawZone(-1, {0, 0, 1}, 1, {0, 1, 0}, .2, 2, true)
+        self.searchzone = searchzone
+        self:ScheduleOnce(30, ZONE_BASE.UndrawZone, searchzone)
     end
     
     if self.PilotParameterHelper == true then
