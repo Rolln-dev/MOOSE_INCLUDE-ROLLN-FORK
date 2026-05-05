@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-05-05T10:34:35+02:00-3203a226684e8241726d371c0d42a26f3d6a2112 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-05-05T11:47:29+02:00-2556dbe145204d9fdf4ed7c6eaf3ca05c70ebedb ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -91008,7 +91008,7 @@ local ScanUnitSet=self.engageZone:GetScannedSetUnit()
 local SeadUnitSet=SET_UNIT:New()
 for _,_unit in pairs(ScanUnitSet.Set)do
 local unit=_unit
-if unit and unit:IsAlive()and unit:HasSEAD()then
+if unit and unit:IsAlive()and unit.HasSEAD and unit:HasSEAD()then
 self:T("Adding UNIT for SEAD: "..unit:GetName())
 local task=CONTROLLABLE.TaskAttackUnit(nil,unit,GroupAttack,AI.Task.WeaponExpend.ALL,1,Direction,self.engageAltitude,2956984318)
 table.insert(DCStasks,task)
