@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-05-10T13:04:56+02:00-47aa5246770ebcbe33d29965185619f02cb44258 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-05-14T10:47:23+02:00-aec3466f137ec73244da0ef8ac792b37b8733b31 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -50651,7 +50651,7 @@ function SUPPRESSION:onafterStop(Controllable,From,Event,To)
 self:_EventFromTo("onafterStop",Event,From,To)
 local text=string.format("Stopping SUPPRESSION for group %s",self.Controllable:GetName())
 MESSAGE:New(text,10):ToAllIf(self.Debug)
-sefl:T(self.lid..text)
+self:T(self.lid..text)
 self.CallScheduler:Clear()
 if self.mooseevents then
 self:UnHandleEvent(EVENTS.Dead)
