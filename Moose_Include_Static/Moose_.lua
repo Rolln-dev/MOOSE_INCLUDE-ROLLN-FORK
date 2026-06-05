@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-05-24T13:01:26+02:00-fdc19a689887cb253e9589ea359bb7c35eb0c6a1 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-06-05T14:25:35+02:00-2aa9b91ce5edf92e7273e19dd6658eb6ac47640e ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -123949,7 +123949,7 @@ FuelCriticalThreshold=10,
 showpatrolpointmarks=false,
 EngageTargetTypes={"Air"},
 }
-EASYGCICAP.version="0.1.35"
+EASYGCICAP.version="0.1.36"
 function EASYGCICAP:New(Alias,AirbaseName,Coalition,EWRName)
 local self=BASE:Inherit(self,FSM:New())
 self.alias=Alias or AirbaseName.." CAP Wing"
@@ -124266,16 +124266,18 @@ end
 end
 end
 if self.noalert5>0 then
+for i=1,self.noalert5 do
 local alert
 if self.ClassName=="EASYGCICAP"then
 alert=AUFTRAG:NewALERT5(AUFTRAG.Type.INTERCEPT)
 elseif self.ClassName=="EASYA2G"then
 alert=AUFTRAG:NewALERT5(AUFTRAG.Type.BAI)
 end
-alert:SetRequiredAssets(self.noalert5)
+alert:SetRequiredAssets(self.capgrouping)
 alert:SetRepeat(99)
 CAP_Wing:AddMission(alert)
 table.insert(self.ListOfAuftrag,alert)
+end
 end
 self.wings[Airbasename]={CAP_Wing,AIRBASE:FindByName(Airbasename):GetZone(),Airbasename}
 return self
