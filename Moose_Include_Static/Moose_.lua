@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-06-07T20:04:55+02:00-7c5af54473190da856f5bfa84960d7de7e528c72 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-06-11T07:59:43+02:00-6c32aa60448dd0a680241177c6e96636b958a071 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -21542,7 +21542,7 @@ SpawnTemplate.uncontrolled=self.SpawnUnControlled
 local GroupSpawned=self:SpawnWithIndex(self.SpawnIndex)
 if Takeoff==GROUP.Takeoff.Air then
 for UnitID,UnitSpawned in pairs(GroupSpawned:GetUnits())do
-self:ScheduleOnce(5,BASE.CreateEventTakeoff,{GroupSpawned,timer.getTime(),UnitSpawned:GetDCSObject()})
+self:ScheduleOnce(5,BASE.CreateEventTakeoff,GroupSpawned,timer.getTime(),UnitSpawned:GetDCSObject())
 end
 end
 return GroupSpawned
