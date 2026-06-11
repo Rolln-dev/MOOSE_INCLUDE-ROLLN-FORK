@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-06-11T07:59:43+02:00-6c32aa60448dd0a680241177c6e96636b958a071 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-06-11T17:34:53+02:00-9b1a3e48948f02b76cb657ec871da1c73d8b0c22 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -41898,12 +41898,7 @@ function SPAWN:SpawnAtAirbase( SpawnAirbase, Takeoff, TakeoffAltitude, TerminalT
       -- When spawned in the air, we need to generate a Takeoff Event.
       if Takeoff == GROUP.Takeoff.Air then
         for UnitID, UnitSpawned in pairs( GroupSpawned:GetUnits() ) do
-          -- BASE:ScheduleOnce forwards its trailing args to the scheduled function as
-          -- varargs, so they must NOT be wrapped in a table here (unlike SCHEDULER:New,
-          -- which takes a single argument table). Passing a table made it argument #1,
-          -- i.e. CreateEventTakeoff ran with that table as `self`, so the takeoff event
-          -- never fired and air-spawned groups (e.g. AI_A2A_DISPATCHER GCI defenders)
-          -- never activated.
+          --SCHEDULER:New( nil, BASE.CreateEventTakeoff, { GroupSpawned, timer.getTime(), UnitSpawned:GetDCSObject() }, 5 )  --No need to create a new SCHEDULER instance every time!
           self:ScheduleOnce(5, BASE.CreateEventTakeoff, GroupSpawned, timer.getTime(), UnitSpawned:GetDCSObject())
         end
       end
