@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-06-23T12:30:14+02:00-4efd71e36a975b84d169717d1b08a2880ddcfe0c ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-06-24T06:30:19+02:00-6829d75464afbb507bb423dac6192450dc1c3a91 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -4608,6 +4608,11 @@ function UTILS.IsLoadingDoorOpen( unit_name )
 
       if string.find(type_name, "SA342" ) and (unit:getDrawArgumentValue(34) == 1) then
           BASE:T(unit_name .. " front door(s) are open or doors removed")
+          return true
+      end
+        
+      if type_name == "Ka-50_3" and unit:getDrawArgumentValue(38) == 1 then
+          BASE:T(unit_name .. " cockpit door is open")
           return true
       end
 
