@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-06-24T06:30:19+02:00-6829d75464afbb507bb423dac6192450dc1c3a91 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-06-26T12:35:03+02:00-36c02973448986cb9707cabfadea119139b34a7c ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -13530,11 +13530,11 @@ function SCHEDULEDISPATCHER:AddSchedule( Scheduler, ScheduleFunction, ScheduleAr
           -- self:T3( { Repeat = CallID, CurrentTime, ScheduleTime, ScheduleArguments } )
           return ScheduleTime -- returns the next time the function needs to be called.
         else
-          self:_Reclaim( Scheduler, CallID )
+          self:Stop( Scheduler, CallID )
         end
 
       else
-        self:_Reclaim( Scheduler, CallID )
+        self:Stop( Scheduler, CallID )
       end
     else
       self:I( "<<<>" .. Name .. ":" .. Line .. " (" .. Source .. ")" )
