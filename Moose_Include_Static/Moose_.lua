@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-06-26T12:35:03+02:00-36c02973448986cb9707cabfadea119139b34a7c ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-06-27T10:57:53+02:00-4ba81cb8bc6581b555f38808186c158679f054cf ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -129759,7 +129759,7 @@ Frequencies=UTILS.EnsureTable(Frequencies or self.frequencies)
 Modulations=UTILS.EnsureTable(Modulations or self.modulations)
 local ffs={}
 for _,_f in pairs(Frequencies)do
-table.insert(ffs,string.format("%.1f",_f))
+table.insert(ffs,string.format("%.3f",_f))
 end
 local freqs=table.concat(ffs,",")
 local modus=table.concat(Modulations,",")
@@ -129809,7 +129809,7 @@ Frequencies=UTILS.EnsureTable(Frequencies)
 Modulations=UTILS.EnsureTable(Modulations)
 local ffs={}
 for _,_f in pairs(Frequencies or self.frequencies)do
-table.insert(ffs,string.format("%.1f",_f))
+table.insert(ffs,string.format("%.3f",_f))
 end
 local freqs=table.concat(ffs,",")
 local modus=table.concat(Modulations or self.modulations,",")
@@ -129845,7 +129845,7 @@ Frequencies=UTILS.EnsureTable(Frequencies)
 Modulations=UTILS.EnsureTable(Modulations)
 local ffs={}
 for _,_f in pairs(Frequencies or self.frequencies)do
-table.insert(ffs,string.format("%.1f",_f))
+table.insert(ffs,string.format("%.3f",_f))
 end
 local freqs=table.concat(ffs,",")
 local modus=table.concat(Modulations or self.modulations,",")

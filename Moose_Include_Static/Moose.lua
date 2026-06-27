@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-06-26T12:35:03+02:00-36c02973448986cb9707cabfadea119139b34a7c ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-06-27T10:57:53+02:00-4ba81cb8bc6581b555f38808186c158679f054cf ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -258388,7 +258388,7 @@ function MSRS:_HoundTextToSpeech(Message,Frequencies,Modulations,Volume,Label,Co
     
   local ffs = {}
   for _,_f in pairs(Frequencies) do
-    table.insert(ffs,string.format("%.1f",_f))
+    table.insert(ffs,string.format("%.3f",_f))
   end
   
   local freqs = table.concat(ffs, ",")
@@ -258494,7 +258494,7 @@ function MSRS:_HoundTestTone(Frequencies, Modulations, Coalition)
  
  local ffs = {}
   for _,_f in pairs(Frequencies or self.frequencies) do
-    table.insert(ffs,string.format("%.1f",_f))
+    table.insert(ffs,string.format("%.3f",_f))
   end
   
  local freqs = table.concat(ffs, ",")
@@ -258571,7 +258571,7 @@ function MSRS:RadioJammerOn(Frequencies, Modulations, Coalition, Noisetype, Volu
  
  local ffs = {}
   for _,_f in pairs(Frequencies or self.frequencies) do
-    table.insert(ffs,string.format("%.1f",_f))
+    table.insert(ffs,string.format("%.3f",_f))
   end
   
  local freqs = table.concat(ffs, ",")
