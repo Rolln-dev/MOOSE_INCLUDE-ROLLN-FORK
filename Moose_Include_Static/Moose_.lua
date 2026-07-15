@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-07-15T18:35:50+02:00-b31fb7ece3b1cf81661debfd92937de99df9282e ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-07-15T19:52:43+02:00-4e3bf9969b1a8fa9a47726a6d1b0c9b80d19ea18 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -6615,6 +6615,15 @@ initiator=PlayerUnit:GetDCSObject()
 }
 world.onEvent(Event)
 end
+function BASE:CreateEventGroupChangeOption(EventTime,Initiator)
+self:F({EventTime,Initiator})
+local Event={
+id=EVENTS.GroupChangeOption,
+time=EventTime,
+initiator=Initiator,
+}
+world.onEvent(Event)
+end
 function BASE:CreateEventNewDynamicCargo(DynamicCargo)
 self:F({DynamicCargo})
 local Event={
@@ -8113,6 +8122,7 @@ SimulationFreeze=world.event.S_EVENT_SIMULATION_FREEZE or-1,
 SimulationUnfreeze=world.event.S_EVENT_SIMULATION_UNFREEZE or-1,
 HumanAircraftRepairStart=world.event.S_EVENT_HUMAN_AIRCRAFT_REPAIR_START or-1,
 HumanAircraftRepairFinish=world.event.S_EVENT_HUMAN_AIRCRAFT_REPAIR_FINISH or-1,
+GroupChangeOption=world.event.S_EVENT_GROUP_CHANGE_OPTION or-1,
 NewDynamicCargo=world.event.S_EVENT_NEW_DYNAMIC_CARGO or-1,
 DynamicCargoLoaded=world.event.S_EVENT_DYNAMIC_CARGO_LOADED or-1,
 DynamicCargoUnloaded=world.event.S_EVENT_DYNAMIC_CARGO_UNLOADED or-1,
@@ -8486,6 +8496,12 @@ Side="I",
 Event="OnEventHumanAircraftRepairFinish",
 Text="S_EVENT_HUMAN_AIRCRAFT_REPAIR_FINISH"
 },
+[EVENTS.GroupChangeOption]={
+Order=1,
+Side="I",
+Event="OnEventGroupChangeOption",
+Text="S_EVENT_GROUP_CHANGE_OPTION"
+},
 [EVENTS.NewDynamicCargo]={
 Order=1,
 Side="I",
@@ -8742,7 +8758,16 @@ if Event.id and Event.id==EVENTS.MissionEnd then
 self.MissionEnd=true
 end
 if Event.initiator then
+if Event.id==EVENTS.GroupChangeOption then
+Event.IniDCSGroup=Event.initiator
+Event.IniDCSGroupName=Group.getName(Event.initiator)
+Event.IniGroupName=Event.IniDCSGroupName
+Event.IniGroup=GROUP:FindByName(Event.IniDCSGroupName)
+Event.IniCoalition=Group.getCoalition(Event.initiator)
+Event.IniGroupCategory=Group.getCategory(Event.initiator)
+else
 Event.IniObjectCategory=Object.getCategory(Event.initiator)
+end
 if Event.IniObjectCategory==Object.Category.STATIC then
 if Event.id==31 then
 Event.IniDCSUnit=Event.initiator
