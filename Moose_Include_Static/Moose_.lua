@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-07-23T17:37:58+02:00-847d1e1492e92daf826bdcd57752a5de14d8a499 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-07-23T21:12:13+02:00-6ae155d11b2c972fb24f15375437dbfa04dd333b ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -2010,7 +2010,15 @@ ENUMS.Storage.weapons.shells.F100_M39_20_HEI_T='weapons.shells.F100_M39_20_HEI_T
 ENUMS.Storage.weapons.shells.F100_M39_20_API_T='weapons.shells.F100_M39_20_API_T'
 ENUMS.Storage.weapons.containers.GD_F100_STRIKE_CAMERA='weapons.containers.GD_F100_STRIKE_CAMERA'
 ENUMS.Storage.weapons.bombs.BLU_49_B='weapons.bombs.BLU-49/B'
+ENUMS.Storage.weapons.bombs.GBU_24E='weapons.bombs.GBU_24E'
 ENUMS.Storage.weapons.containers.GD_F100_SUU_13='weapons.containers.GD_F100_SUU-13'
+ENUMS.Storage.weapons.gunmounts.AKAN='weapons.gunmounts.{AKAN}'
+ENUMS.Storage.weapons.gunmounts.AKAN_NO_TRC='weapons.gunmounts.{AKAN_NO_TRC}'
+ENUMS.Storage.weapons.gunmounts.SUU_23_POD_Wing='weapons.gunmounts.{SUU_23_POD_Wing}'
+ENUMS.Storage.weapons.containers.SUU_23_POD_Wing='weapons.containers.{SUU_23_POD_Wing}'
+ENUMS.Storage.weapons.containers.SUU_23_POD_Centerline='weapons.containers.{SUU_23_POD_Centerline}'
+ENUMS.Storage.weapons.gunmounts.SUU_23_POD_Centerline='weapons.gunmounts.{SUU_23_POD_Centerline}'
+ENUMS.Storage.weapons.containers.HB_F_4E_BRU_42='weapons.containers.HB_F-4E_BRU-42'
 ENUMS.FARPType={
 FARP="FARP",
 INVISIBLE="INVISIBLE",
