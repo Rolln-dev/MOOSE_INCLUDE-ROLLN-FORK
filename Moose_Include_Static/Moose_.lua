@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-08-02T12:39:01+02:00-c7c1e1218ada9f4bd5f3c9e7d9b7a97d2b5ea667 ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-08-03T17:23:04+02:00-28a12c6eb3fcd370fe6fba24a9522162e0e7efbf ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -68046,7 +68046,7 @@ end
 end
 local deltaT=timer.getTime()-playerData.Tlso
 local _advice=true
-if playerData.TIG0==nil and playerData.difficulty~=AIRBOSS.Difficulty.EASY then
+if(playerData.TIG0==nil or playerData.TIG0==0)and playerData.difficulty~=AIRBOSS.Difficulty.EASY then
 _advice=false
 end
 if deltaT>=self.LSOdT and _advice then

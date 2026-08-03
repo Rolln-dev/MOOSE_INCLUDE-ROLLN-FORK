@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-08-02T12:39:01+02:00-c7c1e1218ada9f4bd5f3c9e7d9b7a97d2b5ea667 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-08-03T17:23:04+02:00-28a12c6eb3fcd370fe6fba24a9522162e0e7efbf ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -137903,7 +137903,7 @@ function AIRBOSS:_Groove( playerData )
 
     -- Wait until player passed the 0.75 NM distance.
     local _advice = true
-    if playerData.TIG0 == nil and playerData.difficulty ~= AIRBOSS.Difficulty.EASY then -- rho>RXX
+    if (playerData.TIG0 == nil or playerData.TIG0 == 0) and playerData.difficulty ~= AIRBOSS.Difficulty.EASY then -- rho>RXX
       _advice = false
     end
 
