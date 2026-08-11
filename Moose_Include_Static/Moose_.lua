@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-08-03T17:23:04+02:00-28a12c6eb3fcd370fe6fba24a9522162e0e7efbf ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-08-11T18:34:22+02:00-8b69c197cbe69ee18af9a4ff02f4c60eaa00f2d9 ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -34365,7 +34365,7 @@ return 0,"Scenery"
 end
 function SCENERY:FindByName(Name,Coordinate,Radius,Role,Zone)
 local findme=self:_FindByName(Name)
-if findme then return findme end
+if findme and findme:GetDCSObject()then return findme end
 local radius=Radius or 100
 local name=Name or"unknown"
 local scenery=nil
@@ -34391,7 +34391,6 @@ end
 if Coordinate then
 scenery=SceneryScan(Coordinate,radius,name)
 end
-if not scenery then scenery=SCENERY:Register(Name,nil,Zone)end
 return scenery
 end
 function SCENERY:FindByID(ID)

@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-08-03T17:23:04+02:00-28a12c6eb3fcd370fe6fba24a9522162e0e7efbf ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-08-11T18:34:22+02:00-8b69c197cbe69ee18af9a4ff02f4c60eaa00f2d9 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -67634,7 +67634,7 @@ function SCENERY:FindByName(Name, Coordinate, Radius, Role, Zone)
   --BASE:I("Coordinate x = "..Coordinate.x .. " y = "..Coordinate.y.." z = "..Coordinate.z)
   
   local findme = self:_FindByName(Name)
-  if findme then return findme end
+  if findme and findme:GetDCSObject() then return findme end
   
   local radius = Radius or 100
   local name = Name or "unknown"
@@ -67668,8 +67668,6 @@ function SCENERY:FindByName(Name, Coordinate, Radius, Role, Zone)
   if Coordinate then
     scenery = SceneryScan(Coordinate, radius, name)
   end
-  
-  if not scenery then scenery = SCENERY:Register(Name,nil,Zone) end
     
   return scenery  
 end
