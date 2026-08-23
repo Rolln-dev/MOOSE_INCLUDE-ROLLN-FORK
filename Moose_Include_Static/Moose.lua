@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-08-23T14:35:40+02:00-6467f81f38d239aba5f03ddc33e26b632aa17275 ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-08-23T17:39:58+02:00-2f697641defb515ca942e812aaa2cf757cf3ec91 ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -59560,6 +59560,10 @@ function GROUP:Respawn( Template, Reset )
 
   -- Reset events.
   self:ResetEvents()
+  
+    -- Reset options
+  self.ControllableOptions = nil
+  self.ControllableOptions = {}
 
   return self
 end
