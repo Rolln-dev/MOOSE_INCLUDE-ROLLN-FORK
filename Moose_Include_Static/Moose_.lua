@@ -1,4 +1,4 @@
-env.info('*** MOOSE GITHUB Commit Hash ID: 2026-08-27T14:11:25+02:00-baebfe1c7e280867bbeb662acb0aae3a0be5e51f ***')
+env.info('*** MOOSE GITHUB Commit Hash ID: 2026-08-29T13:20:46+02:00-9273a170a0fc98c98fad5f9950f5b6bb3fec7b1c ***')
 if not MOOSE_DEVELOPMENT_FOLDER then
 MOOSE_DEVELOPMENT_FOLDER='Scripts'
 end
@@ -57097,17 +57097,18 @@ return self
 end
 function MANTIS:_CheckAnyEWRAlive()
 self:T(self.lid.."_CheckAnyEWRAlive")
-local alive=false
-if self.EWR_Group:CountAlive()>0 then
-alive=true
+for _,group in pairs(self.EWR_Group:GetSet())do
+if group and group:IsAlive()then
+return true
 end
-if not alive and self.AWACS_Prefix then
+end
+if self.AWACS_Prefix then
 local awacs=GROUP:FindByName(self.AWACS_Prefix)
 if awacs and awacs:IsAlive()then
-alive=true
+return true
 end
 end
-return alive
+return false
 end
 function MANTIS:_CalcAdvState()
 self:T(self.lid.."CalcAdvState")

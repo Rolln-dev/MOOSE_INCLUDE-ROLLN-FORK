@@ -1,4 +1,4 @@
-env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-08-27T14:11:25+02:00-baebfe1c7e280867bbeb662acb0aae3a0be5e51f ***' )
+env.info( '*** MOOSE GITHUB Commit Hash ID: 2026-08-29T13:20:46+02:00-9273a170a0fc98c98fad5f9950f5b6bb3fec7b1c ***' )
 
 -- Automatic dynamic loading of development files, if they exists.
 -- Try to load Moose as individual script files from <DcsInstallDir\Script\Moose
@@ -41578,14 +41578,14 @@ end
 --    -- Declare SpawnObject and call a function when a new Group is spawned.
 --    local SpawnObject = SPAWN:New( "SpawnObject" )
 --                             :InitLimit( 2, 10 )
---                             :OnBeforeSpawnGroup( function( SpawnTemplate )
+--                             :OnBeforeTemplateSpawnGroup( function( Spawn, SpawnTemplate, SpawnIndex )
                                         -- Tweaking the template units
 --                                 end
 --                               )
 --                             :SpawnScheduled( 300, 0.3 )
 --
 function SPAWN:OnBeforeTemplateSpawnGroup( BeforeTemplateSpawnFunc )
-  --self:F( "OnBeforeSpawnGroup" )
+  --self:F( "OnBeforeTemplateSpawnGroup" )
 
   self.BeforeTemplateSpawnFunc = BeforeTemplateSpawnFunc
 
@@ -116686,20 +116686,22 @@ do
   --- [Internal] Check if any EWR or AWACS is still alive
   -- @param #MANTIS self
   -- @return #boolean outcome
-  function MANTIS:_CheckAnyEWRAlive()
-    self:T(self.lid .. "_CheckAnyEWRAlive")
-    local alive = false
-    if self.EWR_Group:CountAlive() > 0 then
-      alive = true
-    end
-    if not alive and self.AWACS_Prefix then
-      local awacs = GROUP:FindByName(self.AWACS_Prefix)
-      if awacs and awacs:IsAlive() then
-        alive = true
+    function MANTIS:_CheckAnyEWRAlive()
+      self:T(self.lid .. "_CheckAnyEWRAlive")
+    
+      for _, group in pairs(self.EWR_Group:GetSet()) do
+        if group and group:IsAlive() then
+          return true
+        end
       end
+      if self.AWACS_Prefix then
+        local awacs = GROUP:FindByName(self.AWACS_Prefix)
+        if awacs and awacs:IsAlive() then
+          return true
+        end
+      end
+      return false
     end
-    return alive
-  end
 
   --- [Internal] Function to determine state of the advanced mode
   -- @param #MANTIS self
@@ -199175,7 +199177,7 @@ end
 -- ### Author: **funkyfranky**
 --
 -- ===
--- @module OPS.FlightControl
+-- @module Ops.FlightControl
 -- @image OPS_FlightControl.png
 
 
